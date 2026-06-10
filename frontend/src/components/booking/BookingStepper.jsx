@@ -1,45 +1,21 @@
 import React from "react";
 
-export default function BookingStepper({ currentStep }) {
-  const steps = [
-    { num: 1, label: "Dịch vụ" },
-    { num: 2, label: "Barber" },
-    { num: 3, label: "Thời gian" },
-    { num: 4, label: "Thông tin" }
-  ];
-
+export default function BookingStepper({ hasService, hasBarber, hasTime }) {
   return (
-    <div className="mb-16 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => {
-          const isActive = currentStep >= step.num;
-          const isCurrent = currentStep === step.num;
-          
-          return (
-            <React.Fragment key={step.num}>
-              <div className="flex flex-col items-center z-10">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
-                  isActive 
-                    ? 'bg-primary text-on-primary border border-primary' 
-                    : 'bg-surface-container border border-outline text-outline'
-                } ${isCurrent ? 'ring-4 ring-primary/20' : ''}`}>
-                  {step.num}
-                </div>
-                <span className={`mt-2 font-label-md text-label-md ${
-                  isActive ? 'text-primary' : 'text-outline'
-                }`}>
-                  {step.label}
-                </span>
-              </div>
-              
-              {index < steps.length - 1 && (
-                <div className={`h-[2px] flex-grow mx-3 transition-colors duration-300 ${
-                  currentStep > step.num ? 'bg-primary' : 'bg-outline-variant'
-                }`}></div>
-              )}
-            </React.Fragment>
-          );
-        })}
+    <div className="flex justify-center">
+      <div className="flex items-center space-x-8 text-label-md">
+        <div className={`flex items-center space-x-2 pb-2 border-b-2 text-primary border-primary`}>
+          <span className="w-6 h-6 rounded-full border border-primary flex items-center justify-center text-[10px]">01</span>
+          <span>DỊCH VỤ</span>
+        </div>
+        <div className={`flex items-center space-x-2 pb-2 border-b-2 ${hasService ? 'text-primary border-primary' : 'text-outline border-transparent'}`}>
+          <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] ${hasService ? 'border-primary' : 'border-outline'}`}>02</span>
+          <span>BARBER</span>
+        </div>
+        <div className={`flex items-center space-x-2 pb-2 border-b-2 ${hasBarber ? 'text-primary border-primary' : 'text-outline border-transparent'}`}>
+          <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] ${hasBarber ? 'border-primary' : 'border-outline'}`}>03</span>
+          <span>THỜI GIAN</span>
+        </div>
       </div>
     </div>
   );
