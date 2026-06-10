@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Button from "@/components/ui/Button";
 
 export default function Services() {
   return (
@@ -56,9 +57,9 @@ export default function Services() {
               <span className="font-headline-md text-2xl sm:text-3xl text-primary">
                 $65
               </span>
-              <button className="font-label-sm text-sm text-on-surface uppercase tracking-widest hover:text-primary transition-colors py-2 px-4 border border-transparent hover:border-primary rounded-sm">
+              <Button variant="outline" size="sm" className="border-transparent">
                 Book
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -89,9 +90,9 @@ export default function Services() {
               <span className="font-headline-md text-xl sm:text-2xl text-primary">
                 $40
               </span>
-              <button className="font-label-sm text-sm text-on-surface uppercase tracking-widest hover:text-primary transition-colors py-2 px-4 border border-transparent hover:border-primary rounded-sm">
+              <Button variant="outline" size="sm" className="border-transparent">
                 Book
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -109,9 +110,9 @@ export default function Services() {
           <p className="font-body-md text-sm text-on-surface-variant mb-8 flex-grow">
             Uniform clipper work. Fast, efficient, flawless.
           </p>
-          <button className="w-full bg-transparent border border-outline-variant text-on-surface font-label-sm text-sm uppercase py-3.5 rounded-sm hover:border-primary hover:text-primary transition-colors text-center">
+          <Button variant="outline" size="full" className="py-3.5">
             Book Session
-          </button>
+          </Button>
         </div>
 
         {/* Scalp Treatment */}
@@ -142,9 +143,9 @@ export default function Services() {
                 20 Min
               </span>
             </div>
-            <button className="font-label-sm text-sm text-on-surface uppercase tracking-widest hover:text-primary transition-colors py-2 px-4 border border-transparent hover:border-primary rounded-sm">
+            <Button variant="outline" size="sm" className="border-transparent">
               Book
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -6,10 +6,14 @@ Tài liệu này quy định các tiêu chuẩn viết code cho dự án Fronten
 
 Chúng ta sử dụng cấu trúc thư mục quy chuẩn trong `src/`:
 
-- `app/`: Chứa các file định tuyến (Routing) của Next.js (page, layout, loading, error).
+- `app/`: Thư mục **Định tuyến (Router)**. Tên thư mục con sẽ tạo thành URL của web (ví dụ `app/login/` ➔ `localhost:3000/login`).
+  - **Quy tắc bắt buộc:** File `page.jsx` ở đây **PHẢI** là Server Component (KHÔNG CÓ dòng `"use client"`). Nó chỉ làm 2 việc: Export SEO Metadata (`title`, `description`) và import Component giao diện từ thư mục `page/` để hiển thị.
+- `page/`: Thư mục **Giao diện Toàn cảnh (UI Pages)**. Chứa Component đại diện cho nguyên một trang (ví dụ: `HomePage.jsx`, `LoginPage.jsx`).
+  - **Quy tắc bắt buộc:** Đây là nơi chứa Logic người dùng (`useState`, `onChange`), gọi API (`fetch`) và ráp nối các mảnh ghép từ `components/`. File ở đây thường sẽ có `"use client"`.
+  - **Nhóm theo tính năng (Feature-based):** Nếu dự án lớn có nhiều trang, hãy tạo các thư mục con theo chức năng (ví dụ: `page/auth/LoginPage.jsx`, `page/dashboard/AdminDashboard.jsx`). Tuyệt đối không để file nằm "mồ côi" lộn xộn ở ngoài root của `page/`.
 - `assets/`: Chứa tài nguyên tĩnh như hình ảnh (`.png`, `.jpg`, `.svg`), icon.
 - `components/`:
-  - `layout/`: Các component dùng chung toàn trang (Navbar, Footer, Sidebar).
+  - `layout/`: Các component dùng chung tạo thành khung xương của web (Navbar, Footer, Sidebar). **Tuyệt đối không** đặt thư mục layout nằm lộn xộn bên trong thư mục `page/`.
   - `shared/`: Các component nghiệp vụ có khả năng tái sử dụng qua nhiều trang (ví dụ: ServicesList, BookingForm).
   - `home/`, `booking/`: Các component cụ thể chỉ dùng MỘT LẦN cho từng trang tương ứng.
   - `ui/`: Các component UI cơ bản có thể tái sử dụng (Button, Input, Card).
@@ -18,9 +22,10 @@ Chúng ta sử dụng cấu trúc thư mục quy chuẩn trong `src/`:
 - `services/`: Chứa các hàm gọi API (sử dụng fetch hoặc axios).
 - `utils/`: Chứa các hàm helper, formatters (ví dụ: `formatDate`, `currencyFormat`).
 
-## 2. Quy tắc Đặt tên (Naming Convention)
+## 2. Quy tắc Đặt tên (Naming Convention) & Quản lý File
 
-- **Thư mục (Directories):** Sử dụng `kebab-case` (ví dụ: `auth-context`, `home-page`). Riêng các thư mục trong `app/` đặt tên theo chuẩn route của Next.js.
+- **Thư mục (Directories):** **BẮT BUỘC** sử dụng `kebab-case` 100% (ví dụ: `auth-context`, `home-page`, `manage-blog`). Tuyệt đối không pha trộn viết hoa viết thường (kiểu `Admin`, `ManageBlog`) để tránh xung đột hệ điều hành. Riêng các thư mục trong `app/` đặt tên theo chuẩn route của Next.js.
+- **Không để file mồ côi:** Mọi file Component nên được phân loại vào đúng thư mục chủ đề của nó. Tránh tình trạng đã có thư mục chủ đề nhưng file lại nằm vất vưởng bên ngoài.
 - **Tên Component (React Components):** Sử dụng `PascalCase` cho tên file và tên function (ví dụ: `Navbar.jsx`, `HeroSection.jsx`).
 - **Biến và Hàm (Variables & Functions):** Sử dụng `camelCase` (ví dụ: `handleLogin`, `userData`, `fetchServices`).
 - **Hằng số (Constants):** Sử dụng `UPPER_SNAKE_CASE` (ví dụ: `MAX_UPLOAD_SIZE`, `API_URL`).

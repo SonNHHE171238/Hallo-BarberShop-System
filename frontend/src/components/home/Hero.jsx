@@ -1,4 +1,5 @@
 import React from "react";
+import Button from "@/components/ui/Button";
 
 export default function Hero() {
   return (
@@ -29,12 +30,12 @@ export default function Hero() {
             clarity and focus. No vintage clichés, just architectural precision.
           </p>
           <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4 pt-4 sm:pt-6">
-            <button className="w-full sm:w-auto bg-[#3B82F6] text-[#F8FAFC] font-label-sm text-sm uppercase px-8 py-4 rounded-sm tracking-widest transition-all duration-300 electric-glow hover:bg-primary-container active:scale-95 text-center">
+            <Button variant="glow" size="lg" className="w-full sm:w-auto">
               Book Now
-            </button>
-            <button className="w-full sm:w-auto bg-transparent border border-outline-variant text-on-surface font-label-sm text-sm uppercase px-8 py-4 rounded-sm tracking-widest hover:border-primary hover:text-primary transition-all duration-300 active:scale-95 text-center">
+            </Button>
+            <Button variant="outline" size="lg" className="w-full sm:w-auto">
               View Services
-            </button>
+            </Button>
           </div>
         </div>
       </div>

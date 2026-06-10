@@ -74,7 +74,7 @@ export default function Navbar() {
             </span>
           </button>
           <Link
-            href="#"
+            href="/login"
             className="font-body-md text-sm lg:text-base text-primary dark:text-primary scale-95 active:opacity-80 transition-transform uppercase font-bold tracking-wider hover:text-primary-container"
           >
             Login
