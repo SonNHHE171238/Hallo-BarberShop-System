@@ -1,4 +1,4 @@
-import { Inter, Montserrat, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Inter, Montserrat, Hanken_Grotesk, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -25,6 +25,12 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair-display",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata = {
   title: "HALLO BARBER | Premium Grooming for Men",
   description: "Sự chính xác trong từng đường cắt. Nơi định hình phong cách quý ông hiện đại.",
@@ -39,7 +45,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className={`${inter.variable} ${montserrat.variable} ${hankenGrotesk.variable} ${jetbrainsMono.variable} bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col`}>
+      <body className={`${inter.variable} ${montserrat.variable} ${hankenGrotesk.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col`}>
         {children}
       </body>
     </html>

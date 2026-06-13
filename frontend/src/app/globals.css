@@ -65,9 +65,9 @@
 
   --font-headline-md: var(--font-montserrat);
   --font-body-md: var(--font-hanken-grotesk);
-  --font-headline-sm: var(--font-montserrat);
+  --font-headline-sm: var(--font-playfair-display);
   --font-label-md: var(--font-jetbrains-mono);
-  --font-display-lg: var(--font-montserrat);
+  --font-display-lg: var(--font-playfair-display);
   --font-headline-lg: var(--font-montserrat);
   --font-body-lg: var(--font-hanken-grotesk);
   --font-headline-lg-mobile: var(--font-montserrat);
@@ -171,5 +171,38 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #4e4639;
     border-radius: 10px;
+  }
+  .ambient-shadow {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+  .input-field {
+    border-bottom: 1px solid var(--color-outline);
+    transition: all 0.3s ease;
+  }
+  .input-field:focus-within {
+    border-bottom-color: transparent;
+    box-shadow: inset 0 -1px 0 0 var(--color-secondary-container);
+  }
+  .glass-panel {
+    background: rgba(47, 49, 49, 0.95);
+    backdrop-filter: blur(10px);
+  }
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 24px;
+  }
+  @media (max-width: 768px) {
+    .bento-grid {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(233, 193, 118, 0.1);
+  }
+  .serif-title {
+    font-family: var(--font-playfair-display), serif;
+    letter-spacing: -0.02em;
   }
 }
