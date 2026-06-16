@@ -63,16 +63,16 @@
   --spacing-container-padding: 24px;
   --spacing-unit: 4px;
 
-  --font-headline-md: var(--font-montserrat);
-  --font-body-md: var(--font-hanken-grotesk);
+  --font-headline-md: var(--font-playfair-display);
+  --font-body-md: var(--font-playfair-display);
   --font-headline-sm: var(--font-playfair-display);
-  --font-label-md: var(--font-jetbrains-mono);
+  --font-label-md: var(--font-playfair-display);
   --font-display-lg: var(--font-playfair-display);
-  --font-headline-lg: var(--font-montserrat);
-  --font-body-lg: var(--font-hanken-grotesk);
-  --font-headline-lg-mobile: var(--font-montserrat);
-  --font-label-sm: var(--font-inter);
-  --font-display-lg-mobile: var(--font-montserrat);
+  --font-headline-lg: var(--font-playfair-display);
+  --font-body-lg: var(--font-playfair-display);
+  --font-headline-lg-mobile: var(--font-playfair-display);
+  --font-label-sm: var(--font-playfair-display);
+  --font-display-lg-mobile: var(--font-playfair-display);
 
   --text-headline-md: 24px;
   --text-headline-md--line-height: 32px;
@@ -204,5 +204,23 @@
   .serif-title {
     font-family: var(--font-playfair-display), serif;
     letter-spacing: -0.02em;
+  }
+  .icon-fill {
+    font-variation-settings: 'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  }
+  .serif-heading {
+    font-family: var(--font-playfair-display), serif;
+    letter-spacing: -0.02em;
+  }
+  .toggle-checkbox:checked {
+    right: 0;
+    border-color: var(--color-primary);
+  }
+  .toggle-checkbox:checked + .toggle-label {
+    background-color: var(--color-gold-dim);
+  }
+  .toggle-checkbox:checked + .toggle-label:after {
+    transform: translateX(100%);
+    border-color: var(--color-gold-dim);
   }
 }

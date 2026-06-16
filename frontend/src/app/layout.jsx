@@ -1,29 +1,5 @@
-import { Inter, Montserrat, Hanken_Grotesk, JetBrains_Mono, Playfair_Display } from "next/font/google";
+import { Playfair_Display } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const hankenGrotesk = Hanken_Grotesk({
-  variable: "--font-hanken-grotesk",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair-display",
@@ -45,7 +21,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className={`${inter.variable} ${montserrat.variable} ${hankenGrotesk.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col`}>
+      <body className={`${playfairDisplay.variable} bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col`}>
         {children}
       </body>
     </html>
