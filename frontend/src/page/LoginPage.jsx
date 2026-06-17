@@ -42,8 +42,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex-grow flex items-center justify-center relative overflow-hidden py-16">
-      <main className="relative z-20 w-full max-w-md px-container-padding">
+    <div className="flex-grow flex items-center justify-center relative overflow-hidden py-16 min-h-screen bg-background">
+      {/* Nút thoát / Quay lại trang chủ */}
+      <Link 
+        href="/" 
+        className="absolute top-6 right-6 md:top-8 md:left-8 md:right-auto flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors z-30 group"
+      >
+        {/* Mobile: Dấu X ở góc phải trên */}
+        <span className="material-symbols-outlined md:hidden text-3xl bg-surface-container p-2 rounded-full border border-outline-variant active:scale-95">close</span>
+        
+        {/* Desktop: Mũi tên quay lại ở góc trái trên */}
+        <span className="material-symbols-outlined hidden md:block group-hover:-translate-x-1 transition-transform">arrow_back</span>
+        <span className="hidden md:block font-label-md text-label-md uppercase tracking-wider">Quay lại trang chủ</span>
+      </Link>
+
+      <main className="relative z-20 w-full max-w-md px-4">
         {/* Brand Header */}
         <div className="text-center mb-section-gap">
           <h1 className="font-display-lg text-display-lg font-bold tracking-tighter text-on-surface uppercase md:block hidden">

@@ -1,151 +1,111 @@
-import React from "react";
-import Link from "next/link";
-import Button from "@/components/ui/Button";
+"use client";
+
+import React, { useState } from "react";
 
 export default function Services() {
+  const [activeTab, setActiveTab] = useState("Tất cả");
+  const tabs = ["Tất cả", "Cắt tóc", "Uốn tóc", "Nhuộm tóc", "Combo"];
+
   return (
-    <section className="py-16 sm:py-24 lg:py-section-gap max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-      <div className="mb-10 sm:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6">
-        <div>
-          <h2 className="font-headline-md text-2xl sm:text-3xl text-on-surface uppercase tracking-wide mb-2 sm:mb-3">
-            Technical Services
-          </h2>
-          <p className="font-body-md text-base text-on-surface-variant">
-            Engineered routines for the modern professional.
-          </p>
-        </div>
-        <Link
-          href="#"
-          className="font-label-sm text-sm text-primary uppercase tracking-widest hover:text-primary-container transition-colors flex items-center group w-fit"
-        >
-          Full Menu
-          <span
-            className="material-symbols-outlined ml-1.5 group-hover:translate-x-1 transition-transform"
-            style={{ fontSize: "18px" }}
-          >
-            arrow_forward
-          </span>
-        </Link>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6">
-        {/* Signature Cut (Large Span) */}
-        <div className="md:col-span-2 lg:col-span-8 bg-surface-container-highest border border-outline-variant p-6 sm:p-8 rounded-sm group hover:border-primary transition-colors flex flex-col justify-between min-h-[320px] relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent to-surface-container-low opacity-50 z-0"></div>
-          <div className="relative z-10 flex justify-between items-start">
-            <div className="bg-surface p-3 rounded-sm border border-outline-variant">
-              <span
-                className="material-symbols-outlined text-primary"
-                style={{ fontVariationSettings: "'FILL' 0" }}
-              >
-                content_cut
-              </span>
+    <section id="services" className="py-24 bg-surface-container-lowest border-y border-outline-variant">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-16">
+        <div className="text-center mb-16">
+          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-12">Khám phá Dịch vụ của chúng tôi</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 max-w-3xl mx-auto">
+            <div className="p-6 border border-outline-variant rounded-xl bg-surface-container-low">
+              <div className="text-primary font-display-lg text-display-lg mb-2">7K</div>
+              <div className="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Facebook Likes</div>
             </div>
-            <span className="font-label-sm text-xs text-secondary uppercase tracking-widest border border-outline-variant px-2.5 py-1.5 rounded-sm">
-              45 Min
-            </span>
+            <div className="p-6 border border-outline-variant rounded-xl bg-surface-container-low">
+              <div className="text-primary font-display-lg text-display-lg mb-2">7K</div>
+              <div className="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Followers</div>
+            </div>
+            <div className="p-6 border border-outline-variant rounded-xl bg-surface-container-low">
+              <div className="text-primary font-display-lg text-display-lg mb-2">5⭐</div>
+              <div className="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Đánh giá</div>
+            </div>
           </div>
-          <div className="relative z-10 mt-12 sm:mt-16">
-            <h3 className="font-headline-md text-xl sm:text-2xl text-on-surface mb-3">
-              The Signature Architecture
-            </h3>
-            <p className="font-body-md text-sm sm:text-base text-on-surface-variant mb-8 max-w-md">
-              A structural haircut utilizing geometric precision to map your bone
-              structure. Includes consultation, precision wash, and structural
-              styling.
-            </p>
-            <div className="flex items-center justify-between border-t border-outline-variant pt-5">
-              <span className="font-headline-md text-2xl sm:text-3xl text-primary">
-                $65
-              </span>
-              <Button variant="outline" size="sm" className="border-transparent">
-                Book
-              </Button>
-            </div>
+          
+          <div className="flex overflow-x-auto scroll-hide gap-4 justify-start md:justify-center mb-12 pb-4">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`${
+                  activeTab === tab
+                    ? "bg-primary text-on-primary"
+                    : "border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary"
+                } px-6 py-2 rounded-full font-label-md text-label-md whitespace-nowrap transition-all`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Beard Grooming (Medium Span) */}
-        <div className="md:col-span-1 lg:col-span-4 bg-surface-container border border-outline-variant p-6 sm:p-8 rounded-sm group hover:border-primary transition-colors flex flex-col justify-between min-h-[320px]">
-          <div className="flex justify-between items-start">
-            <div className="bg-surface p-3 rounded-sm border border-outline-variant">
-              <span
-                className="material-symbols-outlined text-primary"
-                style={{ fontVariationSettings: "'FILL' 0" }}
-              >
-                face
-              </span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              id: 1,
+              name: "Royal Cut & Shave",
+              price: "350k",
+              description: "Combo cắt tóc, cạo mặt bằng khăn nóng và massage cổ vai gáy thư giãn.",
+              duration: "60 phút",
+              image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBdk6y0HOx4kzaAt36Wuegjq5u-XYI7eeWGzynGThjbSTUbGqNbX53SdN2kf2HnEyw1_UwVlIpmgaf60csVeFaC6Fri6X28Q8VCLiDlgdpY0Qp3zq3kyhq084KyseWNePcDZTUc6w7DDhnOfVImiBv-qTdc3dv4ql9ob7CtKe-lmmM8C17XW52WQX_DxuyIOdbVU2zzQRSRrBMPt452HpjWfZ-7FYpPZaZpVsdsmc6Ri30zvNBLEYHdtkvT7Vy-x7spq7QLlExKOSz5",
+              isBestseller: true
+            },
+            {
+              id: 2,
+              name: "Classic Men's Haircut",
+              price: "150k",
+              description: "Cắt tóc tạo kiểu chuẩn nam giới hiện đại, bao gồm gội đầu và vuốt sáp.",
+              duration: "45 phút",
+              image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAzEEqUAbNsW3wr8zM2oWW2zqsgLqmWKLNvG1aCS_wTPDdox_QgOotp1veJFRSjtcWJ2yOxbjPvPUstFnycSwMrJM5TLQgJGXNE2meEAwghmVUL3WzkvjtJwCzH-n21sz44JyV6jdXpg61i5ZAhvmtcExj34w8crD0eXKsuX7pEwt4XeeV94dt0UgdsXy8BI1ze9zEvfykNytW5btP7Hgm70UmcchN7oApIZWHVcsuoFGZbCJyi4bc-fd85F3H4uPycYRBfoyPxwv25",
+              isBestseller: false
+            },
+            {
+              id: 3,
+              name: "Modern Perm",
+              price: "500k",
+              description: "Uốn tóc tạo độ phồng và nếp tự nhiên theo phong cách hiện đại.",
+              duration: "90 phút",
+              image: "https://lh3.googleusercontent.com/aida-public/AB6AXuC_Ptgb4N4d2oZYbSO2fRWDRN3HJ-PUg-BuqAAYB8ao1HlzradQKUZ6DuWbdiSlKCM7A9iWuSRrJcnXJpDQi6VX8bA5PFUCcv8EhVrg_WdU4ev2aat3Q_NN4CZIPvusFk8d_pSc9Zveku6am8pE3tPnZcmsdkHspmCF_qu8oTpppBuPLZnYOOnetLZY4dUO7zik5JzetCG4H5TtaLx0Xa79p7UWrG_54ltlAOUg5yLOKupe13NpTznbp481Ub8Gbeuenf7D0Jsww8zu",
+              isBestseller: false
+            }
+          ].map((service) => (
+            <div key={service.id} className="bento-card rounded-xl overflow-hidden flex flex-col h-full">
+              <div className="h-56 relative overflow-hidden">
+                <img className="w-full h-full object-cover" alt={service.name} src={service.image} />
+                {service.isBestseller && (
+                  <div className="absolute top-4 right-4 bg-primary text-on-primary px-3 py-1 rounded font-label-md text-label-md">
+                    Bestseller
+                  </div>
+                )}
+              </div>
+              <div className="p-8 flex flex-col flex-grow">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="font-headline-md text-headline-md text-on-surface">{service.name}</h3>
+                  <span className="text-primary font-headline-md text-headline-md">{service.price}</span>
+                </div>
+                <p className="font-body-md text-body-md text-on-surface-variant mb-6 line-clamp-2">{service.description}</p>
+                <div className="flex items-center gap-2 text-outline mb-8">
+                  <span className="material-symbols-outlined text-sm">schedule</span>
+                  <span className="font-label-md text-label-md">{service.duration}</span>
+                </div>
+                <button className="mt-auto w-full border border-primary text-primary py-3 rounded-lg font-headline-sm text-headline-sm hover:bg-primary hover:text-on-primary transition-all">
+                  Đặt lịch ngay
+                </button>
+              </div>
             </div>
-            <span className="font-label-sm text-xs text-secondary uppercase tracking-widest border border-outline-variant px-2.5 py-1.5 rounded-sm">
-              30 Min
-            </span>
-          </div>
-          <div className="mt-8 sm:mt-12">
-            <h3 className="font-headline-md text-lg sm:text-xl text-on-surface mb-3">
-              Beard Calibration
-            </h3>
-            <p className="font-body-md text-sm text-on-surface-variant mb-8">
-              Lineup and sculpting using hot lather and straight razor precision.
-            </p>
-            <div className="flex items-center justify-between border-t border-outline-variant pt-5">
-              <span className="font-headline-md text-xl sm:text-2xl text-primary">
-                $40
-              </span>
-              <Button variant="outline" size="sm" className="border-transparent">
-                Book
-              </Button>
-            </div>
-          </div>
+          ))}
         </div>
-
-        {/* Quick Reset */}
-        <div className="md:col-span-1 lg:col-span-4 bg-surface-container border border-outline-variant p-6 sm:p-8 rounded-sm group hover:border-primary transition-colors flex flex-col justify-between min-h-[240px]">
-          <div className="flex justify-between items-start mb-5">
-            <h3 className="font-headline-md text-lg sm:text-xl text-on-surface">
-              The Reset (Buzz)
-            </h3>
-            <span className="font-headline-md text-lg sm:text-xl text-primary">
-              $35
-            </span>
-          </div>
-          <p className="font-body-md text-sm text-on-surface-variant mb-8 flex-grow">
-            Uniform clipper work. Fast, efficient, flawless.
-          </p>
-          <Button variant="outline" size="full" className="py-3.5">
-            Book Session
-          </Button>
-        </div>
-
-        {/* Scalp Treatment */}
-        <div className="md:col-span-2 lg:col-span-8 bg-surface-container border border-outline-variant p-6 sm:p-8 rounded-sm group hover:border-primary transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 sm:gap-8 min-h-[240px]">
-          <div className="flex-grow">
-            <div className="flex items-center space-x-3 mb-3">
-              <span
-                className="material-symbols-outlined text-primary"
-                style={{ fontVariationSettings: "'FILL' 0" }}
-              >
-                water_drop
-              </span>
-              <h3 className="font-headline-md text-lg sm:text-xl text-on-surface">
-                Follicle Therapy
-              </h3>
-            </div>
-            <p className="font-body-md text-sm sm:text-base text-on-surface-variant max-w-lg">
-              Deep cleansing and invigoration using cooling menthol and
-              high-frequency stimulation devices.
-            </p>
-          </div>
-          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-4 sm:gap-6 border-t sm:border-t-0 sm:border-l border-outline-variant pt-5 sm:pt-0 sm:pl-8">
-            <div className="flex flex-col sm:items-end gap-2">
-              <span className="font-headline-md text-xl sm:text-2xl text-primary">
-                $55
-              </span>
-              <span className="font-label-sm text-xs text-secondary uppercase tracking-widest border border-outline-variant px-2.5 py-1 rounded-sm">
-                20 Min
-              </span>
-            </div>
-            <Button variant="outline" size="sm" className="border-transparent">
-              Book
-            </Button>
+        
+        <div className="mt-16 text-center">
+          <div className="inline-flex flex-col md:flex-row items-center gap-8 bg-surface-container-high p-8 rounded-2xl border border-outline-variant">
+            <p className="font-headline-sm text-headline-sm text-on-surface">Sẵn sàng để thay đổi phong cách? Đặt lịch hẹn ngay hôm nay</p>
+            <button className="bg-primary text-on-primary px-8 py-3 rounded-lg font-headline-sm text-headline-sm hover:scale-105 transition-transform active:scale-95">
+              Booking Now
+            </button>
           </div>
         </div>
       </div>
