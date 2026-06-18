@@ -2342,3 +2342,407 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
     });
   }
 };
+
+// Get available slots for walk-in bookings
+exports.getWalkInAvailableSlots = async (req, res) => {
+  try {
+    const { serviceId, service_id, date } = req.query;
+    const finalServiceId = serviceId || service_id;
+
+    if (!finalServiceId || !date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service ID and date are required'
+      });
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Use YYYY-MM-DD'
+      });
+    }
+
+    // Get service to determine duration
+    const Service = require('../models/service.model');
+    const service = await Service.findById(finalServiceId);
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found'
+      });
+    }
+
+    const durationMinutes = service.durationMinutes || 30;
+
+    // Get all active barbers
+    const Barber = require('../models/barber.model');
+    const barbers = await Barber.find({ isAvailable: true }).populate('userId', 'name profileImageUrl');
+
+    // Get current date time to filter out past slots if date is today
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const isToday = date === todayStr;
+
+    // Determine current hour and minute if it is today
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    const availableSlotsMap = {}; // { timeSlot: [barbers] }
+
+    for (const barber of barbers) {
+      // Check if barber is absent
+      const dateObj = new Date(`${date}T00:00:00.000Z`);
+      const isAbsent = await BarberAbsence.isBarberAbsent(barber._id, dateObj);
+      if (isAbsent) {
+        continue;
+      }
+
+      // Ensure barber schedule is initialized for the date
+      await BarberSchedule.getAvailableSlots(barber._id, date);
+
+      // Get barber schedule
+      const schedule = await BarberSchedule.findOne({ barberId: barber._id, date });
+      if (!schedule || schedule.isOffDay) {
+        continue;
+      }
+
+      const slotDuration = schedule.slotDuration || 30;
+      const slotsNeeded = Math.ceil(durationMinutes / slotDuration);
+
+      // Map schedule slots by time for O(1) lookup
+      const slotsByTime = {};
+      schedule.availableSlots.forEach(slot => {
+        slotsByTime[slot.time] = slot;
+      });
+
+      // Filter slots that are available and have enough consecutive free slots
+      for (const slot of schedule.availableSlots) {
+        // Skip booked or blocked slots
+        if (slot.isBooked || slot.isBlocked) {
+          continue;
+        }
+
+        // If today, skip slots in the past
+        if (isToday) {
+          const [slotHour, slotMin] = slot.time.split(':').map(Number);
+          if (slotHour < currentHour || (slotHour === currentHour && slotMin < currentMinute)) {
+            continue;
+          }
+        }
+
+        // Check if there are enough consecutive slots starting from this slot
+        let isConsecutiveAvailable = true;
+        let tempHour = parseInt(slot.time.split(':')[0]);
+        let tempMinute = parseInt(slot.time.split(':')[1]);
+
+        for (let i = 0; i < slotsNeeded; i++) {
+          const checkTimeStr = `${tempHour.toString().padStart(2, '0')}:${tempMinute.toString().padStart(2, '0')}`;
+          const currentSlot = slotsByTime[checkTimeStr];
+
+          if (!currentSlot || currentSlot.isBooked || currentSlot.isBlocked) {
+            isConsecutiveAvailable = false;
+            break;
+          }
+
+          // Move to next slot time
+          tempMinute += slotDuration;
+          if (tempMinute >= 60) {
+            tempHour += Math.floor(tempMinute / 60);
+            tempMinute = tempMinute % 60;
+          }
+        }
+
+        if (isConsecutiveAvailable) {
+          if (!availableSlotsMap[slot.time]) {
+            availableSlotsMap[slot.time] = [];
+          }
+          availableSlotsMap[slot.time].push({
+            _id: barber._id,
+            name: barber.userId?.name || 'Unknown',
+            profileImageUrl: barber.profileImageUrl || barber.userId?.profileImageUrl,
+            specialties: barber.specialties || [],
+            experienceYears: barber.experienceYears || 0,
+            averageRating: barber.averageRating || 0
+          });
+        }
+      }
+    }
+
+    // Convert map to sorted array
+    const sortedSlots = Object.keys(availableSlotsMap)
+      .sort((a, b) => a.localeCompare(b))
+      .map(time => ({
+        timeSlot: time,
+        barbers: availableSlotsMap[time]
+      }));
+
+    res.json({
+      success: true,
+      service: {
+        _id: service._id,
+        name: service.name,
+        durationMinutes,
+        price: service.price
+      },
+      date,
+      availableSlots: sortedSlots
+    });
+
+  } catch (err) {
+    console.error('Error in getWalkInAvailableSlots:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Internal server error'
+    });
+  }
+};
+
+// Create a new walk-in booking (Admin/Staff only)
+exports.createWalkInBooking = async (req, res) => {
+  try {
+    const {
+      serviceId,
+      barberId,
+      bookingDate,
+      timeSlot,
+      date,
+      customerName,
+      customerPhone,
+      customerEmail,
+      note,
+      notificationMethods,
+      durationMinutes
+    } = req.body;
+
+    // Validate required fields
+    if (!serviceId || !bookingDate || !date || !timeSlot || !customerName || !customerPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service, booking date, date, time slot, customer name, and phone are required',
+        errorCode: 'MISSING_REQUIRED_FIELDS'
+      });
+    }
+
+    // Validate service exists
+    const Service = require('../models/service.model');
+    const service = await Service.findById(serviceId);
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found',
+        errorCode: 'SERVICE_NOT_FOUND'
+      });
+    }
+
+    const finalDurationMinutes = durationMinutes || service.durationMinutes || 30;
+    const requestedDateTime = new Date(bookingDate);
+
+    let finalBarberId = barberId;
+    let isAutoAssigned = false;
+
+    // Handle auto-assignment logic
+    const shouldAutoAssign = !barberId || barberId === 'random' || barberId === 'auto';
+
+    if (shouldAutoAssign) {
+      try {
+        console.log(`🎯 [WALK-IN BOOKING] Auto-assignment triggered for ${date} at ${timeSlot}`);
+        const barberController = require('./barber.controller');
+
+        // Create a mock request/response to call the auto-assign function
+        const mockReq = {
+          body: { date, timeSlot, serviceId }
+        };
+
+        let autoAssignResult = null;
+        const mockRes = {
+          json: (data) => {
+            autoAssignResult = data;
+            return data;
+          },
+          status: (code) => ({
+            json: (data) => {
+              autoAssignResult = { ...data, statusCode: code };
+              return autoAssignResult;
+            }
+          })
+        };
+
+        await barberController.autoAssignBarberForSlot(mockReq, mockRes);
+
+        if (autoAssignResult && autoAssignResult.success && autoAssignResult.assignedBarber) {
+          finalBarberId = autoAssignResult.assignedBarber._id;
+          isAutoAssigned = true;
+        } else {
+          console.error('❌ [WALK-IN BOOKING] Auto-assignment failed:', autoAssignResult);
+          return res.status(404).json({
+            success: false,
+            message: autoAssignResult?.message || 'No barbers available for auto-assignment',
+            errorCode: 'AUTO_ASSIGNMENT_FAILED'
+          });
+        }
+      } catch (autoAssignError) {
+        console.error('Error in auto-assignment:', autoAssignError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to auto-assign barber',
+          errorCode: 'AUTO_ASSIGNMENT_FAILED'
+        });
+      }
+    }
+
+    // Validate barber exists
+    const Barber = require('../models/barber.model');
+    const finalBarber = await Barber.findById(finalBarberId);
+    if (!finalBarber) {
+      return res.status(404).json({
+        success: false,
+        message: 'Barber not found',
+        errorCode: 'BARBER_NOT_FOUND'
+      });
+    }
+
+    // Check if barber is absent on the requested date
+    const isBarberAbsent = await BarberAbsence.isBarberAbsent(finalBarberId, requestedDateTime);
+    if (isBarberAbsent) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selected barber is not available on this date',
+        errorCode: 'BARBER_ABSENT'
+      });
+    }
+
+    const dateStr = requestedDateTime.toISOString().split('T')[0];
+
+    // Get all existing bookings for the barber on this date
+    const barberBookings = await Booking.find({
+      barberId: finalBarberId,
+      bookingDate: {
+        $gte: new Date(dateStr + 'T00:00:00.000Z'),
+        $lt: new Date(dateStr + 'T23:59:59.999Z')
+      },
+      status: { $in: ['pending', 'confirmed'] }
+    }).sort({ bookingDate: 1 });
+
+    const newStart = new Date(bookingDate);
+    const newEnd = new Date(newStart.getTime() + finalDurationMinutes * 60000);
+
+    // Check for barber conflicts (same barber, overlapping time)
+    const barberConflict = barberBookings.find(booking => {
+      const existingStart = new Date(booking.bookingDate);
+      const existingEnd = new Date(existingStart.getTime() + booking.durationMinutes * 60000);
+      return (newStart < existingEnd && newEnd > existingStart);
+    });
+
+    if (barberConflict) {
+      return res.status(409).json({
+        success: false,
+        message: `Time slot conflict detected. The selected time overlaps with an existing booking.`,
+        errorCode: 'BOOKING_CONFLICT',
+        conflictDetails: {
+          conflictType: 'BARBER_CONFLICT',
+          conflictingTime: barberConflict.bookingDate,
+          conflictingDuration: barberConflict.durationMinutes,
+          requestedTime: bookingDate,
+          requestedDuration: finalDurationMinutes
+        }
+      });
+    }
+
+    // Check barber's daily booking limit
+    if (barberBookings.length >= finalBarber.maxDailyBookings) {
+      return res.status(400).json({
+        success: false,
+        message: 'Barber has reached maximum bookings for this date',
+        errorCode: 'DAILY_LIMIT_EXCEEDED'
+      });
+    }
+
+    // Create the booking
+    const booking = new Booking({
+      bookingType: 'guest',
+      customerId: null,
+      barberId: finalBarberId,
+      serviceId,
+      bookingDate: new Date(bookingDate),
+      durationMinutes: finalDurationMinutes,
+      note,
+      notificationMethods,
+      autoAssignedBarber: isAutoAssigned,
+      customerName,
+      customerEmail,
+      customerPhone,
+      status: 'confirmed',
+      confirmedAt: new Date(),
+      confirmedBy: req.userId
+    });
+
+    await booking.save();
+
+    // Update barber's totalBookings count
+    try {
+      await Barber.findByIdAndUpdate(finalBarberId, {
+        $inc: { totalBookings: 1 }
+      });
+      console.log(`✅ Updated totalBookings for barber ${finalBarberId}`);
+    } catch (updateError) {
+      console.error('Error updating barber totalBookings:', updateError);
+    }
+
+    // Mark time slots as booked in the barber schedule
+    const startTimeStr = timeSlot;
+
+    try {
+      const scheduleResult = await BarberSchedule.markSlotsAsBooked(
+        finalBarberId,
+        dateStr,
+        startTimeStr,
+        finalDurationMinutes,
+        booking._id,
+        null
+      );
+      console.log('Successfully marked slots booked:', scheduleResult);
+    } catch (scheduleError) {
+      console.error('Error marking schedule slots as booked:', scheduleError);
+      // Clean up booking if schedule update fails
+      await Booking.findByIdAndDelete(booking._id);
+      return res.status(409).json({
+        success: false,
+        message: 'Failed to reserve time slots in schedule: ' + scheduleError.message,
+        errorCode: 'SCHEDULE_UPDATE_FAILED'
+      });
+    }
+
+    // Populate the response
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('serviceId', 'name price durationMinutes category')
+      .populate('barberId', 'userId specialties averageRating experienceYears profileImageUrl')
+      .populate({
+        path: 'barberId',
+        populate: {
+          path: 'userId',
+          select: 'name email profileImageUrl'
+        }
+      })
+      .populate('confirmedBy', 'name email');
+
+    res.status(201).json({
+      success: true,
+      booking: populatedBooking,
+      message: isAutoAssigned
+        ? `Walk-in booking created successfully with auto-assigned barber: ${populatedBooking.barberId?.userId?.name || 'Unknown'}`
+        : 'Walk-in booking created successfully'
+    });
+
+  } catch (err) {
+    console.error('Error in createWalkInBooking:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      errorCode: 'INTERNAL_ERROR'
+    });
+  }
+};
+
