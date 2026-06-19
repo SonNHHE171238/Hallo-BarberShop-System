@@ -1,5 +1,5 @@
 import React from "react";
-import HomePage from "@/page/HomePage";
+import HomePage from "@/page/home/HomePage";
 
 export const metadata = {
   title: "HALLO BARBER | High-Tech Grooming",

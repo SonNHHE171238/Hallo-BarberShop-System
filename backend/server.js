@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 
-// Load default .env
-require('dotenv').config();
+// Load default .env with override to prevent stuck terminal variables
+require('dotenv').config({ override: true });
 
 // Load local-env/db.env if it exists (overrides default env)
 const localDbEnvPath = path.join(__dirname, 'local-env', 'db.env');

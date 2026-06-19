@@ -9,7 +9,7 @@ const bookingRoute = require('../routes/booking.route');
 const app = express();
 
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:3000,http://localhost:3001,http://localhost:5173').split(','),
     credentials: true
 }));
 app.use(express.json());
