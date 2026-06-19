@@ -1,12 +1,34 @@
 {
   "app": {
     "[project]/src/app/_not-found/page": [
-      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2",
-      "static/media/e8f2fbee2754df70-s.p.1dqa_6e_ad4sj.woff2"
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
+    ],
+    "[project]/src/app/admin/dashboard/page": [
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
+    ],
+    "[project]/src/app/barber/dashboard/page": [
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
+    ],
+    "[project]/src/app/booking/page": [
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
+    ],
+    "[project]/src/app/customer/booking/page": [
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
+    ],
+    "[project]/src/app/customer/dashboard/page": [
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
+    ],
+    "[project]/src/app/login/customer/page": [
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
+    ],
+    "[project]/src/app/login/page": [
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
     ],
     "[project]/src/app/page": [
-      "static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2",
-      "static/media/e8f2fbee2754df70-s.p.1dqa_6e_ad4sj.woff2"
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
+    ],
+    "[project]/src/app/shop/page": [
+      "static/media/2a65768255d6b625-s.p.3u4lli0-axodc.woff2"
     ]
   },
   "appUsingSizeAdjust": true,

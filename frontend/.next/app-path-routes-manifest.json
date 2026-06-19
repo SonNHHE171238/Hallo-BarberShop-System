@@ -1,6 +1,14 @@
 {
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
-  "/favicon.ico/route": "/favicon.ico",
-  "/page": "/"
+  "/admin/dashboard/page": "/admin/dashboard",
+  "/barber/dashboard/page": "/barber/dashboard",
+  "/booking/page": "/booking",
+  "/customer/booking/page": "/customer/booking",
+  "/customer/dashboard/page": "/customer/dashboard",
+  "/icon.png/route": "/icon.png",
+  "/login/customer/page": "/login/customer",
+  "/login/page": "/login",
+  "/page": "/",
+  "/shop/page": "/shop"
 }
