@@ -3,7 +3,7 @@ export const metadata = {
   description: 'Đặt lịch hẹn cắt tóc, cạo râu và chăm sóc da tại HALLO BARBER.',
 };
 
-import BookingPage from '@/page/BookingPage';
+import BookingPage from '@/page/booking/BookingPage';
 
 export default function Page() {
   return <BookingPage />;

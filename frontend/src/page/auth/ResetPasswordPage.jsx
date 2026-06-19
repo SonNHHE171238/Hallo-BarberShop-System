@@ -1,15 +1,22 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { authService } from '@/services/auth.service';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState('idle'); // 'idle', 'loading', 'success'
   const [error, setError] = useState('');
+  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const id = searchParams.get('id');
+  const token = searchParams.get('token');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
@@ -23,12 +30,23 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    if (!id || !token) {
+      setError('Đường dẫn không hợp lệ hoặc đã hết hạn.');
+      return;
+    }
+
     setStatus('loading');
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await authService.resetPassword(id, token, newPassword);
       setStatus('success');
-    }, 1500);
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+    } catch (err) {
+      setError(err.message || 'Khôi phục mật khẩu thất bại.');
+      setStatus('idle');
+    }
   };
 
   return (
@@ -160,7 +178,7 @@ export default function ResetPasswordPage() {
             <div className="mt-10 pt-8 border-t border-outline-variant/30 text-center animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <Link 
                 className="text-label-md text-on-surface-variant hover:text-primary transition-colors duration-300 flex items-center justify-center gap-2" 
-                href="/login/customer"
+                href="/login"
               >
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                 Quay lại trang đăng nhập
@@ -183,5 +201,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-surface-obsidian flex justify-center items-center text-primary font-headline-sm">Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

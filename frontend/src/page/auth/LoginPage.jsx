@@ -2,42 +2,31 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
     setError("");
 
     try {
-      const response = await fetch("http://localhost:3000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error_code || "Đăng nhập thất bại. Vui lòng kiểm tra lại!");
-      }
-
-      console.log("Đăng nhập thành công:", data);
-      alert("Đăng nhập thành công!");
-      
+      await login(email, password);
+      router.push("/");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -58,14 +47,14 @@ export default function LoginPage() {
 
       <main className="relative z-20 w-full max-w-md px-4">
         {/* Brand Header */}
-        <div className="text-center mb-section-gap">
+        <div className="text-center mb-10">
           <h1 className="font-display-lg text-display-lg font-bold tracking-tighter text-on-surface uppercase md:block hidden">
             HALLO BARBER
           </h1>
           <h1 className="font-display-lg-mobile text-display-lg-mobile font-bold tracking-tighter text-on-surface uppercase block md:hidden">
             HALLO BARBER
           </h1>
-          <p className="font-label-sm text-label-sm text-secondary tracking-[0.2em] mt-unit uppercase">
+          <p className="font-label-sm text-label-sm text-secondary tracking-[0.2em] mt-2 uppercase">
             Client Portal
           </p>
         </div>
@@ -106,7 +95,7 @@ export default function LoginPage() {
               rightElement={
                 <Link
                   className="font-label-sm text-label-sm text-primary hover:text-primary-fixed transition-colors"
-                  href="#"
+                  href="/login/forgot-password"
                 >
                   Forgot?
                 </Link>
@@ -114,8 +103,8 @@ export default function LoginPage() {
             />
 
             <div className="pt-4">
-              <Button type="submit" variant="primary" size="full">
-                {loading ? "Processing..." : "Sign In"}
+              <Button type="submit" variant="primary" size="full" disabled={isLoading}>
+                {isLoading ? "Processing..." : "Sign In"}
               </Button>
             </div>
           </form>
@@ -125,7 +114,7 @@ export default function LoginPage() {
               New client?{" "}
               <Link
                 className="text-primary hover:text-primary-fixed transition-colors font-bold underline decoration-primary/30 hover:decoration-primary underline-offset-4"
-                href="#"
+                href="/login/register"
               >
                 Create Account
               </Link>
