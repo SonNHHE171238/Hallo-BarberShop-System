@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const authRoute = require('../routes/authRoute');
 const bookingRoute = require('../routes/booking.route');
+const serviceRoute = require('../routes/service.route');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(cookieParser());
 
 app.use('/api/auth', authRoute);
 app.use('/api/bookings', bookingRoute);
+app.use('/api/services', serviceRoute);
 
 app.get('/', (req, res) => {
     res.send('Hallo BarberShop API is running');

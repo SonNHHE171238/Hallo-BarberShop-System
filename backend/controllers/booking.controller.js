@@ -1356,6 +1356,45 @@ exports.checkAvailability = async (req, res) => {
   }
 };
 
+exports.generateTimeSlots = async (req, res) => {
+  try {
+    const { barberId, date, durationMinutes, fromTime } = req.body;
+
+    if (!barberId || !date || !durationMinutes) {
+      return res.status(400).json({
+        message: 'barberId, date, and durationMinutes are required'
+      });
+    }
+
+    const startDate = new Date(`${date}T00:00:00.000Z`);
+    if (isNaN(startDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format' });
+    }
+
+    const barber = await require('../models/barber.model').findById(barberId);
+    if (!barber) {
+      return res.status(404).json({ message: 'Barber not found' });
+    }
+
+    const timeSlots = await BarberSchedule.generateAvailableStartTimes(barberId, date, Number(durationMinutes), fromTime);
+
+    return res.json({
+      success: true,
+      barberId,
+      date,
+      durationMinutes: Number(durationMinutes),
+      fromTime: fromTime || null,
+      slots: timeSlots.slots,
+      available: timeSlots.available,
+      reason: timeSlots.reason || null,
+      slotDuration: timeSlots.slotDuration || barber.slotDuration || 30
+    });
+  } catch (err) {
+    console.error('Error generating time slots:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Get booking conflicts for admin dashboard
 exports.getBookingConflicts = async (req, res) => {
   try {

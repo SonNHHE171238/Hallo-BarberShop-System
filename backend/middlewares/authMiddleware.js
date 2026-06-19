@@ -25,7 +25,10 @@ exports.authorizeRoles =
   (...roles) =>
   (req, res, next) => {
     if (!req.role || !roles.includes(req.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+      return res.status(403).json({
+        message: 'Permission denied',
+        error_code: 'PERMISSION_DENIED'
+      });
     }
     next();
   };
