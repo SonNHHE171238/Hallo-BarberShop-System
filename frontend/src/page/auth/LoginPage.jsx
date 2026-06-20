@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -21,8 +22,16 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await login(email, password);
-      router.push("/");
+      const user = await login(email, password);
+      if (user?.role === 'admin') {
+        router.push("/admin/dashboard");
+      } else if (user?.role === 'staff') {
+        router.push("/staff/dashboard");
+      } else if (user?.role === 'barber') {
+        router.push("/barber/dashboard");
+      } else {
+        router.push("/");
+      }
     } catch (err) {
       setError(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
@@ -85,13 +94,15 @@ export default function LoginPage() {
             <Input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               label="Password"
               placeholder="••••••••"
               icon="lock"
               required={true}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              rightIcon={showPassword ? "visibility_off" : "visibility"}
+              onRightIconClick={() => setShowPassword(!showPassword)}
               rightElement={
                 <Link
                   className="font-label-sm text-label-sm text-primary hover:text-primary-fixed transition-colors"

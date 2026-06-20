@@ -15,8 +15,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await authService.getMe();
       setUser(data.user);
+      return data.user;
     } catch (error) {
       setUser(null);
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -28,7 +30,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     await authService.login(email, password);
-    await checkAuth(); // Fetch user info after successful login
+    const loggedInUser = await checkAuth(); // Fetch user info after successful login
+    return loggedInUser;
   };
 
   const logout = async () => {
