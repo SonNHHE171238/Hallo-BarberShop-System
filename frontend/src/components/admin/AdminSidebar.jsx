@@ -11,6 +11,7 @@ export default function AdminSidebar() {
     { name: 'Tổng quan', href: '/admin/dashboard', icon: 'dashboard' },
     { name: 'Lịch hẹn', href: '/admin/appointments', icon: 'calendar_month' },
     { name: 'Dịch vụ', href: '/admin/services', icon: 'cut' },
+    { name: 'Barber', href: '/admin/barbers', icon: 'badge' },
     { name: 'Kho hàng', href: '/admin/inventory', icon: 'inventory_2' },
     { name: 'Nhân viên', href: '/admin/staff', icon: 'group' },
     { name: 'Phân tích', href: '/admin/analytics', icon: 'analytics' },
@@ -20,27 +21,28 @@ export default function AdminSidebar() {
     <aside className="w-20 lg:w-64 flex-shrink-0 border-r border-outline-gold bg-surface-container-lowest flex flex-col hidden md:flex z-20 transition-all duration-300">
       {/* Brand Header */}
       <div className="h-20 flex items-center justify-center lg:justify-start px-4 lg:px-6 border-b border-outline-gold">
-        <span className="font-headline-sm text-headline-sm text-primary uppercase tracking-wider truncate">HALLO BARBER</span>
+        <Link href="/" className="font-headline-sm text-headline-sm text-primary uppercase tracking-wider truncate hover:text-primary-focus transition-colors">
+          HALLO BARBER
+        </Link>
       </div>
-      
+
       {/* Navigation Links */}
       <nav className="flex-1 overflow-y-auto py-6 px-3 lg:px-4 flex flex-col gap-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
-          
+
           return (
-            <Link 
+            <Link
               key={item.href}
-              href={item.href} 
+              href={item.href}
               title={item.name}
-              className={`flex items-center justify-center lg:justify-start gap-3 px-3 py-3 lg:py-2.5 rounded transition-colors group ${
-                isActive 
-                  ? 'bg-surface-container-high text-primary border border-outline-gold' 
-                  : 'text-on-surface-variant hover:text-primary hover:bg-surface-container border border-transparent'
-              }`}
+              className={`flex items-center justify-center lg:justify-start gap-3 px-3 py-3 lg:py-2.5 rounded transition-colors group ${isActive
+                ? 'bg-surface-container-high text-primary border border-outline-gold'
+                : 'text-on-surface-variant hover:text-primary hover:bg-surface-container border border-transparent'
+                }`}
             >
-              <span 
-                className={`material-symbols-outlined ${isActive ? 'text-primary' : ''}`} 
+              <span
+                className={`material-symbols-outlined ${isActive ? 'text-primary' : ''}`}
                 style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
               >
                 {item.icon}
@@ -50,7 +52,7 @@ export default function AdminSidebar() {
           );
         })}
       </nav>
-      
+
       {/* User Profile Area */}
       <div className="p-3 lg:p-4 border-t border-outline-gold">
         <div className="flex items-center justify-center lg:justify-start gap-3 p-2 rounded hover:bg-surface-container cursor-pointer transition-colors">
