@@ -1,3 +1,4 @@
 .env
 .next/
 backend/server.js
+backend/implementation_plan.md
