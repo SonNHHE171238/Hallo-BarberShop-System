@@ -3,7 +3,7 @@ export const metadata = {
   description: 'Khám phá các sản phẩm grooming nam giới cao cấp tại HALLO BARBER.',
 };
 
-import ShopPage from '@/page/ShopPage';
+import ShopPage from '@/page/shop/ShopPage';
 
 export default function Page() {
   return <ShopPage />;
