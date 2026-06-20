@@ -8,17 +8,52 @@ import ServiceSelection from "@/components/booking/ServiceSelection";
 import BarberSelection from "@/components/booking/BarberSelection";
 import DateTimeSelection from "@/components/booking/DateTimeSelection";
 import BookingSummarySidebar from "@/components/booking/BookingSummarySidebar";
-import GuestInfoModal from "@/components/booking/GuestInfoModal";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { bookingService } from "@/services/booking.service";
 
 export default function BookingPage() {
   const [selectedService, setSelectedService] = useState(null);
   const [selectedBarber, setSelectedBarber] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const router = useRouter();
 
-  const handleConfirm = () => {
-    setIsModalOpen(true);
+  const handleConfirm = async () => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để đặt lịch.");
+      router.push("/login?redirect=/booking");
+      return;
+    }
+
+    if (!selectedService || !selectedDate || !selectedTime) {
+      alert("Vui lòng chọn đầy đủ Dịch vụ và Thời gian.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Build Payload matching backend expectations
+      const payload = {
+        serviceId: selectedService.id,
+        barberId: selectedBarber ? selectedBarber.id : "auto", // Auto assign if none selected
+        bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
+        date: selectedDate, // YYYY-MM-DD
+        timeSlot: selectedTime, // HH:MM
+        bookingType: "user",
+      };
+
+      await bookingService.createBookingSinglePage(payload);
+      
+      alert("Đặt lịch thành công! Cảm ơn bạn.");
+      router.push("/profile"); // Redirect to profile or a success page
+    } catch (error) {
+      alert("Đặt lịch thất bại: " + (error.message || "Lỗi hệ thống"));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -51,19 +86,13 @@ export default function BookingPage() {
               selectedDate={selectedDate} 
               selectedTime={selectedTime}
               onConfirm={handleConfirm}
+              isLoading={isLoading}
             />
           </div>
         </div>
       </main>
 
       <Footer />
-
-      {isModalOpen && (
-        <GuestInfoModal 
-          onClose={() => setIsModalOpen(false)}
-          bookingData={{ selectedService, selectedBarber, selectedDate, selectedTime }}
-        />
-      )}
     </div>
   );
 }
