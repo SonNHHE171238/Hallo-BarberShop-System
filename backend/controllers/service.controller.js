@@ -1,291 +1,201 @@
-const Service = require('../models/service.model');
-const { validateServiceInput, sanitizeServiceData } = require('../utils/serviceValidation');
+const Service = require("../models/service.model");
 
-/**
- * Create a new service
- * POST /api/services
- */
+// @desc    Create a new service (Admin only)
+// @route   POST /api/services
 exports.createService = async (req, res) => {
   try {
-    // Validate input
-    const validation = validateServiceInput(req.body);
-    if (!validation.isValid) {
-      return res.status(400).json({
-        message: 'Dữ liệu không hợp lệ',
-        errors: validation.errors
-      });
+    const {
+      name,
+      description,
+      steps,
+      suggestedFor,
+      hairTypes,
+      styleCompatibility,
+      expertiseRequired,
+      price,
+      durationMinutes,
+      isActive,
+      category,
+      images,
+    } = req.body;
+
+    if (!name || price === undefined) {
+      return res.status(400).json({ message: "Name and price are required." });
     }
 
-    // Sanitize data
-    const sanitizedData = sanitizeServiceData(req.body);
+    const service = new Service({
+      name,
+      description,
+      steps: steps || [],
+      suggestedFor: suggestedFor || [],
+      hairTypes: hairTypes || [],
+      styleCompatibility: styleCompatibility || [],
+      expertiseRequired: expertiseRequired || [],
+      price,
+      durationMinutes: durationMinutes || 30,
+      isActive: isActive !== undefined ? isActive : true,
+      category: category || "cut",
+      images: images || [],
+    });
 
-    // Create service
-    const newService = new Service(sanitizedData);
-    const savedService = await newService.save();
+    await service.save();
 
     res.status(201).json({
-      message: 'Dịch vụ đã được tạo thành công',
-      data: savedService
+      success: true,
+      message: "Service created successfully.",
+      service,
     });
-  } catch (error) {
-    console.error('Error creating service:', error);
-    res.status(500).json({ message: 'Lỗi tạo dịch vụ', error: error.message });
+  } catch (err) {
+    console.error("Error creating service:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-/**
- * Get all services
- * GET /api/services
- */
+// @desc    Get all services (Public)
+// @route   GET /api/services
 exports.getAllServices = async (req, res) => {
   try {
     const {
-      category,
-      isActive = true,
       search,
-      sortBy = 'name',
-      sortOrder = 'asc',
+      category,
+      isActive,
       page = 1,
-      limit = 20
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
     } = req.query;
 
-    // Build filter
-    const filter = {};
+    const query = {};
 
-    if (isActive !== 'all') {
-      filter.isActive = isActive === 'true' || isActive === true;
+    // 1. Search filter
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
     }
 
-    if (category) {
-      filter.category = category;
+    // 2. Category filter
+    if (category && category !== "all") {
+      query.category = category;
     }
 
-    if (search && search.trim()) {
-      filter.$or = [
-        { name: { $regex: search.trim(), $options: 'i' } },
-        { description: { $regex: search.trim(), $options: 'i' } }
-      ];
+    // 3. Active status filter
+    if (isActive !== undefined && isActive !== "") {
+      query.isActive = isActive === "true";
     }
 
-    // Build sort
-    const sortObj = {};
-    sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    // 4. Pagination config
+    const parsedPage = Math.max(1, parseInt(page));
+    const parsedLimit = Math.max(1, parseInt(limit));
+    const skip = (parsedPage - 1) * parsedLimit;
 
-    // Pagination
-    const skip = (Number(page) - 1) * Number(limit);
+    // 5. Sorting
+    const sort = {};
+    if (sortBy) {
+      sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+    }
 
-    // Query
-    const total = await Service.countDocuments(filter);
-    const services = await Service.find(filter)
-      .sort(sortObj)
+    const services = await Service.find(query)
+      .sort(sort)
       .skip(skip)
-      .limit(Number(limit));
+      .limit(parsedLimit);
+
+    const total = await Service.countDocuments(query);
 
     res.status(200).json({
-      message: 'Danh sách dịch vụ',
-      data: services,
+      success: true,
+      services,
       pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
         total,
-        page: Number(page),
-        limit: Number(limit),
-        pages: Math.ceil(total / Number(limit))
-      }
+        pages: Math.ceil(total / parsedLimit),
+      },
     });
-  } catch (error) {
-    console.error('Error getting services:', error);
-    res.status(500).json({ message: 'Lỗi lấy danh sách dịch vụ', error: error.message });
+  } catch (err) {
+    console.error("Error getting services:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-/**
- * Get service by ID
- * GET /api/services/:id
- */
-exports.getServiceById = async (req, res) => {
+// @desc    Get service detail (Public)
+// @route   GET /api/services/:id
+exports.getServiceDetail = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const service = await Service.findById(id);
-
+    const service = await Service.findById(req.params.id);
     if (!service) {
-      return res.status(404).json({ message: 'Dịch vụ không tồn tại' });
+      return res.status(404).json({ message: "Service not found." });
     }
-
-    res.status(200).json({
-      message: 'Chi tiết dịch vụ',
-      data: service
-    });
-  } catch (error) {
-    console.error('Error getting service:', error);
-    res.status(500).json({ message: 'Lỗi lấy chi tiết dịch vụ', error: error.message });
+    res.status(200).json({ success: true, service });
+  } catch (err) {
+    console.error("Error getting service detail:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-/**
- * Update service
- * PUT /api/services/:id
- */
+// @desc    Update an existing service (Admin only)
+// @route   PUT /api/services/:id
 exports.updateService = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {
+      name,
+      description,
+      steps,
+      suggestedFor,
+      hairTypes,
+      styleCompatibility,
+      expertiseRequired,
+      price,
+      durationMinutes,
+      isActive,
+      category,
+      images,
+    } = req.body;
 
-    // Check if service exists
-    const service = await Service.findById(id);
+    const service = await Service.findById(req.params.id);
     if (!service) {
-      return res.status(404).json({ message: 'Dịch vụ không tồn tại' });
+      return res.status(404).json({ message: "Service not found." });
     }
 
-    // Validate input (only validate fields that are provided)
-    const updateData = {};
-    if (req.body.name !== undefined) updateData.name = req.body.name;
-    if (req.body.description !== undefined) updateData.description = req.body.description;
-    if (req.body.price !== undefined) updateData.price = req.body.price;
-    if (req.body.durationMinutes !== undefined) updateData.durationMinutes = req.body.durationMinutes;
-    if (req.body.category !== undefined) updateData.category = req.body.category;
-    if (req.body.hairTypes !== undefined) updateData.hairTypes = req.body.hairTypes;
-    if (req.body.styleCompatibility !== undefined) updateData.styleCompatibility = req.body.styleCompatibility;
-    if (req.body.expertiseRequired !== undefined) updateData.expertiseRequired = req.body.expertiseRequired;
-    if (req.body.images !== undefined) updateData.images = req.body.images;
-    if (req.body.steps !== undefined) updateData.steps = req.body.steps;
-    if (req.body.suggestedFor !== undefined) updateData.suggestedFor = req.body.suggestedFor;
-    if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
-    if (req.body.popularity !== undefined) updateData.popularity = req.body.popularity;
+    if (name !== undefined) service.name = name;
+    if (description !== undefined) service.description = description;
+    if (steps !== undefined) service.steps = steps;
+    if (suggestedFor !== undefined) service.suggestedFor = suggestedFor;
+    if (hairTypes !== undefined) service.hairTypes = hairTypes;
+    if (styleCompatibility !== undefined) service.styleCompatibility = styleCompatibility;
+    if (expertiseRequired !== undefined) service.expertiseRequired = expertiseRequired;
+    if (price !== undefined) service.price = price;
+    if (durationMinutes !== undefined) service.durationMinutes = durationMinutes;
+    if (isActive !== undefined) service.isActive = isActive;
+    if (category !== undefined) service.category = category;
+    if (images !== undefined) service.images = images;
 
-    const validation = validateServiceInput(updateData);
-    if (!validation.isValid) {
-      return res.status(400).json({
-        message: 'Dữ liệu không hợp lệ',
-        errors: validation.errors
-      });
-    }
-
-    // Sanitize and update
-    const sanitizedData = sanitizeServiceData(updateData);
-    const updatedService = await Service.findByIdAndUpdate(
-      id,
-      sanitizedData,
-      { new: true, runValidators: true }
-    );
+    await service.save();
 
     res.status(200).json({
-      message: 'Dịch vụ đã được cập nhật thành công',
-      data: updatedService
+      success: true,
+      message: "Service updated successfully.",
+      service,
     });
-  } catch (error) {
-    console.error('Error updating service:', error);
-    res.status(500).json({ message: 'Lỗi cập nhật dịch vụ', error: error.message });
+  } catch (err) {
+    console.error("Error updating service:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-/**
- * Delete service
- * DELETE /api/services/:id
- */
+// @desc    Delete a service (Admin only)
+// @route   DELETE /api/services/:id
 exports.deleteService = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const service = await Service.findByIdAndDelete(id);
-
+    const service = await Service.findByIdAndDelete(req.params.id);
     if (!service) {
-      return res.status(404).json({ message: 'Dịch vụ không tồn tại' });
+      return res.status(404).json({ message: "Service not found." });
     }
 
     res.status(200).json({
-      message: 'Dịch vụ đã được xóa thành công',
-      data: service
+      success: true,
+      message: "Service deleted successfully.",
     });
-  } catch (error) {
-    console.error('Error deleting service:', error);
-    res.status(500).json({ message: 'Lỗi xóa dịch vụ', error: error.message });
-  }
-};
-
-/**
- * Get service categories
- * GET /api/services/meta/categories
- */
-exports.getCategories = async (req, res) => {
-  try {
-    const categories = ['cut', 'perm', 'color', 'combo', 'styling', 'treatment'];
-    res.status(200).json({
-      message: 'Danh sách danh mục dịch vụ',
-      data: categories
-    });
-  } catch (error) {
-    console.error('Error getting categories:', error);
-    res.status(500).json({ message: 'Lỗi lấy danh mục', error: error.message });
-  }
-};
-
-/**
- * Bulk update service status (activate/deactivate)
- * PUT /api/services/bulk/status
- */
-exports.bulkUpdateStatus = async (req, res) => {
-  try {
-    const { serviceIds, isActive } = req.body;
-
-    if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
-      return res.status(400).json({ message: 'serviceIds phải là mảng không trống' });
-    }
-
-    if (typeof isActive !== 'boolean') {
-      return res.status(400).json({ message: 'isActive phải là boolean' });
-    }
-
-    const result = await Service.updateMany(
-      { _id: { $in: serviceIds } },
-      { isActive }
-    );
-
-    res.status(200).json({
-      message: 'Trạng thái dịch vụ đã được cập nhật',
-      data: {
-        modifiedCount: result.modifiedCount,
-        matchedCount: result.matchedCount
-      }
-    });
-  } catch (error) {
-    console.error('Error bulk updating services:', error);
-    res.status(500).json({ message: 'Lỗi cập nhật hàng loạt', error: error.message });
-  }
-};
-
-/**
- * Get service statistics
- * GET /api/services/stats
- */
-exports.getServiceStats = async (req, res) => {
-  try {
-    const stats = await Service.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 },
-          avgPrice: { $avg: '$price' },
-          minPrice: { $min: '$price' },
-          maxPrice: { $max: '$price' },
-          avgPopularity: { $avg: '$popularity' }
-        }
-      },
-      { $sort: { count: -1 } }
-    ]);
-
-    const total = await Service.countDocuments();
-    const activeCount = await Service.countDocuments({ isActive: true });
-
-    res.status(200).json({
-      message: 'Thống kê dịch vụ',
-      data: {
-        total,
-        activeCount,
-        inactiveCount: total - activeCount,
-        byCategory: stats
-      }
-    });
-  } catch (error) {
-    console.error('Error getting service stats:', error);
-    res.status(500).json({ message: 'Lỗi lấy thống kê', error: error.message });
+  } catch (err) {
+    console.error("Error deleting service:", err);
+    res.status(500).json({ message: err.message });
   }
 };
