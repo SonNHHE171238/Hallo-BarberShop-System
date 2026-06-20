@@ -15,6 +15,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { name: 'Tổng quan', href: '/admin/dashboard', icon: 'dashboard' },
     { name: 'Lịch hẹn', href: '/admin/appointments', icon: 'calendar_month' },
     { name: 'Dịch vụ', href: '/admin/services', icon: 'cut' },
+    { name: 'Barber', href: '/admin/barbers', icon: 'badge' },
     { name: 'Kho hàng', href: '/admin/inventory', icon: 'inventory_2' },
     { name: 'Nhân viên', href: '/admin/employee', icon: 'group' },
     { name: 'Phân tích', href: '/admin/analytics', icon: 'analytics' },
@@ -42,20 +43,19 @@ export default function AdminSidebar({ isOpen, onClose }) {
       <nav className="flex-1 overflow-y-auto py-6 px-3 lg:px-4 flex flex-col gap-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
-          
+
           return (
-            <Link 
+            <Link
               key={item.href}
-              href={item.href} 
+              href={item.href}
               title={item.name}
-              className={`flex items-center justify-center lg:justify-start gap-3 px-3 py-3 lg:py-2.5 rounded transition-colors group ${
-                isActive 
-                  ? 'bg-surface-container-high text-primary border border-outline-gold' 
-                  : 'text-on-surface-variant hover:text-primary hover:bg-surface-container border border-transparent'
-              }`}
+              className={`flex items-center justify-center lg:justify-start gap-3 px-3 py-3 lg:py-2.5 rounded transition-colors group ${isActive
+                ? 'bg-surface-container-high text-primary border border-outline-gold'
+                : 'text-on-surface-variant hover:text-primary hover:bg-surface-container border border-transparent'
+                }`}
             >
-              <span 
-                className={`material-symbols-outlined ${isActive ? 'text-primary' : ''}`} 
+              <span
+                className={`material-symbols-outlined ${isActive ? 'text-primary' : ''}`}
                 style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
               >
                 {item.icon}
@@ -65,7 +65,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
           );
         })}
       </nav>
-      
+
       {/* User Profile Area */}
       <div className="p-3 lg:p-4 border-t border-outline-gold relative">
         {/* Profile Menu Popup */}

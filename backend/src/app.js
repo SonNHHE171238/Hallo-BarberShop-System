@@ -18,6 +18,7 @@ app.use(cookieParser());
 
 app.use('/api/auth', authRoute);
 app.use('/api/bookings', bookingRoute);
+app.use('/api/admin/barbers', adminBarberRoute);
 
 app.get('/', (req, res) => {
     res.send('Hallo BarberShop API is running');
