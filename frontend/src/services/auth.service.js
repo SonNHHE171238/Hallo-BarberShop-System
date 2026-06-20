@@ -8,6 +8,13 @@ export const authService = {
     });
   },
 
+  loginWithGoogle: async (accessToken) => {
+    return fetchWithAuth('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ accessToken }),
+    });
+  },
+
   register: async (name, email, phone, password) => {
     return fetchWithAuth('/auth/register', {
       method: 'POST',

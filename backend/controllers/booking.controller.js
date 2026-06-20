@@ -18,7 +18,10 @@ const {
   getTimeUntilCompletion,
 } = require("../utils/timeWindowValidation");
 
-exports.createBooking = async (req, res) => {
+const bookingService = require('../services/booking.service');
+const { sendSuccess } = require('../utils/response.helper');
+
+exports.createBooking = async (req, res, next) => {
   try {
     const {
       barberId,
@@ -32,156 +35,33 @@ exports.createBooking = async (req, res) => {
       customerName,
       customerEmail,
       customerPhone,
-      // 👉 CẬP NHẬT 1: Lấy thêm bookingType từ request body
       bookingType,
     } = req.body;
 
-    // 👉 CẬP NHẬT 2: Validate bookingType và xử lý customerId theo loại khách
     if (!["user", "guest"].includes(bookingType)) {
-      return res
-        .status(400)
-        .json({ message: 'bookingType phải là "user" hoặc "guest"' });
+      const error = new Error('bookingType phải là "user" hoặc "guest"');
+      error.statusCode = 400;
+      throw error;
     }
 
     let customerId = null;
     if (bookingType === "user") {
-      customerId = req.userId; // User thì gán ID từ token
+      customerId = req.userId;
     } else if (bookingType === "guest") {
-      // Guest thì ép buộc phải có tên và SĐT
       if (!customerName || !customerPhone) {
-        return res.status(400).json({
-          message: "Khách vãng lai bắt buộc phải cung cấp Tên và Số điện thoại",
-        });
+        const error = new Error("Khách vãng lai bắt buộc phải cung cấp Tên và Số điện thoại");
+        error.statusCode = 400;
+        throw error;
       }
     }
 
-    // 👉 CẬP NHẬT 3: Chuẩn hoá thời gian (Normalize Date) để Unique Index hoạt động chính xác
-    const requestedDateTime = new Date(bookingDate);
-    requestedDateTime.setSeconds(0, 0); // Ép giây và mili-giây về 0 tuyệt đối
-
-    // Validation: Check if booking is at least 30 minutes in the future
-    const now = new Date();
-    const timeDifference = requestedDateTime.getTime() - now.getTime();
-    const minutesDifference = timeDifference / (1000 * 60);
-
-    if (minutesDifference < 30) {
-      return res.status(400).json({
-        message: "Bookings must be made at least 30 minutes in advance",
-      });
-    }
-
-    // 👉 CẬP NHẬT 4: Chỉ check No-show nếu là User (vì guest không có ID để check)
-    if (bookingType === "user" && customerId) {
-      const isBlocked = await NoShow.isCustomerBlocked(customerId, 3);
-      if (isBlocked) {
-        const noShowCount = await NoShow.getCustomerNoShowCount(customerId);
-        return res.status(403).json({
-          message: `Booking blocked due to ${noShowCount} cancellations/no-shows. Please contact support to resolve this issue.`,
-          errorCode: "CUSTOMER_BLOCKED",
-          details: { noShowCount, limit: 3, contactSupport: true },
-        });
-      }
-    }
-
-    // Check if barber is absent on the requested date
-    const isBarberAbsent = await BarberAbsence.isBarberAbsent(
-      barberId,
-      requestedDateTime,
-    );
-    if (isBarberAbsent) {
-      return res
-        .status(400)
-        .json({ message: "Selected barber is not available on this date" });
-    }
-
-    // CRITICAL: Enhanced conflict checking to prevent overlapping bookings
-    const dateStr = requestedDateTime.toISOString().split("T")[0];
-
-    // Get all existing bookings for the barber on this date (Áp dụng cho mọi khách)
-    const barberBookings = await Booking.find({
-      barberId,
-      bookingDate: {
-        $gte: new Date(dateStr + "T00:00:00.000Z"),
-        $lt: new Date(dateStr + "T23:59:59.999Z"),
-      },
-      status: { $in: ["pending", "confirmed"] },
-    }).sort({ bookingDate: 1 });
-
-    const newStart = new Date(requestedDateTime);
-    const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
-
-    // 1. Check for barber conflicts (same barber, overlapping time)
-    const barberConflict = barberBookings.find((booking) => {
-      const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(
-        existingStart.getTime() + booking.durationMinutes * 60000,
-      );
-      return newStart < existingEnd && newEnd > existingStart;
-    });
-
-    if (barberConflict) {
-      return res.status(409).json({
-        message: `Time slot conflict detected. Your ${durationMinutes}-minute service overlaps with an existing booking.`,
-        errorCode: "BOOKING_CONFLICT",
-      });
-    }
-
-    // 👉 CẬP NHẬT 5: Chỉ check trùng lịch cá nhân (Customer conflict) nếu là User
-    if (bookingType === "user" && customerId) {
-      const customerBookings = await Booking.find({
-        customerId,
-        bookingDate: {
-          $gte: new Date(dateStr + "T00:00:00.000Z"),
-          $lt: new Date(dateStr + "T23:59:59.999Z"),
-        },
-        status: { $in: ["pending", "confirmed"] },
-      })
-        .populate("barberId", "userId")
-        .populate({
-          path: "barberId",
-          populate: { path: "userId", select: "name" },
-        });
-
-      const customerConflict = customerBookings.find((booking) => {
-        const existingStart = new Date(booking.bookingDate);
-        const existingEnd = new Date(
-          existingStart.getTime() + booking.durationMinutes * 60000,
-        );
-        return newStart < existingEnd && newEnd > existingStart;
-      });
-
-      if (customerConflict) {
-        return res.status(409).json({
-          message: `You already have a booking during this time period.`,
-          errorCode: "CUSTOMER_DOUBLE_BOOKING",
-        });
-      }
-    }
-
-    // Check barber's daily booking limit
-    const Barber = require("../models/barber.model");
-    const barber = await Barber.findById(barberId);
-    if (!barber) return res.status(404).json({ message: "Barber not found" });
-
-    if (barberBookings.length >= barber.maxDailyBookings) {
-      return res.status(400).json({
-        message: "Barber has reached maximum bookings for this date",
-        errorCode: "DAILY_LIMIT_EXCEEDED",
-      });
-    }
-
-    // Validate service exists
-    const Service = require("../models/service.model");
-    const service = await Service.findById(serviceId);
-    if (!service) return res.status(404).json({ message: "Service not found" });
-
-    // 👉 CẬP NHẬT 6: Thêm bookingType và gán bookingDate = thời gian đã chuẩn hoá
-    const booking = new Booking({
+    const populatedBooking = await bookingService.processCreateBooking({
       bookingType,
       customerId,
       barberId,
       serviceId,
-      bookingDate: requestedDateTime, // Dùng biến đã được setSeconds(0,0)
+      bookingDate,
+      timeSlot,
       durationMinutes,
       note,
       notificationMethods,
@@ -191,70 +71,18 @@ exports.createBooking = async (req, res) => {
       customerPhone,
     });
 
-    await booking.save();
-
-    // Cập nhật thống kê thợ (không làm gián đoạn flow nếu lỗi)
-    try {
-      await Barber.findByIdAndUpdate(barberId, { $inc: { totalBookings: 1 } });
-    } catch (updateError) {
-      console.error("Error updating barber totalBookings:", updateError);
-    }
-
-    // Cập nhật Schedule
-    const BarberSchedule = require("../models/barber-schedule.model");
-    try {
-      await BarberSchedule.markSlotsAsBooked(
-        barberId,
-        dateStr,
-        timeSlot,
-        durationMinutes,
-        booking._id,
-        null,
-      );
-    } catch (scheduleError) {
-      console.error("Error marking schedule slots:", scheduleError);
-      await Booking.findByIdAndDelete(booking._id);
-      return res.status(409).json({
-        message:
-          "Failed to reserve time slots in schedule: " + scheduleError.message,
-        errorCode: "SCHEDULE_UPDATE_FAILED",
-      });
-    }
-
-    // Trả về response
-    const populatedBooking = await Booking.findById(booking._id)
-      .populate("serviceId", "name price durationMinutes")
-      .populate("barberId", "userId specialties averageRating")
-      .populate({
-        path: "barberId",
-        populate: { path: "userId", select: "name email" },
-      });
-
-    res.status(201).json({
-      booking: populatedBooking,
-      message: "Booking created successfully",
-    });
+    return sendSuccess(res, 201, "Booking created successfully", { booking: populatedBooking });
   } catch (err) {
-    console.error("Error in createBooking:", err);
-
-    // 👉 CẬP NHẬT 7: Bắt lỗi Race Condition (2 người đặt cùng mili-giây) từ Unique Index
     if (err.code === 11000) {
-      return res.status(409).json({
-        message:
-          "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!",
-        errorCode: "RACE_CONDITION_CONFLICT",
-      });
+      err.message = "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
+      err.errorCode = "RACE_CONDITION_CONFLICT";
+      err.statusCode = 409;
     }
-
-    res.status(500).json({
-      message: err.message,
-      errorCode: "INTERNAL_ERROR",
-    });
+    next(err);
   }
 };
 
-// Create booking for single-page flow with enhanced auto-assignment
-exports.createBookingSinglePage = async (req, res) => {
+exports.createBookingSinglePage = async (req, res, next) => {
   try {
     const {
       serviceId,
@@ -274,74 +102,21 @@ exports.createBookingSinglePage = async (req, res) => {
     } = req.body;
 
     const customerId = req.userId;
-    // Validate bookingType
     if (!["user", "guest"].includes(bookingType)) {
-      return res.status(400).json({
-        success: false,
-        message: 'bookingType phải là "user" hoặc "guest"',
-        errorCode: "INVALID_BOOKING_TYPE",
-      });
+      const error = new Error('bookingType phải là "user" hoặc "guest"');
+      error.statusCode = 400;
+      throw error;
     }
 
-    // Validate required fields
     if (!serviceId || !bookingDate || !date || !timeSlot) {
-      return res.status(400).json({
-        success: false,
-        message: "Service, booking date, date, and time slot are required",
-        errorCode: "MISSING_REQUIRED_FIELDS",
-      });
+      const error = new Error("Service, booking date, date, and time slot are required");
+      error.statusCode = 400;
+      throw error;
     }
-
-    // Validation: Check if booking is at least 30 minutes in the future
-    const now = new Date();
-    const requestedDateTime = new Date(bookingDate);
-    requestedDateTime.setSeconds(0, 0);
-    const timeDifference = requestedDateTime.getTime() - now.getTime();
-    const minutesDifference = timeDifference / (1000 * 60);
-
-    if (minutesDifference < 30) {
-      return res.status(400).json({
-        success: false,
-        message: "Bookings must be made at least 30 minutes in advance",
-        errorCode: "BOOKING_TOO_SOON",
-      });
-    }
-
-    // Enhanced no-show checking
-    const isBlocked = await NoShow.isCustomerBlocked(customerId, 3);
-    if (isBlocked) {
-      const noShowCount = await NoShow.getCustomerNoShowCount(customerId);
-      return res.status(403).json({
-        success: false,
-        message: `Booking blocked due to ${noShowCount} cancellations/no-shows. Please contact support to resolve this issue.`,
-        errorCode: "CUSTOMER_BLOCKED",
-        details: {
-          noShowCount,
-          limit: 3,
-          contactSupport: true,
-        },
-      });
-    }
-
-    // Validate service exists
-    const Service = require("../models/service.model");
-    const service = await Service.findById(serviceId);
-    if (!service) {
-      return res.status(404).json({
-        success: false,
-        message: "Service not found",
-        errorCode: "SERVICE_NOT_FOUND",
-      });
-    }
-
-    // Use service duration if not provided
-    const finalDurationMinutes =
-      durationMinutes || service.durationMinutes || 30;
 
     let finalBarberId = barberId;
     let isAutoAssigned = false;
 
-    // Handle auto-assignment logic
     const shouldAutoAssign =
       !barberId ||
       barberId === "random" ||
@@ -349,208 +124,44 @@ exports.createBookingSinglePage = async (req, res) => {
       autoAssignBarber ||
       isAutoAssign;
 
-    console.log(`🔍 [BOOKING] Auto-assign check:`, {
-      barberId,
-      autoAssignBarber,
-      isAutoAssign,
-      condition1: !barberId,
-      condition2: barberId === "random",
-      condition3: barberId === "auto",
-      condition4: autoAssignBarber,
-      condition5: isAutoAssign,
-      shouldAutoAssign,
-    });
-
     if (shouldAutoAssign) {
       try {
-        console.log(
-          `🎯 [BOOKING] Auto-assignment triggered for ${date} at ${timeSlot}`,
-        );
-
-        // Use the NEW auto-assignment logic (same as autoAssignBarberForSlot)
         const barberController = require("./barber.controller");
-
-        // Create a mock request/response to call the auto-assign function
-        const mockReq = {
-          body: { date, timeSlot, serviceId },
-        };
+        const mockReq = { body: { date, timeSlot, serviceId } };
 
         let autoAssignResult = null;
         const mockRes = {
-          json: (data) => {
-            autoAssignResult = data;
-            return data;
-          },
+          json: (data) => { autoAssignResult = data; return data; },
           status: (code) => ({
-            json: (data) => {
-              autoAssignResult = { ...data, statusCode: code };
-              return autoAssignResult;
-            },
+            json: (data) => { autoAssignResult = { ...data, statusCode: code }; return autoAssignResult; },
           }),
         };
 
-        // Call the auto-assign function
         await barberController.autoAssignBarberForSlot(mockReq, mockRes);
 
-        if (
-          autoAssignResult &&
-          autoAssignResult.success &&
-          autoAssignResult.assignedBarber
-        ) {
+        if (autoAssignResult && autoAssignResult.success && autoAssignResult.assignedBarber) {
           finalBarberId = autoAssignResult.assignedBarber._id;
           isAutoAssigned = true;
         } else {
-          console.error(
-            "❌ [BOOKING] Auto-assignment failed:",
-            autoAssignResult,
-          );
-          return res.status(404).json({
-            success: false,
-            message:
-              autoAssignResult?.message ||
-              "No barbers available for auto-assignment",
-            errorCode: "AUTO_ASSIGNMENT_FAILED",
-          });
+          const error = new Error(autoAssignResult?.message || "No barbers available for auto-assignment");
+          error.statusCode = 404;
+          throw error;
         }
       } catch (autoAssignError) {
-        console.error("Error in auto-assignment:", autoAssignError);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to auto-assign barber",
-          errorCode: "AUTO_ASSIGNMENT_FAILED",
-        });
+        const error = new Error("Failed to auto-assign barber");
+        error.statusCode = 500;
+        throw error;
       }
     }
 
-    // Validate final barber
-    const Barber = require("../models/barber.model");
-    const finalBarber = await Barber.findById(finalBarberId);
-    if (!finalBarber) {
-      return res.status(404).json({
-        success: false,
-        message: "Barber not found",
-        errorCode: "BARBER_NOT_FOUND",
-      });
-    }
-
-    // Continue with existing validation logic...
-    // (The rest of the validation logic from the original createBooking function)
-
-    // Check if barber is absent on the requested date
-    const isBarberAbsent = await BarberAbsence.isBarberAbsent(
-      finalBarberId,
-      requestedDateTime,
-    );
-    if (isBarberAbsent) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected barber is not available on this date",
-        errorCode: "BARBER_ABSENT",
-      });
-    }
-
-    // Enhanced conflict checking
-    const dateStr = requestedDateTime.toISOString().split("T")[0];
-
-    // Get all existing bookings for the barber on this date
-    const barberBookings = await Booking.find({
-      barberId: finalBarberId,
-      bookingDate: {
-        $gte: new Date(dateStr + "T00:00:00.000Z"),
-        $lt: new Date(dateStr + "T23:59:59.999Z"),
-      },
-      status: { $in: ["pending", "confirmed"] },
-    }).sort({ bookingDate: 1 });
-
-    // Check for customer conflicts across ALL barbers on this date
-    const customerBookings = await Booking.find({
-      customerId,
-      bookingDate: {
-        $gte: new Date(dateStr + "T00:00:00.000Z"),
-        $lt: new Date(dateStr + "T23:59:59.999Z"),
-      },
-      status: { $in: ["pending", "confirmed"] },
-    })
-      .populate("barberId", "userId")
-      .populate({
-        path: "barberId",
-        populate: {
-          path: "userId",
-          select: "name",
-        },
-      });
-
-    // Enhanced conflict detection with proper time overlap checking
-    const newStart = new Date(bookingDate);
-    const newEnd = new Date(newStart.getTime() + finalDurationMinutes * 60000);
-
-    // 1. Check for barber conflicts
-    const barberConflict = barberBookings.find((booking) => {
-      const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(
-        existingStart.getTime() + booking.durationMinutes * 60000,
-      );
-      return newStart < existingEnd && newEnd > existingStart;
-    });
-
-    if (barberConflict) {
-      return res.status(409).json({
-        success: false,
-        message: `Time slot conflict detected. The selected time overlaps with an existing booking.`,
-        errorCode: "BOOKING_CONFLICT",
-        conflictDetails: {
-          conflictType: "BARBER_CONFLICT",
-          conflictingTime: barberConflict.bookingDate,
-          conflictingDuration: barberConflict.durationMinutes,
-          requestedTime: bookingDate,
-          requestedDuration: finalDurationMinutes,
-        },
-      });
-    }
-
-    // 2. Check for customer conflicts
-    const customerConflict = customerBookings.find((booking) => {
-      const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(
-        existingStart.getTime() + booking.durationMinutes * 60000,
-      );
-      return newStart < existingEnd && newEnd > existingStart;
-    });
-
-    if (customerConflict) {
-      const conflictingBarberName =
-        customerConflict.barberId?.userId?.name || "Unknown Barber";
-      return res.status(409).json({
-        success: false,
-        message: `You already have a booking during this time period with ${conflictingBarberName}.`,
-        errorCode: "CUSTOMER_DOUBLE_BOOKING",
-        conflictDetails: {
-          conflictType: "CUSTOMER_CONFLICT",
-          conflictingBookingId: customerConflict._id,
-          conflictingBarber: conflictingBarberName,
-          conflictingTime: customerConflict.bookingDate,
-          conflictingDuration: customerConflict.durationMinutes,
-        },
-      });
-    }
-
-    // Check barber's daily booking limit
-    if (barberBookings.length >= finalBarber.maxDailyBookings) {
-      return res.status(400).json({
-        success: false,
-        message: "Barber has reached maximum bookings for this date",
-        errorCode: "DAILY_LIMIT_EXCEEDED",
-      });
-    }
-
-    // Create the booking
-    const booking = new Booking({
+    const populatedBooking = await bookingService.processCreateBooking({
       bookingType,
       customerId,
       barberId: finalBarberId,
       serviceId,
-      bookingDate: requestedDateTime,
-      durationMinutes: finalDurationMinutes,
+      bookingDate,
+      timeSlot,
+      durationMinutes,
       note,
       notificationMethods,
       autoAssignedBarber: isAutoAssigned,
@@ -559,70 +170,18 @@ exports.createBookingSinglePage = async (req, res) => {
       customerPhone,
     });
 
-    await booking.save();
-
-    // CRITICAL: Update barber's totalBookings count
-    try {
-      await Barber.findByIdAndUpdate(finalBarberId, {
-        $inc: { totalBookings: 1 },
-      });
-      console.log(`✅ Updated totalBookings for barber ${finalBarberId}`);
-    } catch (updateError) {
-      console.error("Error updating barber totalBookings:", updateError);
-      // Don't fail the booking creation if this update fails, but log it
-    }
-
-    // Mark time slots as booked in the barber schedule
-    const BarberSchedule = require("../models/barber-schedule.model");
-    const startTimeStr = timeSlot; // Use explicitly provided timeSlot
-
-    try {
-      const scheduleResult = await BarberSchedule.markSlotsAsBooked(
-        finalBarberId,
-        dateStr,
-        startTimeStr,
-        finalDurationMinutes,
-        booking._id,
-        null,
-      );
-    } catch (scheduleError) {
-      console.error("Error marking schedule slots as booked:", scheduleError);
-      await Booking.findByIdAndDelete(booking._id);
-      return res.status(409).json({
-        success: false,
-        message:
-          "Failed to reserve time slots in schedule: " + scheduleError.message,
-        errorCode: "SCHEDULE_UPDATE_FAILED",
-      });
-    }
-
-    // Populate the response with enhanced information for single-page flow
-    const populatedBooking = await Booking.findById(booking._id)
-      .populate("serviceId", "name price durationMinutes category")
-      .populate(
-        "barberId",
-        "userId specialties averageRating experienceYears profileImageUrl",
-      )
-      .populate({
-        path: "barberId",
-        populate: {
-          path: "userId",
-          select: "name email profileImageUrl",
-        },
-      });
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       booking: populatedBooking,
       bookingDetails: {
-        bookingId: booking._id,
+        bookingId: populatedBooking._id,
         service: {
-          name: service.name,
-          price: service.price,
-          duration: finalDurationMinutes,
+          name: populatedBooking.serviceId?.name,
+          price: populatedBooking.serviceId?.price,
+          duration: populatedBooking.durationMinutes,
         },
         barber: {
-          name: finalBarber.userId?.name || "Unknown",
+          name: populatedBooking.barberId?.userId?.name || "Unknown",
           isAutoAssigned: isAutoAssigned,
         },
         schedule: {
@@ -637,16 +196,16 @@ exports.createBookingSinglePage = async (req, res) => {
         },
       },
       message: isAutoAssigned
-        ? `Booking created successfully with auto-assigned barber: ${finalBarber.userId?.name || "Unknown"}`
+        ? `Booking created successfully with auto-assigned barber: ${populatedBooking.barberId?.userId?.name || "Unknown"}`
         : "Booking created successfully",
     });
   } catch (err) {
-    console.error("Error in createBookingSinglePage:", err);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-      errorCode: "INTERNAL_ERROR",
-    });
+    if (err.code === 11000) {
+      err.message = "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
+      err.errorCode = "RACE_CONDITION_CONFLICT";
+      err.statusCode = 409;
+    }
+    next(err);
   }
 };
 

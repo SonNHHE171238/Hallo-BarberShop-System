@@ -22,7 +22,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className="font-body-md bg-surface text-on-surface antialiased overflow-x-hidden selection:bg-primary selection:text-on-primary">
+      <body className={`${playfairDisplay.variable} font-body-md bg-surface text-on-surface antialiased overflow-x-hidden selection:bg-primary selection:text-on-primary`}>
         <Providers>
           {children}
         </Providers>

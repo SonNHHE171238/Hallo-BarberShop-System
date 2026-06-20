@@ -3,8 +3,9 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const authRoute = require('../routes/authRoute');
+const authRoute = require('../routes/auth.route');
 const bookingRoute = require('../routes/booking.route');
+const errorHandler = require('../middlewares/error.middleware');
 
 const app = express();
 
@@ -21,5 +22,8 @@ app.use('/api/bookings', bookingRoute);
 app.get('/', (req, res) => {
     res.send('Hallo BarberShop API is running');
 });
+
+// Error Handling Middleware (phải nằm cuối cùng)
+app.use(errorHandler);
 
 module.exports = app;

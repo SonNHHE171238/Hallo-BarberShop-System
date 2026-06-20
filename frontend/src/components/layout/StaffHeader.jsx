@@ -3,10 +3,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function StaffHeader() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const navItems = [
     { name: "Tổng quan", href: "/staff/dashboard" },
@@ -50,12 +53,51 @@ export default function StaffHeader() {
           <button className="hidden md:block p-2 hover:bg-surface-bright/10 rounded-full transition-transform active:scale-95 text-on-surface-variant hover:text-primary">
             <span className="material-symbols-outlined">settings</span>
           </button>
-          <div className="hidden md:block w-10 h-10 rounded-full overflow-hidden border border-primary ml-2 cursor-pointer hover:scale-105 transition-transform">
-            <img
-              alt="Staff Profile"
-              className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAkQs76rDjQ2LE41uM-qb9odZtBg7udAZ4a4QyikekUPIShJfmPlixGx_NPXgPUSbqd9q91rq46uvvVKsBoKNOehotl0ILJeJhq7pikEn7y_WdXggivkRYcX1EdPHXkPj3VQwMzMegSjYpXJgGRNOxAtXdIHxjKgPZ8y9sCuAKBwBPzoUAIwvPVjekkW3gKp0WwBa9gWJW3SlEpoJOHGULwDVJC4MpWn1BnJ4i0lXeqyg0Jb65r4gNvZJNktCZXQ5KYsdmCEkgjL75"
-            />
+          <div className="relative hidden md:block ml-2">
+            <div 
+              className="w-10 h-10 rounded-full overflow-hidden border border-primary cursor-pointer hover:scale-105 transition-transform"
+              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+            >
+              <img
+                alt="Staff Profile"
+                className="w-full h-full object-cover"
+                src={user?.avatarUrl || "https://lh3.googleusercontent.com/aida-public/AB6AXuAAkQs76rDjQ2LE41uM-qb9odZtBg7udAZ4a4QyikekUPIShJfmPlixGx_NPXgPUSbqd9q91rq46uvvVKsBoKNOehotl0ILJeJhq7pikEn7y_WdXggivkRYcX1EdPHXkPj3VQwMzMegSjYpXJgGRNOxAtXdIHxjKgPZ8y9sCuAKBwBPzoUAIwvPVjekkW3gKp0WwBa9gWJW3SlEpoJOHGULwDVJC4MpWn1BnJ4i0lXeqyg0Jb65r4gNvZJNktCZXQ5KYsdmCEkgjL75"}
+              />
+            </div>
+            
+            {/* Profile Menu Dropdown */}
+            {isProfileMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsProfileMenuOpen(false)}
+                ></div>
+                <div className="absolute right-0 mt-2 w-48 bg-surface-container-high border border-outline-variant shadow-lg rounded py-1 z-50 origin-top-right animate-in fade-in zoom-in duration-200">
+                  <div className="px-4 py-2 border-b border-outline-variant/30 mb-1">
+                    <p className="text-sm font-bold text-on-surface truncate">{user?.name || "Staff Member"}</p>
+                    <p className="text-xs text-on-surface-variant truncate">{user?.email || "staff@hallobarber.com"}</p>
+                  </div>
+                  <Link 
+                    href="/staff/profile" 
+                    onClick={() => setIsProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-on-surface hover:bg-surface-variant transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">person</span>
+                    Thông tin
+                  </Link>
+                  <button 
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error/10 transition-colors text-left"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                    Đăng xuất
+                  </button>
+                </div>
+              </>
+            )}
           </div>
           {/* Mobile Menu Toggle */}
           <button 
@@ -94,12 +136,29 @@ export default function StaffHeader() {
               <img
                 alt="Staff Profile"
                 className="w-full h-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAkQs76rDjQ2LE41uM-qb9odZtBg7udAZ4a4QyikekUPIShJfmPlixGx_NPXgPUSbqd9q91rq46uvvVKsBoKNOehotl0ILJeJhq7pikEn7y_WdXggivkRYcX1EdPHXkPj3VQwMzMegSjYpXJgGRNOxAtXdIHxjKgPZ8y9sCuAKBwBPzoUAIwvPVjekkW3gKp0WwBa9gWJW3SlEpoJOHGULwDVJC4MpWn1BnJ4i0lXeqyg0Jb65r4gNvZJNktCZXQ5KYsdmCEkgjL75"
+                src={user?.avatarUrl || "https://lh3.googleusercontent.com/aida-public/AB6AXuAAkQs76rDjQ2LE41uM-qb9odZtBg7udAZ4a4QyikekUPIShJfmPlixGx_NPXgPUSbqd9q91rq46uvvVKsBoKNOehotl0ILJeJhq7pikEn7y_WdXggivkRYcX1EdPHXkPj3VQwMzMegSjYpXJgGRNOxAtXdIHxjKgPZ8y9sCuAKBwBPzoUAIwvPVjekkW3gKp0WwBa9gWJW3SlEpoJOHGULwDVJC4MpWn1BnJ4i0lXeqyg0Jb65r4gNvZJNktCZXQ5KYsdmCEkgjL75"}
               />
             </div>
             <div>
-              <p className="text-sm font-bold text-on-surface">Staff Member</p>
-              <button className="text-xs text-error hover:underline mt-1">Đăng xuất</button>
+              <p className="text-sm font-bold text-on-surface truncate max-w-[200px]">{user?.name || "Staff Member"}</p>
+              <div className="flex gap-3 mt-1">
+                <Link 
+                  href="/staff/profile" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Thông tin
+                </Link>
+                <button 
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-xs text-error hover:underline"
+                >
+                  Đăng xuất
+                </button>
+              </div>
             </div>
           </div>
         </div>

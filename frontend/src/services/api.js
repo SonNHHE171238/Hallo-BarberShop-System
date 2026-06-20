@@ -30,8 +30,13 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
     data = {};
   }
 
-  if (!response.ok) {
+  if (!response.ok || data.success === false) {
     throw new Error(data.message || data.error_code || 'Có lỗi xảy ra khi kết nối máy chủ.');
+  }
+
+  // Tự động bóc vỏ data nếu Backend trả về định dạng { success, message, data }
+  if (data && data.success && data.data !== undefined) {
+    return data.data;
   }
 
   return data;

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/booking.controller');
-const { authenticate, authorizeRoles } = require('../middlewares/authMiddleware');
+const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 const {
   applyRoleBasedBookingFilter,
   requireAdminForBookingConfirmation,
