@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import BarberHeaderControls from "@/components/barber/BarberHeaderControls";
 import BarberStatsGrid from "@/components/barber/BarberStatsGrid";
 import ScheduleTimeline from "@/components/barber/ScheduleTimeline";
 
 export default function BarberDashboardPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-on-surface font-body-md">
       {/* TopNavBar Component */}
@@ -38,6 +40,27 @@ export default function BarberDashboardPage() {
                 <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary">person</span>
               </div>
             </div>
+            {/* Mobile Menu Toggle */}
+            <button 
+              className="md:hidden text-on-surface-variant p-2 rounded-md hover:bg-surface-variant transition-colors"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        <div 
+          className={`md:hidden absolute top-full left-0 w-full bg-surface-container-lowest border-b border-outline-gold shadow-lg transition-all duration-300 overflow-hidden ${
+            isMobileMenuOpen ? "max-h-screen opacity-100 py-4" : "max-h-0 opacity-0 py-0"
+          }`}
+        >
+          <div className="flex flex-col px-4 space-y-4">
+            <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="#">Dịch Vụ</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="#">Cửa Hàng</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="#">Đặt Lịch</Link>
+            <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="#">Bộ Sưu Tập</Link>
           </div>
         </div>
       </header>

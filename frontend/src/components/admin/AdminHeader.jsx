@@ -1,10 +1,10 @@
 import React from 'react';
 
-export default function AdminHeader() {
+export default function AdminHeader({ onMenuClick }) {
   return (
     <header className="h-20 flex-shrink-0 border-b border-outline-gold bg-surface-obsidian/90 backdrop-blur-md sticky top-0 z-10 px-4 md:px-8 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <button className="md:hidden text-on-surface-variant hover:text-primary">
+        <button className="md:hidden text-on-surface-variant hover:text-primary" onClick={onMenuClick}>
           <span className="material-symbols-outlined">menu</span>
         </button>
         <h1 className="font-headline-md text-headline-sm md:text-headline-md text-on-surface uppercase tracking-[0.05em] truncate">Bảng Điều Khiển - Admin</h1>

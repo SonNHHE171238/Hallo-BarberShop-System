@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export default function StaffHeader() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
     { name: "Tổng quan", href: "/staff/dashboard" },
@@ -43,18 +44,63 @@ export default function StaffHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
-          <button className="p-2 hover:bg-surface-bright/10 rounded-full transition-transform active:scale-95 text-on-surface-variant hover:text-primary">
+          <button className="hidden md:block p-2 hover:bg-surface-bright/10 rounded-full transition-transform active:scale-95 text-on-surface-variant hover:text-primary">
             <span className="material-symbols-outlined">notifications</span>
           </button>
-          <button className="p-2 hover:bg-surface-bright/10 rounded-full transition-transform active:scale-95 text-on-surface-variant hover:text-primary">
+          <button className="hidden md:block p-2 hover:bg-surface-bright/10 rounded-full transition-transform active:scale-95 text-on-surface-variant hover:text-primary">
             <span className="material-symbols-outlined">settings</span>
           </button>
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-primary ml-2 cursor-pointer hover:scale-105 transition-transform">
+          <div className="hidden md:block w-10 h-10 rounded-full overflow-hidden border border-primary ml-2 cursor-pointer hover:scale-105 transition-transform">
             <img
               alt="Staff Profile"
               className="w-full h-full object-cover"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAkQs76rDjQ2LE41uM-qb9odZtBg7udAZ4a4QyikekUPIShJfmPlixGx_NPXgPUSbqd9q91rq46uvvVKsBoKNOehotl0ILJeJhq7pikEn7y_WdXggivkRYcX1EdPHXkPj3VQwMzMegSjYpXJgGRNOxAtXdIHxjKgPZ8y9sCuAKBwBPzoUAIwvPVjekkW3gKp0WwBa9gWJW3SlEpoJOHGULwDVJC4MpWn1BnJ4i0lXeqyg0Jb65r4gNvZJNktCZXQ5KYsdmCEkgjL75"
             />
+          </div>
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="lg:hidden p-2 rounded-md hover:bg-surface-variant transition-colors text-on-surface"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      <div 
+        className={`lg:hidden absolute top-full left-0 w-full bg-surface-container-high border-b border-outline-variant shadow-lg transition-all duration-300 overflow-hidden ${
+          isMobileMenuOpen ? "max-h-screen opacity-100 py-4" : "max-h-0 opacity-0 py-0"
+        }`}
+      >
+        <div className="flex flex-col px-4 space-y-4">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`font-label-md py-2 border-b border-outline-variant/30 ${
+                  isActive ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"
+                }`}
+              >
+                {item.name}
+              </Link>
+            );
+          })}
+          <div className="pt-2 flex items-center gap-4 border-t border-outline-variant">
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-primary">
+              <img
+                alt="Staff Profile"
+                className="w-full h-full object-cover"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAkQs76rDjQ2LE41uM-qb9odZtBg7udAZ4a4QyikekUPIShJfmPlixGx_NPXgPUSbqd9q91rq46uvvVKsBoKNOehotl0ILJeJhq7pikEn7y_WdXggivkRYcX1EdPHXkPj3VQwMzMegSjYpXJgGRNOxAtXdIHxjKgPZ8y9sCuAKBwBPzoUAIwvPVjekkW3gKp0WwBa9gWJW3SlEpoJOHGULwDVJC4MpWn1BnJ4i0lXeqyg0Jb65r4gNvZJNktCZXQ5KYsdmCEkgjL75"
+              />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-on-surface">Staff Member</p>
+              <button className="text-xs text-error hover:underline mt-1">Đăng xuất</button>
+            </div>
           </div>
         </div>
       </div>
