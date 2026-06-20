@@ -3,3 +3,5 @@
 backend/local-env/db.env
 backend/server.js
 
+.md
+backend/implementation_plan.md
