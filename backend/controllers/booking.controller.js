@@ -270,9 +270,18 @@ exports.createBookingSinglePage = async (req, res) => {
       customerPhone,
       autoAssignBarber = false, // Flag to indicate auto-assignment preference
       isAutoAssign = false, // Alternative parameter name from frontend
+      bookingType,
     } = req.body;
 
     const customerId = req.userId;
+    // Validate bookingType
+    if (!["user", "guest"].includes(bookingType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'bookingType phải là "user" hoặc "guest"',
+        errorCode: "INVALID_BOOKING_TYPE",
+      });
+    }
 
     // Validate required fields
     if (!serviceId || !bookingDate || !date || !timeSlot) {
@@ -286,6 +295,7 @@ exports.createBookingSinglePage = async (req, res) => {
     // Validation: Check if booking is at least 30 minutes in the future
     const now = new Date();
     const requestedDateTime = new Date(bookingDate);
+    requestedDateTime.setSeconds(0, 0);
     const timeDifference = requestedDateTime.getTime() - now.getTime();
     const minutesDifference = timeDifference / (1000 * 60);
 
@@ -535,10 +545,11 @@ exports.createBookingSinglePage = async (req, res) => {
 
     // Create the booking
     const booking = new Booking({
+      bookingType,
       customerId,
       barberId: finalBarberId,
       serviceId,
-      bookingDate: new Date(bookingDate),
+      bookingDate: requestedDateTime,
       durationMinutes: finalDurationMinutes,
       note,
       notificationMethods,
@@ -898,11 +909,9 @@ exports.assignBarberToBooking = async (req, res) => {
 
     // Only admins can assign barbers
     if (req.role !== "admin") {
-      return res
-        .status(403)
-        .json({
-          message: "Only administrators can assign barbers to bookings",
-        });
+      return res.status(403).json({
+        message: "Only administrators can assign barbers to bookings",
+      });
     }
 
     // Validate input
@@ -2565,7 +2574,7 @@ exports.getWalkInAvailableSlots = async (req, res) => {
     if (!finalServiceId || !date) {
       return res.status(400).json({
         success: false,
-        message: 'Service ID and date are required'
+        message: "Service ID and date are required",
       });
     }
 
@@ -2574,29 +2583,32 @@ exports.getWalkInAvailableSlots = async (req, res) => {
     if (!dateRegex.test(date)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid date format. Use YYYY-MM-DD'
+        message: "Invalid date format. Use YYYY-MM-DD",
       });
     }
 
     // Get service to determine duration
-    const Service = require('../models/service.model');
+    const Service = require("../models/service.model");
     const service = await Service.findById(finalServiceId);
     if (!service) {
       return res.status(404).json({
         success: false,
-        message: 'Service not found'
+        message: "Service not found",
       });
     }
 
     const durationMinutes = service.durationMinutes || 30;
 
     // Get all active barbers
-    const Barber = require('../models/barber.model');
-    const barbers = await Barber.find({ isAvailable: true }).populate('userId', 'name profileImageUrl');
+    const Barber = require("../models/barber.model");
+    const barbers = await Barber.find({ isAvailable: true }).populate(
+      "userId",
+      "name profileImageUrl",
+    );
 
     // Get current date time to filter out past slots if date is today
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = now.toISOString().split("T")[0];
     const isToday = date === todayStr;
 
     // Determine current hour and minute if it is today
@@ -2617,7 +2629,10 @@ exports.getWalkInAvailableSlots = async (req, res) => {
       await BarberSchedule.getAvailableSlots(barber._id, date);
 
       // Get barber schedule
-      const schedule = await BarberSchedule.findOne({ barberId: barber._id, date });
+      const schedule = await BarberSchedule.findOne({
+        barberId: barber._id,
+        date,
+      });
       if (!schedule || schedule.isOffDay) {
         continue;
       }
@@ -2627,7 +2642,7 @@ exports.getWalkInAvailableSlots = async (req, res) => {
 
       // Map schedule slots by time for O(1) lookup
       const slotsByTime = {};
-      schedule.availableSlots.forEach(slot => {
+      schedule.availableSlots.forEach((slot) => {
         slotsByTime[slot.time] = slot;
       });
 
@@ -2640,19 +2655,22 @@ exports.getWalkInAvailableSlots = async (req, res) => {
 
         // If today, skip slots in the past
         if (isToday) {
-          const [slotHour, slotMin] = slot.time.split(':').map(Number);
-          if (slotHour < currentHour || (slotHour === currentHour && slotMin < currentMinute)) {
+          const [slotHour, slotMin] = slot.time.split(":").map(Number);
+          if (
+            slotHour < currentHour ||
+            (slotHour === currentHour && slotMin < currentMinute)
+          ) {
             continue;
           }
         }
 
         // Check if there are enough consecutive slots starting from this slot
         let isConsecutiveAvailable = true;
-        let tempHour = parseInt(slot.time.split(':')[0]);
-        let tempMinute = parseInt(slot.time.split(':')[1]);
+        let tempHour = parseInt(slot.time.split(":")[0]);
+        let tempMinute = parseInt(slot.time.split(":")[1]);
 
         for (let i = 0; i < slotsNeeded; i++) {
-          const checkTimeStr = `${tempHour.toString().padStart(2, '0')}:${tempMinute.toString().padStart(2, '0')}`;
+          const checkTimeStr = `${tempHour.toString().padStart(2, "0")}:${tempMinute.toString().padStart(2, "0")}`;
           const currentSlot = slotsByTime[checkTimeStr];
 
           if (!currentSlot || currentSlot.isBooked || currentSlot.isBlocked) {
@@ -2674,11 +2692,12 @@ exports.getWalkInAvailableSlots = async (req, res) => {
           }
           availableSlotsMap[slot.time].push({
             _id: barber._id,
-            name: barber.userId?.name || 'Unknown',
-            profileImageUrl: barber.profileImageUrl || barber.userId?.profileImageUrl,
+            name: barber.userId?.name || "Unknown",
+            profileImageUrl:
+              barber.profileImageUrl || barber.userId?.profileImageUrl,
             specialties: barber.specialties || [],
             experienceYears: barber.experienceYears || 0,
-            averageRating: barber.averageRating || 0
+            averageRating: barber.averageRating || 0,
           });
         }
       }
@@ -2687,9 +2706,9 @@ exports.getWalkInAvailableSlots = async (req, res) => {
     // Convert map to sorted array
     const sortedSlots = Object.keys(availableSlotsMap)
       .sort((a, b) => a.localeCompare(b))
-      .map(time => ({
+      .map((time) => ({
         timeSlot: time,
-        barbers: availableSlotsMap[time]
+        barbers: availableSlotsMap[time],
       }));
 
     res.json({
@@ -2698,17 +2717,16 @@ exports.getWalkInAvailableSlots = async (req, res) => {
         _id: service._id,
         name: service.name,
         durationMinutes,
-        price: service.price
+        price: service.price,
       },
       date,
-      availableSlots: sortedSlots
+      availableSlots: sortedSlots,
     });
-
   } catch (err) {
-    console.error('Error in getWalkInAvailableSlots:', err);
+    console.error("Error in getWalkInAvailableSlots:", err);
     res.status(500).json({
       success: false,
-      message: err.message || 'Internal server error'
+      message: err.message || "Internal server error",
     });
   }
 };
@@ -2727,46 +2745,59 @@ exports.createWalkInBooking = async (req, res) => {
       customerEmail,
       note,
       notificationMethods,
-      durationMinutes
+      durationMinutes,
     } = req.body;
 
     // Validate required fields
-    if (!serviceId || !bookingDate || !date || !timeSlot || !customerName || !customerPhone) {
+    if (
+      !serviceId ||
+      !bookingDate ||
+      !date ||
+      !timeSlot ||
+      !customerName ||
+      !customerPhone
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Service, booking date, date, time slot, customer name, and phone are required',
-        errorCode: 'MISSING_REQUIRED_FIELDS'
+        message:
+          "Service, booking date, date, time slot, customer name, and phone are required",
+        errorCode: "MISSING_REQUIRED_FIELDS",
       });
     }
 
     // Validate service exists
-    const Service = require('../models/service.model');
+    const Service = require("../models/service.model");
     const service = await Service.findById(serviceId);
     if (!service) {
       return res.status(404).json({
         success: false,
-        message: 'Service not found',
-        errorCode: 'SERVICE_NOT_FOUND'
+        message: "Service not found",
+        errorCode: "SERVICE_NOT_FOUND",
       });
     }
 
-    const finalDurationMinutes = durationMinutes || service.durationMinutes || 30;
+    const finalDurationMinutes =
+      durationMinutes || service.durationMinutes || 30;
     const requestedDateTime = new Date(bookingDate);
+    requestedDateTime.setSeconds(0, 0);
 
     let finalBarberId = barberId;
     let isAutoAssigned = false;
 
     // Handle auto-assignment logic
-    const shouldAutoAssign = !barberId || barberId === 'random' || barberId === 'auto';
+    const shouldAutoAssign =
+      !barberId || barberId === "random" || barberId === "auto";
 
     if (shouldAutoAssign) {
       try {
-        console.log(`🎯 [WALK-IN BOOKING] Auto-assignment triggered for ${date} at ${timeSlot}`);
-        const barberController = require('./barber.controller');
+        console.log(
+          `🎯 [WALK-IN BOOKING] Auto-assignment triggered for ${date} at ${timeSlot}`,
+        );
+        const barberController = require("./barber.controller");
 
         // Create a mock request/response to call the auto-assign function
         const mockReq = {
-          body: { date, timeSlot, serviceId }
+          body: { date, timeSlot, serviceId },
         };
 
         let autoAssignResult = null;
@@ -2779,88 +2810,102 @@ exports.createWalkInBooking = async (req, res) => {
             json: (data) => {
               autoAssignResult = { ...data, statusCode: code };
               return autoAssignResult;
-            }
-          })
+            },
+          }),
         };
 
         await barberController.autoAssignBarberForSlot(mockReq, mockRes);
 
-        if (autoAssignResult && autoAssignResult.success && autoAssignResult.assignedBarber) {
+        if (
+          autoAssignResult &&
+          autoAssignResult.success &&
+          autoAssignResult.assignedBarber
+        ) {
           finalBarberId = autoAssignResult.assignedBarber._id;
           isAutoAssigned = true;
         } else {
-          console.error('❌ [WALK-IN BOOKING] Auto-assignment failed:', autoAssignResult);
+          console.error(
+            "❌ [WALK-IN BOOKING] Auto-assignment failed:",
+            autoAssignResult,
+          );
           return res.status(404).json({
             success: false,
-            message: autoAssignResult?.message || 'No barbers available for auto-assignment',
-            errorCode: 'AUTO_ASSIGNMENT_FAILED'
+            message:
+              autoAssignResult?.message ||
+              "No barbers available for auto-assignment",
+            errorCode: "AUTO_ASSIGNMENT_FAILED",
           });
         }
       } catch (autoAssignError) {
-        console.error('Error in auto-assignment:', autoAssignError);
+        console.error("Error in auto-assignment:", autoAssignError);
         return res.status(500).json({
           success: false,
-          message: 'Failed to auto-assign barber',
-          errorCode: 'AUTO_ASSIGNMENT_FAILED'
+          message: "Failed to auto-assign barber",
+          errorCode: "AUTO_ASSIGNMENT_FAILED",
         });
       }
     }
 
     // Validate barber exists
-    const Barber = require('../models/barber.model');
+    const Barber = require("../models/barber.model");
     const finalBarber = await Barber.findById(finalBarberId);
     if (!finalBarber) {
       return res.status(404).json({
         success: false,
-        message: 'Barber not found',
-        errorCode: 'BARBER_NOT_FOUND'
+        message: "Barber not found",
+        errorCode: "BARBER_NOT_FOUND",
       });
     }
 
     // Check if barber is absent on the requested date
-    const isBarberAbsent = await BarberAbsence.isBarberAbsent(finalBarberId, requestedDateTime);
+    const isBarberAbsent = await BarberAbsence.isBarberAbsent(
+      finalBarberId,
+      requestedDateTime,
+    );
     if (isBarberAbsent) {
       return res.status(400).json({
         success: false,
-        message: 'Selected barber is not available on this date',
-        errorCode: 'BARBER_ABSENT'
+        message: "Selected barber is not available on this date",
+        errorCode: "BARBER_ABSENT",
       });
     }
 
-    const dateStr = requestedDateTime.toISOString().split('T')[0];
+    const dateStr = requestedDateTime.toISOString().split("T")[0];
 
     // Get all existing bookings for the barber on this date
     const barberBookings = await Booking.find({
       barberId: finalBarberId,
       bookingDate: {
-        $gte: new Date(dateStr + 'T00:00:00.000Z'),
-        $lt: new Date(dateStr + 'T23:59:59.999Z')
+        $gte: new Date(dateStr + "T00:00:00.000Z"),
+        $lt: new Date(dateStr + "T23:59:59.999Z"),
       },
-      status: { $in: ['pending', 'confirmed'] }
+      status: { $in: ["pending", "confirmed"] },
     }).sort({ bookingDate: 1 });
 
     const newStart = new Date(bookingDate);
     const newEnd = new Date(newStart.getTime() + finalDurationMinutes * 60000);
 
     // Check for barber conflicts (same barber, overlapping time)
-    const barberConflict = barberBookings.find(booking => {
+    const barberConflict = barberBookings.find((booking) => {
       const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(existingStart.getTime() + booking.durationMinutes * 60000);
-      return (newStart < existingEnd && newEnd > existingStart);
+      const existingEnd = new Date(
+        existingStart.getTime() + booking.durationMinutes * 60000,
+      );
+      return newStart < existingEnd && newEnd > existingStart;
     });
 
     if (barberConflict) {
       return res.status(409).json({
         success: false,
         message: `Time slot conflict detected. The selected time overlaps with an existing booking.`,
-        errorCode: 'BOOKING_CONFLICT',
+        errorCode: "BOOKING_CONFLICT",
         conflictDetails: {
-          conflictType: 'BARBER_CONFLICT',
+          conflictType: "BARBER_CONFLICT",
           conflictingTime: barberConflict.bookingDate,
           conflictingDuration: barberConflict.durationMinutes,
           requestedTime: bookingDate,
-          requestedDuration: finalDurationMinutes
-        }
+          requestedDuration: finalDurationMinutes,
+        },
       });
     }
 
@@ -2868,18 +2913,18 @@ exports.createWalkInBooking = async (req, res) => {
     if (barberBookings.length >= finalBarber.maxDailyBookings) {
       return res.status(400).json({
         success: false,
-        message: 'Barber has reached maximum bookings for this date',
-        errorCode: 'DAILY_LIMIT_EXCEEDED'
+        message: "Barber has reached maximum bookings for this date",
+        errorCode: "DAILY_LIMIT_EXCEEDED",
       });
     }
 
     // Create the booking
     const booking = new Booking({
-      bookingType: 'guest',
+      bookingType: "guest",
       customerId: null,
       barberId: finalBarberId,
       serviceId,
-      bookingDate: new Date(bookingDate),
+      bookingDate: requestedDateTime,
       durationMinutes: finalDurationMinutes,
       note,
       notificationMethods,
@@ -2887,9 +2932,9 @@ exports.createWalkInBooking = async (req, res) => {
       customerName,
       customerEmail,
       customerPhone,
-      status: 'confirmed',
+      status: "confirmed",
       confirmedAt: new Date(),
-      confirmedBy: req.userId
+      confirmedBy: req.userId,
     });
 
     await booking.save();
@@ -2897,11 +2942,11 @@ exports.createWalkInBooking = async (req, res) => {
     // Update barber's totalBookings count
     try {
       await Barber.findByIdAndUpdate(finalBarberId, {
-        $inc: { totalBookings: 1 }
+        $inc: { totalBookings: 1 },
       });
       console.log(`✅ Updated totalBookings for barber ${finalBarberId}`);
     } catch (updateError) {
-      console.error('Error updating barber totalBookings:', updateError);
+      console.error("Error updating barber totalBookings:", updateError);
     }
 
     // Mark time slots as booked in the barber schedule
@@ -2914,48 +2959,50 @@ exports.createWalkInBooking = async (req, res) => {
         startTimeStr,
         finalDurationMinutes,
         booking._id,
-        null
+        null,
       );
-      console.log('Successfully marked slots booked:', scheduleResult);
+      console.log("Successfully marked slots booked:", scheduleResult);
     } catch (scheduleError) {
-      console.error('Error marking schedule slots as booked:', scheduleError);
+      console.error("Error marking schedule slots as booked:", scheduleError);
       // Clean up booking if schedule update fails
       await Booking.findByIdAndDelete(booking._id);
       return res.status(409).json({
         success: false,
-        message: 'Failed to reserve time slots in schedule: ' + scheduleError.message,
-        errorCode: 'SCHEDULE_UPDATE_FAILED'
+        message:
+          "Failed to reserve time slots in schedule: " + scheduleError.message,
+        errorCode: "SCHEDULE_UPDATE_FAILED",
       });
     }
 
     // Populate the response
     const populatedBooking = await Booking.findById(booking._id)
-      .populate('serviceId', 'name price durationMinutes category')
-      .populate('barberId', 'userId specialties averageRating experienceYears profileImageUrl')
+      .populate("serviceId", "name price durationMinutes category")
+      .populate(
+        "barberId",
+        "userId specialties averageRating experienceYears profileImageUrl",
+      )
       .populate({
-        path: 'barberId',
+        path: "barberId",
         populate: {
-          path: 'userId',
-          select: 'name email profileImageUrl'
-        }
+          path: "userId",
+          select: "name email profileImageUrl",
+        },
       })
-      .populate('confirmedBy', 'name email');
+      .populate("confirmedBy", "name email");
 
     res.status(201).json({
       success: true,
       booking: populatedBooking,
       message: isAutoAssigned
-        ? `Walk-in booking created successfully with auto-assigned barber: ${populatedBooking.barberId?.userId?.name || 'Unknown'}`
-        : 'Walk-in booking created successfully'
+        ? `Walk-in booking created successfully with auto-assigned barber: ${populatedBooking.barberId?.userId?.name || "Unknown"}`
+        : "Walk-in booking created successfully",
     });
-
   } catch (err) {
-    console.error('Error in createWalkInBooking:', err);
+    console.error("Error in createWalkInBooking:", err);
     res.status(500).json({
       success: false,
       message: err.message,
-      errorCode: 'INTERNAL_ERROR'
+      errorCode: "INTERNAL_ERROR",
     });
   }
 };
-
