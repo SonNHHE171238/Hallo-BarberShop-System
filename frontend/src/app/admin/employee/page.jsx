@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { adminBarberService } from "@/services/adminBarber.service";
 
 // MOCK DATA
 const mockStaff = [
@@ -93,8 +94,49 @@ const mockStaff = [
 
 export default function AdminStaffPage() {
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'barber', 'staff'
+  const [staffList, setStaffList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredStaff = mockStaff.filter(staff => {
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const response = await adminBarberService.getAllAdminBarbers();
+        
+        // Chuyển đổi dữ liệu từ API sang format của bảng
+        const apiBarbers = response.barbers.map(item => {
+          const b = item.barber;
+          const u = item.user;
+          return {
+            id: b._id.substring(b._id.length - 6).toUpperCase(), // Lấy 6 ký tự cuối làm ID cho gọn
+            name: u.name,
+            role: b.experienceYears >= 5 ? "Master Barber" : "Junior Barber",
+            type: "barber",
+            avatar: u.avatarUrl,
+            rating: 5.0, // Mock vì chưa có tính năng Review
+            reviews: 0,
+            revenue: "-",
+            status: u.status,
+            shift: `${b.preferredWorkingHours?.start || '08:00'} - ${b.preferredWorkingHours?.end || '20:00'}`,
+            email: u.email,
+            phone: u.phone || "Chưa cập nhật"
+          };
+        });
+
+        // Ghép chung với Staff Khác (Lễ tân, Thợ phụ) từ MockData (vì backend chưa có API cho Staff Khác)
+        const otherStaff = mockStaff.filter(s => s.type === "staff");
+        setStaffList([...apiBarbers, ...otherStaff]);
+      } catch (error) {
+        console.error("Lỗi khi tải danh sách nhân viên:", error);
+        setStaffList(mockStaff); // Fallback về toàn bộ mockData nếu lỗi
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStaff();
+  }, []);
+
+  const filteredStaff = staffList.filter(staff => {
     if (activeTab === "all") return true;
     return staff.type === activeTab;
   });
@@ -199,7 +241,16 @@ export default function AdminStaffPage() {
                 </tr>
               </thead>
               <tbody className="text-sm font-medium">
-                {filteredStaff.map((staff) => (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-8 text-outline">Đang tải dữ liệu nhân sự...</td>
+                  </tr>
+                ) : filteredStaff.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-8 text-outline">Không có nhân sự nào.</td>
+                  </tr>
+                ) : (
+                  filteredStaff.map((staff) => (
                   <tr key={staff.id} className="border-b border-outline-variant/30 hover:bg-white/5 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
@@ -270,7 +321,8 @@ export default function AdminStaffPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -36,6 +36,7 @@ const userSchema = new mongoose.Schema(
     otpExpires: { type: Date },
     resetTokenHash: { type: String, select: false },
     resetTokenExpires: { type: Date },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
