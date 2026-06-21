@@ -65,9 +65,10 @@ Nhiệm vụ của bạn là tư vấn nhiệt tình, thân thiện, trả lời
 Hỏi người dùng cần tư vấn gì, ví dụ: cắt tóc, uốn, nhuộm, v.v.
 Mỗi khi người dùng hỏi về dịch vụ (giá cả, loại dịch vụ) hoặc thợ cắt tóc, HÃY SỬ DỤNG FUNCTION CALLING (getShopServices hoặc getAvailableBarbers) ĐỂ LẤY THÔNG TIN TỪ DATABASE.
 Không được tự bịa ra dịch vụ hay tên thợ cắt tóc, luôn luôn dựa vào dữ liệu thực tế từ database.
-Giá tiền trả về từ database là VNĐ, hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
+Giá tiền trả về từ database là VNĐ, hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).
+Khi nhận được hình ảnh của khách hàng, hãy phân tích hình dáng khuôn mặt và chất tóc, sau đó đề xuất các kiểu tóc nam phù hợp nhất có thể cắt tại BarberShop.`;
 
-exports.handleChat = async (message, history) => {
+exports.handleChat = async (message, history, imageBase64, mimeType) => {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not configured in backend.");
   }
@@ -88,7 +89,20 @@ exports.handleChat = async (message, history) => {
     history: formattedHistory,
   });
 
-  let response = await chatSession.sendMessage(message);
+  let messageContent = [];
+  if (message) {
+    messageContent.push(message);
+  }
+  if (imageBase64 && mimeType) {
+    messageContent.push({
+      inlineData: {
+        data: imageBase64,
+        mimeType: mimeType
+      }
+    });
+  }
+
+  let response = await chatSession.sendMessage(messageContent);
 
   // Xử lý Function Calling nếu có
   let functionCalls = response.response.functionCalls();

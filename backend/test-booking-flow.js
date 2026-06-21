@@ -62,7 +62,7 @@ async function runTest() {
     });
 
     // Generate JWT Token for customer
-    // Note: authMiddleware checks `process.env.JWT_SECRET`, so we must ensure it matches
+    // Note: auth.middleware checks `process.env.JWT_SECRET`, so we must ensure it matches
     process.env.JWT_SECRET = JWT_SECRET;
     const token = jwt.sign(
       { userId: customer._id, role: "customer" },
