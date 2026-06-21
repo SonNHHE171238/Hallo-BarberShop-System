@@ -148,21 +148,24 @@ exports.loginUser = async (email, password) => {
   const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
 
   if (!user || user.status !== 'active') {
-    const error = new Error('Invalid email or password');
+    const error = new Error('Email hoặc mật khẩu không chính xác.');
     error.statusCode = 401;
+    error.isOperational = true;
     throw error;
   }
 
   if (!user.isVerified) {
-    const error = new Error('Please verify your email before logging in');
+    const error = new Error('Vui lòng xác thực email của bạn trước khi đăng nhập.');
     error.statusCode = 403;
+    error.isOperational = true;
     throw error;
   }
 
   const match = await user.comparePassword(password);
   if (!match) {
-    const error = new Error('Invalid email or password');
+    const error = new Error('Email hoặc mật khẩu không chính xác.');
     error.statusCode = 401;
+    error.isOperational = true;
     throw error;
   }
 

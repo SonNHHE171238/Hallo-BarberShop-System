@@ -1,6 +1,8 @@
 import React from 'react';
 
-export default function DashboardHero() {
+export default function DashboardHero({ userName }) {
+  const firstName = userName ? userName.split(' ').pop() : 'Bạn';
+  
   return (
     <section className="relative h-[500px] rounded-lg overflow-hidden flex flex-col justify-center items-center text-center p-8 border border-outline-variant">
       <img 
@@ -12,11 +14,11 @@ export default function DashboardHero() {
       <div className="relative z-10 max-w-3xl flex flex-col gap-6">
         <div className="flex justify-center mb-4">
           <div className="w-12 h-[1px] bg-primary-container self-center"></div>
-          <span className="mx-4 font-label-md text-primary-container tracking-[0.3em] uppercase text-xs">Từ năm 1924</span>
+          <span className="mx-4 font-label-md text-primary-container tracking-[0.3em] uppercase text-xs">Từ năm 2020</span>
           <div className="w-12 h-[1px] bg-primary-container self-center"></div>
         </div>
-        <h1 className="font-headline-lg text-4xl md:text-5xl lg:text-6xl text-on-surface serif-title font-bold">Chào mừng trở lại, Arthur.</h1>
-        <p className="font-body-lg text-xl text-on-surface-variant max-w-xl mx-auto italic">Thánh đường dành cho việc chăm sóc tỉ mỉ và nghề thủ công di sản đang chờ đón bạn.</p>
+        <h1 className="font-headline-lg text-4xl md:text-5xl lg:text-6xl text-on-surface serif-title font-bold">Chào mừng trở lại, {firstName}.</h1>
+        <p className="font-body-lg text-xl text-on-surface-variant max-w-xl mx-auto italic">Tạo dấu ấn qua mái tóc của bạn.</p>
         <div className="mt-4">
           <div className="h-10 w-[1px] bg-primary-container/40 mx-auto"></div>
         </div>

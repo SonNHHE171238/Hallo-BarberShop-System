@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { useGoogleLogin } from '@react-oauth/google';
 
@@ -23,7 +25,7 @@ export default function LoginPage() {
     } else if (user?.role === 'barber') {
       router.push("/barber/dashboard");
     } else {
-      router.push("/");
+      router.push("/customer/dashboard");
     }
   };
 
@@ -61,18 +63,12 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="bg-surface-obsidian text-on-surface font-body-md min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Nút thoát / Quay lại trang chủ */}
-      <Link
-        href="/"
-        className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors z-30 group"
-      >
-        <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
-        <span className="font-label-md text-label-md uppercase tracking-wider">Quay lại trang chủ</span>
-      </Link>
+    <div className="bg-surface-obsidian text-on-surface font-body-md min-h-screen flex flex-col relative overflow-hidden">
+      {/* Top Navigation */}
+      <Navbar />
 
       {/* Login Card */}
-      <main className="relative z-20 w-full max-w-lg px-4">
+      <main className="relative z-20 w-full max-w-lg px-4 flex-grow flex flex-col justify-center mx-auto mt-24 mb-16">
         {/* Brand Header */}
         <div className="text-center mb-12">
           <h1 className="font-display-lg text-4xl md:text-5xl font-bold tracking-tighter text-on-surface uppercase mb-2">HALLO BARBER</h1>
@@ -166,17 +162,21 @@ export default function LoginPage() {
           <div className="mt-10 text-center">
             <p className="font-body-md text-sm text-on-surface-variant">
               Khách hàng mới?{" "}
-              <Link className="text-primary hover:text-primary-fixed transition-colors font-bold underline decoration-primary/30 hover:decoration-primary underline-offset-8" href="/login/register">
+              <Link className="text-primary hover:text-primary-fixed transition-colors font-bold underline decoration-primary/30 hover:decoration-primary underline-offset-8" href="/register">
                 Tạo Tài Khoản
               </Link>
             </p>
           </div>
         </div>
       </main>
-
       {/* Background Accents */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] -z-10"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 blur-[120px] -z-10"></div>
+
+      {/* Footer */}
+      <div className="w-full relative z-10 mt-auto">
+        <Footer />
+      </div>
     </div>
   );
 }

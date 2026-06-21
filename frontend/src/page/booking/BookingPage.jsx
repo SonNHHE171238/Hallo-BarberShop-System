@@ -71,23 +71,31 @@ export default function BookingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-12">
             <div className="lg:col-span-8 space-y-12">
               <ServiceSelection selectedService={selectedService} setSelectedService={setSelectedService} />
-              <BarberSelection selectedBarber={selectedBarber} setSelectedBarber={setSelectedBarber} />
-              <DateTimeSelection 
-                selectedDate={selectedDate} 
-                setSelectedDate={setSelectedDate} 
-                selectedTime={selectedTime} 
-                setSelectedTime={setSelectedTime} 
-              />
+              
+              {selectedService && (
+                <BarberSelection selectedBarber={selectedBarber} setSelectedBarber={setSelectedBarber} />
+              )}
+              
+              {selectedService && selectedBarber && (
+                <DateTimeSelection 
+                  selectedDate={selectedDate} 
+                  setSelectedDate={setSelectedDate} 
+                  selectedTime={selectedTime} 
+                  setSelectedTime={setSelectedTime} 
+                />
+              )}
             </div>
 
-            <BookingSummarySidebar 
-              selectedService={selectedService} 
-              selectedBarber={selectedBarber} 
-              selectedDate={selectedDate} 
-              selectedTime={selectedTime}
-              onConfirm={handleConfirm}
-              isLoading={isLoading}
-            />
+            {selectedService && selectedBarber && selectedDate && selectedTime && (
+              <BookingSummarySidebar 
+                selectedService={selectedService} 
+                selectedBarber={selectedBarber} 
+                selectedDate={selectedDate} 
+                selectedTime={selectedTime}
+                onConfirm={handleConfirm}
+                isLoading={isLoading}
+              />
+            )}
           </div>
         </div>
       </main>

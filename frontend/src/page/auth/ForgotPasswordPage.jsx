@@ -2,6 +2,9 @@
 
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import { authService } from '@/services/auth.service';
 
 export default function ForgotPasswordPage() {
@@ -39,22 +42,19 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center justify-center p-4 selection:bg-primary selection:text-on-primary font-body-md antialiased relative overflow-hidden">
-      {/* Background Decoration */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,#4e463933,transparent_60%)]"></div>
-      </div>
+    <div className="min-h-screen bg-surface-obsidian text-on-surface flex flex-col relative overflow-hidden font-body-md">
+      {/* Top Navigation */}
+      <Navbar />
 
-      {/* Brand Header */}
-      <header className="z-10 mb-12 text-center">
-        <h1 className="text-display-lg md:text-display-lg text-[48px] leading-tight font-bold tracking-tighter text-primary uppercase">
-          HALLO BARBER
-        </h1>
-        <div className="h-px w-12 bg-primary mx-auto mt-2"></div>
-      </header>
+      <main className="relative z-10 w-full max-w-lg px-4 xl:max-w-xl flex-grow flex flex-col justify-center mx-auto mt-24 mb-16">
+        {/* Brand Header */}
+        <header className="z-10 mb-12 text-center">
+          <h1 className="text-display-lg md:text-display-lg text-[48px] leading-tight font-bold tracking-tighter text-primary uppercase">
+            HALLO BARBER
+          </h1>
+          <div className="h-px w-12 bg-primary mx-auto mt-2"></div>
+        </header>
 
-      {/* Main Card */}
-      <main className="z-10 w-full max-w-md" style={{ perspective: '1000px' }}>
         <div 
           ref={cardRef}
           onMouseMove={handleMouseMove}
@@ -152,11 +152,9 @@ export default function ForgotPasswordPage() {
       </main>
 
       {/* Footer Identity */}
-      <footer className="z-10 mt-12 text-center text-on-surface-variant">
-        <p className="text-label-md opacity-60 uppercase tracking-widest">
-          © 2024 HALLO BARBER. Precision in every cut.
-        </p>
-      </footer>
+      <div className="w-full relative z-10 mt-auto">
+        <Footer />
+      </div>
 
       {/* Decorative Side Images for Large Screens */}
       <div className="hidden xl:block fixed right-0 top-0 h-full w-1/4 z-0 pointer-events-none opacity-40">

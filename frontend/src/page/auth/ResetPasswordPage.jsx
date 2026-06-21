@@ -3,6 +3,8 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import { authService } from '@/services/auth.service';
 
 function ResetPasswordForm() {
@@ -50,8 +52,9 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="bg-surface-obsidian text-on-surface font-body-md overflow-x-hidden selection:bg-primary selection:text-on-primary">
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4">
+    <div className="bg-surface-obsidian text-on-surface font-body-md flex flex-col min-h-screen overflow-x-hidden selection:bg-primary selection:text-on-primary">
+      <Navbar />
+      <div className="relative flex-grow flex items-center justify-center overflow-hidden p-4 mt-24 mb-16">
         
         {/* Background Gradients */}
         <div className="absolute inset-0 z-0 pointer-events-none">
@@ -188,17 +191,14 @@ function ResetPasswordForm() {
             {/* Glowing orb bottom right */}
             <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-[64px] pointer-events-none"></div>
           </div>
-
-          <footer className="mt-8 text-center animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-            <p className="text-label-md font-playfair text-outline italic">
-              Precision in every cut. Excellence in every detail.
-            </p>
-          </footer>
         </main>
 
         <div className="fixed bottom-0 left-0 w-full h-[300px] pointer-events-none opacity-20">
           <div className="absolute bottom-0 w-full h-full bg-gradient-to-t from-primary/20 to-transparent"></div>
         </div>
+      </div>
+      <div className="w-full relative z-10 mt-auto">
+        <Footer />
       </div>
     </div>
   );

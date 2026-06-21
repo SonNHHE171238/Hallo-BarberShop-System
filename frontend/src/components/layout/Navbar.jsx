@@ -119,9 +119,9 @@ export default function Navbar() {
                   <p className="text-body-md font-bold text-on-surface truncate">{user.name}</p>
                   <p className="text-label-sm text-on-surface-variant truncate">{user.email}</p>
                 </div>
-                <Link href={user.role === 'customer' ? '/profile' : `/${user.role}/dashboard`} className="flex items-center gap-2 px-4 py-3 text-body-md text-on-surface hover:bg-surface-variant transition-colors">
-                  <span className="material-symbols-outlined text-sm">account_circle</span>
-                  Trang cá nhân
+                <Link href={`/${user.role}/dashboard`} className="flex items-center gap-2 px-4 py-3 text-body-md text-on-surface hover:bg-surface-variant transition-colors">
+                  <span className="material-symbols-outlined text-sm">dashboard</span>
+                  Bảng điều khiển
                 </Link>
                 <button onClick={logout} className="flex items-center gap-2 w-full text-left px-4 py-3 text-body-md text-error hover:bg-error/10 transition-colors border-t border-outline-variant">
                   <span className="material-symbols-outlined text-sm">logout</span>
@@ -183,8 +183,8 @@ export default function Navbar() {
                     <p className="text-on-surface-variant text-label-sm">{user.email}</p>
                   </div>
                 </div>
-                <Link href={user.role === 'customer' ? '/profile' : `/${user.role}/dashboard`} onClick={() => setIsMobileMenuOpen(false)} className="font-label-md text-label-md text-on-surface hover:text-primary uppercase tracking-wider flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">account_circle</span> Trang cá nhân
+                <Link href={`/${user.role}/dashboard`} onClick={() => setIsMobileMenuOpen(false)} className="font-label-md text-label-md text-on-surface hover:text-primary uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">dashboard</span> Bảng điều khiển
                 </Link>
                 <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="font-label-md text-label-md text-error hover:text-error/80 uppercase tracking-wider flex items-center gap-2 text-left">
                   <span className="material-symbols-outlined text-sm">logout</span> Đăng xuất

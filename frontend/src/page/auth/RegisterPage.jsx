@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { authService } from '@/services/auth.service';
 import { useAuth } from '@/context/AuthContext';
@@ -37,9 +38,6 @@ export default function RegisterPage() {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       return setError('Mật khẩu xác nhận không khớp');
-    }
-    if (!termsAccepted) {
-      return setError('Bạn phải đồng ý với Điều khoản & Điều kiện');
     }
 
     setIsLoading(true);
@@ -88,25 +86,7 @@ export default function RegisterPage() {
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center justify-center relative overflow-hidden selection:bg-primary selection:text-on-primary">
       {/* Top Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md border-b border-outline-variant shadow-md">
-        <div className="flex justify-between items-center px-6 md:px-margin-desktop py-4 max-w-container-max mx-auto">
-          <Link href="/" className="text-headline-sm md:text-headline-md font-bold tracking-tighter text-primary uppercase">
-            HALLO BARBER
-          </Link>
-          <div className="hidden md:flex gap-8">
-            <Link className="text-body-md font-body-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="/">Trang chủ</Link>
-            <Link className="text-body-md font-body-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="/services">Dịch vụ</Link>
-            <Link className="text-body-md font-body-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="/team">Đội ngũ</Link>
-            <Link className="text-body-md font-body-md text-on-surface-variant hover:text-primary transition-colors duration-200" href="/about">Về chúng tôi</Link>
-          </div>
-          <Link 
-            href="/customer/booking" 
-            className="bg-primary text-on-primary px-6 py-2 font-body-md font-bold hover:scale-95 transition-transform duration-150 rounded"
-          >
-            Đặt Lịch Hẹn
-          </Link>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Main Registration Container */}
       <main 
@@ -122,7 +102,7 @@ export default function RegisterPage() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-[2px] bg-primary"></div>
           
           <header className="text-center mb-10">
-            <h1 className="text-headline-lg font-headline-lg text-primary tracking-tight mb-2 uppercase">Gia Nhập Cộng Đồng</h1>
+            <h1 className="text-headline-lg font-headline-lg text-primary tracking-tight mb-2 uppercase">Đăng Ký Thành Viên</h1>
             <p className="text-body-md font-body-md text-on-surface-variant">Trải nghiệm phong cách quý ông thượng lưu cùng HALLO BARBER.</p>
           </header>
 
@@ -218,9 +198,9 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Terms */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex items-center">
+            {/* Promotion Checkbox */}
+            <div className="flex items-start gap-3">
+              <div className="relative flex items-center pt-1">
                 <input 
                   className="w-5 h-5 rounded bg-surface-container border-outline-gold text-primary focus:ring-primary/50 focus:ring-offset-0 transition-all cursor-pointer" 
                   id="terms" 
@@ -229,8 +209,8 @@ export default function RegisterPage() {
                   onChange={(e) => setTermsAccepted(e.target.checked)}
                 />
               </div>
-              <label className="text-label-md font-body-md text-on-surface-variant cursor-pointer select-none" htmlFor="terms">
-                Tôi đồng ý với <Link className="text-primary hover:underline transition-all underline-offset-4" href="#">Điều khoản & Điều kiện</Link>
+              <label className="text-label-md font-body-md text-on-surface-variant cursor-pointer select-none leading-relaxed" htmlFor="terms">
+                Tôi đồng ý với việc nhận email về các chương trình khuyến mãi từ bên cửa hàng.
               </label>
             </div>
 
