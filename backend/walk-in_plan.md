@@ -22,7 +22,6 @@ Xây dựng luồng API đặt lịch Walk-in (khách tại quầy) cho nhân vi
 | API kiểm tra slots trống (cho walk-in) | Tận dụng `getAvailableSlots` đã có, thêm route |
 | Notification (bước 4 trong plan) | ⏭️ Chưa có hạ tầng notification — **bỏ qua bước này, để phase sau** |
 | `POST /customers` tạo khách mới | ⏭️ Không cần model Customer riêng — thông tin guest lưu trực tiếp trong Booking |
-
 ---
 
 ## Luồng kỹ thuật Walk-in (theo plan hình ảnh)

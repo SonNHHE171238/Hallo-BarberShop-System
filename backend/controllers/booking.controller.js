@@ -188,6 +188,7 @@ exports.createBooking = async (req, res) => {
 
     // Create the booking
     const booking = new Booking({
+      bookingType: req.body.bookingType || 'user',
       customerId,
       barberId,
       serviceId,
@@ -523,6 +524,7 @@ exports.createBookingSinglePage = async (req, res) => {
 
     // Create the booking
     const booking = new Booking({
+      bookingType: req.body.bookingType || 'user',
       customerId,
       barberId: finalBarberId,
       serviceId,
@@ -2021,6 +2023,7 @@ exports.createBookingFromBot = async (payload, userId) => {
 
     // Tạo booking
     const booking = new Booking({
+      bookingType: 'user',
       customerId: userId,
       barberId,
       serviceId,
