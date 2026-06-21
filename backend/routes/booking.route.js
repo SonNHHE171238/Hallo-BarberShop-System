@@ -51,6 +51,7 @@ router.get('/:bookingId/completion-eligibility', authenticate, bookingController
 router.post('/check-availability', authenticate, bookingController.checkAvailability);
 router.get('/conflicts', authenticate, bookingController.getBookingConflicts);
 
-
+// Route for dynamic time slots
+router.post('/available-slots', bookingController.getAvailableSlots);
 
 module.exports = router;

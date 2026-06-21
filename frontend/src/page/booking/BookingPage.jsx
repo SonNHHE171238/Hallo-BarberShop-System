@@ -37,18 +37,32 @@ export default function BookingPage() {
     try {
       // Build Payload matching backend expectations
       const payload = {
-        serviceId: selectedService.id,
-        barberId: selectedBarber ? selectedBarber.id : "auto", // Auto assign if none selected
+        serviceId: selectedService._id || selectedService.id,
+        barberId: selectedBarber ? (selectedBarber._id || selectedBarber.id) : "auto", // Auto assign if none selected
         bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
         date: selectedDate, // YYYY-MM-DD
         timeSlot: selectedTime, // HH:MM
         bookingType: "user",
+        durationMinutes: selectedService.durationMinutes || selectedService.duration || 30,
       };
 
-      await bookingService.createBookingSinglePage(payload);
+      const response = await bookingService.createBookingSinglePage(payload);
       
-      alert("Đặt lịch thành công! Cảm ơn bạn.");
-      router.push("/profile"); // Redirect to profile or a success page
+      // Redirect to the success page with details
+      const dateObj = new Date(selectedDate);
+      const dateStr = dateObj.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      
+      const queryParams = new URLSearchParams({
+        id: (response.booking && response.booking._id) || response._id || "NEW",
+        service: selectedService.name,
+        price: selectedService.price,
+        barber: selectedBarber ? selectedBarber.name : "Barber Auto",
+        title: selectedBarber ? (selectedBarber.title || "Stylist") : "Stylist",
+        time: selectedTime,
+        dateStr: dateStr
+      });
+      
+      router.push(`/booking/success?${queryParams.toString()}`);
     } catch (error) {
       alert("Đặt lịch thất bại: " + (error.message || "Lỗi hệ thống"));
     } finally {
@@ -78,6 +92,8 @@ export default function BookingPage() {
               
               {selectedService && selectedBarber && (
                 <DateTimeSelection 
+                  selectedBarber={selectedBarber}
+                  selectedService={selectedService}
                   selectedDate={selectedDate} 
                   setSelectedDate={setSelectedDate} 
                   selectedTime={selectedTime} 

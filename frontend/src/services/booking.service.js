@@ -34,6 +34,32 @@ export const bookingService = {
   },
 
   /**
+   * Lấy danh sách thợ cắt (Barbers)
+   */
+  getBarbers: async () => {
+    try {
+      const response = await fetchWithAuth('/barbers', { method: 'GET' });
+      return response;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách thợ cắt:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Lấy danh sách ngày nghỉ của Barber
+   */
+  getBarberAbsences: async (barberId) => {
+    try {
+      const response = await fetchWithAuth(`/barbers/${barberId}/absences`, { method: 'GET' });
+      return response;
+    } catch (error) {
+      console.error('Lỗi khi lấy lịch nghỉ của thợ cắt:', error);
+      return { absentDates: [] }; // Fallback
+    }
+  },
+
+  /**
    * Lấy danh sách khung giờ trống
    */
   checkAvailability: async (data) => {
@@ -47,5 +73,23 @@ export const bookingService = {
       console.error('Lỗi khi check availability:', error);
       throw error;
     }
-  }
+  },
+
+  /**
+   * Lấy danh sách khung giờ động (đã lọc overlap)
+   */
+  getAvailableSlots: async (data) => {
+    try {
+      // Dùng fetch thay vì fetchWithAuth nếu route này là public.
+      // Nhưng theo backend route, tôi để trống authenticate middleware nên nó là public.
+      const response = await fetchWithAuth('/bookings/available-slots', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      return response;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách khung giờ:', error);
+      throw error;
+    }
+  },
 };
