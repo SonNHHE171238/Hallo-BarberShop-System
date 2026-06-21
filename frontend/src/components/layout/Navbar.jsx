@@ -3,10 +3,13 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -97,12 +100,43 @@ export default function Navbar() {
 
         {/* Trailing Action */}
         <div className="flex items-center space-x-4">
-          <Link
-            href="/login"
-            className="hidden md:block font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors uppercase tracking-wider mr-4"
-          >
-            Đăng nhập
-          </Link>
+          {user ? (
+            <div className="relative group hidden md:flex items-center space-x-2 mr-4 cursor-pointer py-2">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center border border-outline-variant">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-on-surface-variant text-sm">person</span>
+                )}
+              </div>
+              <span className="font-label-md text-label-md text-on-surface hover:text-primary transition-colors uppercase tracking-wider truncate max-w-[120px]">
+                {user.name.split(' ')[user.name.split(' ').length - 1]}
+              </span>
+              
+              {/* Dropdown */}
+              <div className="absolute top-full right-0 w-48 bg-surface-container-high border border-outline-variant rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-outline-variant bg-surface-container">
+                  <p className="text-body-md font-bold text-on-surface truncate">{user.name}</p>
+                  <p className="text-label-sm text-on-surface-variant truncate">{user.email}</p>
+                </div>
+                <Link href={`/${user.role}/dashboard`} className="flex items-center gap-2 px-4 py-3 text-body-md text-on-surface hover:bg-surface-variant transition-colors">
+                  <span className="material-symbols-outlined text-sm">dashboard</span>
+                  Bảng điều khiển
+                </Link>
+                <button onClick={logout} className="flex items-center gap-2 w-full text-left px-4 py-3 text-body-md text-error hover:bg-error/10 transition-colors border-t border-outline-variant">
+                  <span className="material-symbols-outlined text-sm">logout</span>
+                  Đăng xuất
+                </button>
+              </div>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden md:block font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors uppercase tracking-wider mr-4"
+            >
+              Đăng nhập
+            </Link>
+          )}
           <Link 
             href="/booking" 
             className="bg-primary text-on-primary px-6 py-2 rounded-lg font-headline-sm text-headline-sm transition-all active:scale-95 duration-150 hover:bg-primary-container whitespace-nowrap"
@@ -111,9 +145,56 @@ export default function Navbar() {
           </Link>
           
           {/* Mobile Menu Toggle */}
-          <button className="md:hidden text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors">
-            <span className="material-symbols-outlined">menu</span>
+          <button 
+            className="md:hidden text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <span className="material-symbols-outlined">{isMobileMenuOpen ? 'close' : 'menu'}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      <div 
+        className={`md:hidden absolute top-full left-0 w-full bg-surface-container-high border-b border-outline-variant shadow-lg transition-all duration-300 overflow-hidden ${
+          isMobileMenuOpen ? "max-h-screen opacity-100 py-4" : "max-h-0 opacity-0 py-0"
+        }`}
+      >
+        <div className="flex flex-col px-4 space-y-4">
+          <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Trang chủ</Link>
+          <Link href="/#about" onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-body-md font-body-md">Về chúng tôi</Link>
+          <Link href="/#services" onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-body-md font-body-md">Dịch vụ</Link>
+          <Link href="/#deals" onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-body-md font-body-md">Khuyến mãi</Link>
+          <Link href="/#team" onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-body-md font-body-md">Đội ngũ</Link>
+          <Link href="/shop" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
+          <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
+            {user ? (
+              <>
+                <div className="flex items-center space-x-3 mb-2 px-2">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center border border-outline-variant">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="material-symbols-outlined text-on-surface-variant">person</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface text-body-md">{user.name}</p>
+                    <p className="text-on-surface-variant text-label-sm">{user.email}</p>
+                  </div>
+                </div>
+                <Link href={`/${user.role}/dashboard`} onClick={() => setIsMobileMenuOpen(false)} className="font-label-md text-label-md text-on-surface hover:text-primary uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">dashboard</span> Bảng điều khiển
+                </Link>
+                <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="font-label-md text-label-md text-error hover:text-error/80 uppercase tracking-wider flex items-center gap-2 text-left">
+                  <span className="material-symbols-outlined text-sm">logout</span> Đăng xuất
+                </button>
+              </>
+            ) : (
+              <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="font-label-md text-label-md text-on-surface-variant hover:text-primary uppercase tracking-wider">Đăng nhập</Link>
+            )}
+            <Link href="/booking" onClick={() => setIsMobileMenuOpen(false)} className="bg-primary text-on-primary px-6 py-3 rounded-lg font-headline-sm text-center transition-all active:scale-95 hover:bg-primary-container">Đặt Lịch Hẹn</Link>
+          </div>
         </div>
       </div>
     </nav>

@@ -1,1 +1,7 @@
 .env
+.next/
+backend/local-env/db.env
+backend/server.js
+.md
+backend/implementation_plan.md
+backend/test-booking-flow.js

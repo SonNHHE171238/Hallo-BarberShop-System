@@ -1,5 +1,6 @@
-import { Playfair_Display } from "next/font/google";
+import { Playfair_Display, Montserrat, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
 import "./globals.css";
+import { Providers } from './providers';
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair-display",
@@ -21,8 +22,10 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className={`${playfairDisplay.variable} bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col`}>
-        {children}
+      <body className={`${playfairDisplay.variable} font-body-md bg-surface text-on-surface antialiased overflow-x-hidden selection:bg-primary selection:text-on-primary`}>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

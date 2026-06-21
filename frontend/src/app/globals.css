@@ -223,4 +223,42 @@
     transform: translateX(100%);
     border-color: var(--color-gold-dim);
   }
+  .step-active {
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-primary);
+  }
+}
+
+/* Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-gold);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-outline);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Fix Webkit Autofill Background for Dark Mode */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px var(--color-surface-container-low) inset !important;
+    -webkit-text-fill-color: var(--color-on-surface) !important;
+    transition: background-color 5000s ease-in-out 0s;
 }

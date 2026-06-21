@@ -115,7 +115,7 @@ const bookingSchema = new Schema(
     noShowNote: { type: String, trim: true, default: null },
   },
   {
-timestamps: true,
+    timestamps: true,
   },
 );
 
