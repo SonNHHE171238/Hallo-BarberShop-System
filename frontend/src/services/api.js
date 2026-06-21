@@ -1,15 +1,15 @@
 // src/services/api.js
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export const fetchWithAuth = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
     },
   };
-  
+
   const fetchOptions = {
     ...defaultOptions,
     ...options,
@@ -21,7 +21,7 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
   };
 
   const response = await fetch(url, fetchOptions);
-  
+
   // Try to parse json response
   let data;
   try {

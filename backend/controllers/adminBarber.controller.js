@@ -2,6 +2,7 @@ const User = require('../models/user.model');
 const Barber = require('../models/barber.model');
 const BarberSchedule = require('../models/barber-schedule.model');
 const { uploadAvatar } = require('../services/cloudStorage.service');
+const ExcelJS = require('exceljs');
 
 const isString = (value) => typeof value === 'string' && value.trim().length > 0;
 
@@ -369,6 +370,123 @@ exports.activateAdminBarber = async (req, res) => {
         );
 
         return res.json({ message: 'Barber đã được kích hoạt lại.' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+exports.exportAdminBarbersCSV = async (req, res) => {
+    try {
+        const barbers = await Barber.find().populate('userId', 'name email phone avatarUrl status');
+
+        const header = [
+            'Name',
+            'Email',
+            'Phone',
+            'Status',
+            'Specialties',
+            'Certifications',
+            'Languages',
+            'WorkingSince',
+            'MaxDailyBookings',
+            'AutoAssignmentEligible',
+            'ExperienceYears',
+            'Rating',
+            'Bio',
+        ];
+
+        const csvEscape = (v) => {
+            if (v === null || v === undefined) return '';
+            const s = String(v);
+            return `"${s.replace(/"/g, '""')}"`;
+        };
+
+        const rows = [header.join(',')];
+
+        barbers.forEach((barber) => {
+            const user = barber.userId || {};
+            const specialties = Array.isArray(barber.specialties) ? barber.specialties.join(';') : barber.specialties || '';
+            const certifications = Array.isArray(barber.certifications) ? barber.certifications.join(';') : barber.certifications || '';
+            const languages = Array.isArray(barber.languages) ? barber.languages.join(';') : barber.languages || '';
+
+            const row = [
+                csvEscape(user.name || barber.name || ''),
+                csvEscape(user.email || ''),
+                csvEscape(user.phone || ''),
+                csvEscape(user.status || barber.status || ''),
+                csvEscape(specialties),
+                csvEscape(certifications),
+                csvEscape(languages),
+                csvEscape(barber.workingSince || ''),
+                csvEscape(barber.maxDailyBookings || ''),
+                csvEscape(barber.autoAssignmentEligible ? 'true' : 'false'),
+                csvEscape(barber.experienceYears || ''),
+                csvEscape(barber.averageRating || barber.rating || ''),
+                csvEscape(barber.bio || ''),
+            ];
+
+            rows.push(row.join(','));
+        });
+
+        const csvContent = rows.join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="barbers.csv"');
+        return res.send(csvContent);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+exports.exportAdminBarbersXLSX = async (req, res) => {
+    try {
+        const barbers = await Barber.find().populate('userId', 'name email phone avatarUrl status');
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Barbers');
+
+        sheet.columns = [
+            { header: 'Name', key: 'name', width: 30 },
+            { header: 'Email', key: 'email', width: 30 },
+            { header: 'Phone', key: 'phone', width: 20 },
+            { header: 'Status', key: 'status', width: 15 },
+            { header: 'Specialties', key: 'specialties', width: 40 },
+            { header: 'Certifications', key: 'certifications', width: 40 },
+            { header: 'Languages', key: 'languages', width: 30 },
+            { header: 'WorkingSince', key: 'workingSince', width: 20 },
+            { header: 'MaxDailyBookings', key: 'maxDailyBookings', width: 15 },
+            { header: 'AutoAssignmentEligible', key: 'autoAssignmentEligible', width: 10 },
+            { header: 'ExperienceYears', key: 'experienceYears', width: 10 },
+            { header: 'Rating', key: 'rating', width: 10 },
+            { header: 'Bio', key: 'bio', width: 50 },
+        ];
+
+        barbers.forEach((barber) => {
+            const user = barber.userId || {};
+            sheet.addRow({
+                name: user.name || barber.name || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                status: user.status || barber.status || '',
+                specialties: Array.isArray(barber.specialties) ? barber.specialties.join('; ') : (barber.specialties || ''),
+                certifications: Array.isArray(barber.certifications) ? barber.certifications.join('; ') : (barber.certifications || ''),
+                languages: Array.isArray(barber.languages) ? barber.languages.join('; ') : (barber.languages || ''),
+                workingSince: barber.workingSince || '',
+                maxDailyBookings: barber.maxDailyBookings || '',
+                autoAssignmentEligible: barber.autoAssignmentEligible ? 'true' : 'false',
+                experienceYears: barber.experienceYears || '',
+                rating: barber.averageRating || barber.rating || '',
+                bio: barber.bio || '',
+            });
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="barbers.xlsx"');
+        return res.send(Buffer.from(buffer));
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: error.message });

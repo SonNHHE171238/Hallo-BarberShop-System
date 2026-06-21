@@ -1,4 +1,4 @@
-import { fetchWithAuth } from './api';
+import { fetchWithAuth, API_BASE_URL } from './api';
 
 export const adminBarberService = {
     getAllAdminBarbers: async () => {
@@ -31,5 +31,27 @@ export const adminBarberService = {
         return fetchWithAuth(`/admin/barbers/${barberId}/activate`, {
             method: 'PATCH',
         });
+    },
+
+    exportBarbers: async () => {
+        const url = `${API_BASE_URL}/admin/barbers/export`;
+        const resp = await fetch(url, { method: 'GET', credentials: 'include' });
+        if (!resp.ok) {
+            const txt = await resp.text();
+            throw new Error(txt || 'Không thể xuất file.');
+        }
+        const blob = await resp.blob();
+        return blob;
+    },
+
+    exportBarbersXLSX: async () => {
+        const url = `${API_BASE_URL}/admin/barbers/export/xlsx`;
+        const resp = await fetch(url, { method: 'GET', credentials: 'include' });
+        if (!resp.ok) {
+            const txt = await resp.text();
+            throw new Error(txt || 'Không thể xuất file.');
+        }
+        const blob = await resp.blob();
+        return blob;
     },
 };

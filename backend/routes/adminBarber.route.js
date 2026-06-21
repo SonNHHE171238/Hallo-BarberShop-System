@@ -9,5 +9,7 @@ router.get('/:barberId', adminBarberController.getAdminBarberById);
 router.put('/:barberId', adminBarberController.updateAdminBarber);
 router.patch('/:barberId/deactivate', adminBarberController.deactivateAdminBarber);
 router.patch('/:barberId/activate', adminBarberController.activateAdminBarber);
+router.get('/export', adminBarberController.exportAdminBarbersCSV);
+router.get('/export/xlsx', adminBarberController.exportAdminBarbersXLSX);
 
 module.exports = router;

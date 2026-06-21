@@ -52,6 +52,7 @@ export default function AdminBarberManagement() {
     const [statusMessage, setStatusMessage] = useState('');
     const [statusError, setStatusError] = useState('');
     const [statusProcessing, setStatusProcessing] = useState(false);
+    const [exportProcessing, setExportProcessing] = useState(false);
 
     const loadBarbers = async (selectedId) => {
         try {
@@ -171,6 +172,27 @@ export default function AdminBarberManagement() {
         }
     };
 
+    const handleExport = async () => {
+        setExportProcessing(true);
+        setStatusError('');
+        setStatusMessage('');
+        try {
+            const blob = await adminBarberService.exportBarbersXLSX();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'barbers.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            setStatusError(err.message || 'Không thể xuất file.');
+        } finally {
+            setExportProcessing(false);
+        }
+    };
+
     const filteredBarbers = barbers.filter((barber) => barber.name.toLowerCase().includes(searchTerm.toLowerCase().trim()));
     const displayBarbers = searchTerm.trim() ? filteredBarbers : barbers.length ? barbers : [initialBarber];
 
@@ -188,6 +210,9 @@ export default function AdminBarberManagement() {
                     <p className="mt-2 max-w-2xl text-body-sm text-on-surface-variant">Tạo mới, chỉnh sửa và quản lý tài khoản barber do admin tạo.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
+                    <button onClick={handleExport} disabled={exportProcessing} className="inline-flex items-center justify-center rounded-full border border-outline-gold bg-surface-container-high px-4 py-2 text-sm font-semibold uppercase tracking-[0.15em] text-on-surface transition hover:bg-surface">
+                        {exportProcessing ? 'Đang xuất...' : 'Xuất file'}
+                    </button>
                     <button onClick={handleOpenCreate} className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold uppercase tracking-[0.15em] text-on-primary transition hover:bg-primary-focus">Tạo barber mới</button>
                 </div>
             </div>
