@@ -19,6 +19,7 @@ const {
 } = require("../utils/timeWindowValidation");
 
 const bookingService = require('../services/booking.service');
+const emailService = require('../services/email.service');
 const { sendSuccess } = require('../utils/response.helper');
 
 exports.createBooking = async (req, res, next) => {
@@ -70,6 +71,17 @@ exports.createBooking = async (req, res, next) => {
       customerEmail,
       customerPhone,
     });
+
+    const emailToSend = customerEmail || populatedBooking.customerId?.email;
+    if (emailToSend) {
+      emailService.sendBookingConfirmationEmail(emailToSend, {
+        customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
+        serviceName: populatedBooking.serviceId?.name || 'Dịch vụ',
+        barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
+        bookingDate: populatedBooking.bookingDate,
+        timeSlot: timeSlot
+      }).catch(err => console.error('Failed to send confirmation email', err));
+    }
 
     return sendSuccess(res, 201, "Booking created successfully", { booking: populatedBooking });
   } catch (err) {
@@ -204,6 +216,17 @@ exports.createBookingSinglePage = async (req, res, next) => {
       customerEmail,
       customerPhone,
     });
+
+    const emailToSend = customerEmail || populatedBooking.customerId?.email;
+    if (emailToSend) {
+      emailService.sendBookingConfirmationEmail(emailToSend, {
+        customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
+        serviceName: populatedBooking.serviceId?.name || 'Dịch vụ',
+        barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
+        bookingDate: populatedBooking.bookingDate,
+        timeSlot: timeSlot
+      }).catch(err => console.error('Failed to send confirmation email', err));
+    }
 
     return res.status(201).json({
       success: true,

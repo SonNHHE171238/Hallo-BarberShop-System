@@ -222,7 +222,7 @@ exports.processForgotPassword = async (email) => {
   const resetLink = `${clientUrl}/reset-password?id=${user._id}&token=${plainToken}`;
 
   try {
-    await sendPasswordResetEmail(user.email, resetLink);
+    await sendPasswordResetEmail(user.email, resetLink, user.name);
   } catch (err) {
     const error = new Error('Could not send password reset email. Please try again later.');
     error.statusCode = 502;
