@@ -101,7 +101,15 @@ exports.createBookingSinglePage = async (req, res, next) => {
       bookingType,
     } = req.body;
 
-    const customerId = req.userId;
+    let customerId = req.userId;
+    if (['staff', 'admin', 'manager'].includes(req.role)) {
+      if (req.body.customerId) {
+        customerId = req.body.customerId;
+      } else if (bookingType === 'guest') {
+        customerId = null;
+      }
+    }
+
     if (!["user", "guest"].includes(bookingType)) {
       const error = new Error('bookingType phải là "user" hoặc "guest"');
       error.statusCode = 400;
