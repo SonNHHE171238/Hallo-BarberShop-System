@@ -1,9 +1,9 @@
-const Booking = require('../models/booking.model');
-const Barber = require('../models/barber.model');
-const Service = require('../models/service.model');
-const NoShow = require('../models/no-show.model');
-const BarberAbsence = require('../models/barber-absence.model');
-const BarberSchedule = require('../models/barber-schedule.model');
+const Booking = require("../models/booking.model");
+const Barber = require("../models/barber.model");
+const Service = require("../models/service.model");
+const NoShow = require("../models/no-show.model");
+const BarberAbsence = require("../models/barber-absence.model");
+const BarberSchedule = require("../models/barber-schedule.model");
 
 /**
  * Handle business logic for creating a new booking
@@ -12,7 +12,7 @@ exports.processCreateBooking = async ({
   bookingType,
   customerId,
   barberId,
-  serviceId,
+  services,
   bookingDate,
   timeSlot,
   durationMinutes,
@@ -29,45 +29,53 @@ exports.processCreateBooking = async ({
 
   // Time Buffer Validation (30 mins advance)
   const now = new Date();
-  const minutesDifference = (requestedDateTime.getTime() - now.getTime()) / (1000 * 60);
+  const minutesDifference =
+    (requestedDateTime.getTime() - now.getTime()) / (1000 * 60);
 
   if (minutesDifference < 30) {
-    const error = new Error('Bookings must be made at least 30 minutes in advance');
+    const error = new Error(
+      "Bookings must be made at least 30 minutes in advance",
+    );
     error.statusCode = 400;
-    error.errorCode = 'BOOKING_TOO_SOON';
+    error.errorCode = "BOOKING_TOO_SOON";
     throw error;
   }
 
   // No-show validation for User
-  if (bookingType === 'user' && customerId) {
+  if (bookingType === "user" && customerId) {
     const isBlocked = await NoShow.isCustomerBlocked(customerId, 3);
     if (isBlocked) {
       const noShowCount = await NoShow.getCustomerNoShowCount(customerId);
-      const error = new Error(`Booking blocked due to ${noShowCount} cancellations/no-shows.`);
+      const error = new Error(
+        `Booking blocked due to ${noShowCount} cancellations/no-shows.`,
+      );
       error.statusCode = 403;
-      error.errorCode = 'CUSTOMER_BLOCKED';
+      error.errorCode = "CUSTOMER_BLOCKED";
       throw error;
     }
   }
 
   // Barber Absence
-  const isBarberAbsent = await BarberAbsence.isBarberAbsent(barberId, requestedDateTime);
+  const isBarberAbsent = await BarberAbsence.isBarberAbsent(
+    barberId,
+    requestedDateTime,
+  );
   if (isBarberAbsent) {
-    const error = new Error('Selected barber is not available on this date');
+    const error = new Error("Selected barber is not available on this date");
     error.statusCode = 400;
-    error.errorCode = 'BARBER_ABSENT';
+    error.errorCode = "BARBER_ABSENT";
     throw error;
   }
 
   // Conflict Checking (Overlap)
-  const dateStr = requestedDateTime.toISOString().split('T')[0];
+  const dateStr = requestedDateTime.toISOString().split("T")[0];
   const barberBookings = await Booking.find({
     barberId,
     bookingDate: {
-      $gte: new Date(dateStr + 'T00:00:00.000Z'),
-      $lt: new Date(dateStr + 'T23:59:59.999Z'),
+      $gte: new Date(dateStr + "T00:00:00.000Z"),
+      $lt: new Date(dateStr + "T23:59:59.999Z"),
     },
-    status: { $in: ['pending', 'confirmed'] },
+    status: { $in: ["pending", "confirmed"] },
   }).sort({ bookingDate: 1 });
 
   const newStart = new Date(requestedDateTime);
@@ -76,38 +84,46 @@ exports.processCreateBooking = async ({
   // 1. Barber Conflict
   const barberConflict = barberBookings.find((booking) => {
     const existingStart = new Date(booking.bookingDate);
-    const existingEnd = new Date(existingStart.getTime() + booking.durationMinutes * 60000);
+    const existingEnd = new Date(
+      existingStart.getTime() + booking.durationMinutes * 60000,
+    );
     return newStart < existingEnd && newEnd > existingStart;
   });
 
   if (barberConflict) {
-    const error = new Error(`Time slot conflict detected. Your ${durationMinutes}-minute service overlaps with an existing booking.`);
+    const error = new Error(
+      `Time slot conflict detected. Your ${durationMinutes}-minute service overlaps with an existing booking.`,
+    );
     error.statusCode = 409;
-    error.errorCode = 'BOOKING_CONFLICT';
+    error.errorCode = "BOOKING_CONFLICT";
     throw error;
   }
 
   // 2. Customer Conflict
-  if (bookingType === 'user' && customerId) {
+  if (bookingType === "user" && customerId) {
     const customerBookings = await Booking.find({
       customerId,
       bookingDate: {
-        $gte: new Date(dateStr + 'T00:00:00.000Z'),
-        $lt: new Date(dateStr + 'T23:59:59.999Z'),
+        $gte: new Date(dateStr + "T00:00:00.000Z"),
+        $lt: new Date(dateStr + "T23:59:59.999Z"),
       },
-      status: { $in: ['pending', 'confirmed'] },
+      status: { $in: ["pending", "confirmed"] },
     });
 
     const customerConflict = customerBookings.find((booking) => {
       const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(existingStart.getTime() + booking.durationMinutes * 60000);
+      const existingEnd = new Date(
+        existingStart.getTime() + booking.durationMinutes * 60000,
+      );
       return newStart < existingEnd && newEnd > existingStart;
     });
 
     if (customerConflict) {
-      const error = new Error(`You already have a booking during this time period.`);
+      const error = new Error(
+        `You already have a booking during this time period.`,
+      );
       error.statusCode = 409;
-      error.errorCode = 'CUSTOMER_DOUBLE_BOOKING';
+      error.errorCode = "CUSTOMER_DOUBLE_BOOKING";
       throw error;
     }
   }
@@ -115,22 +131,39 @@ exports.processCreateBooking = async ({
   // Barber Daily Limit
   const barber = await Barber.findById(barberId);
   if (!barber) {
-    const error = new Error('Barber not found');
+    const error = new Error("Barber not found");
     error.statusCode = 404;
     throw error;
   }
 
   if (barberBookings.length >= barber.maxDailyBookings) {
-    const error = new Error('Barber has reached maximum bookings for this date');
+    const error = new Error(
+      "Barber has reached maximum bookings for this date",
+    );
     error.statusCode = 400;
-    error.errorCode = 'DAILY_LIMIT_EXCEEDED';
+    error.errorCode = "DAILY_LIMIT_EXCEEDED";
     throw error;
   }
 
-  // Service exists
-  const service = await Service.findById(serviceId);
-  if (!service) {
-    const error = new Error('Service not found');
+  // Check duplicate services
+  const uniqueServices = new Set(services);
+  if (uniqueServices.size !== services.length) {
+    const error = new Error(
+      "You cannot select the same service more than once",
+    );
+    error.statusCode = 400;
+    error.errorCode = "DUPLICATE_SERVICES";
+    throw error;
+  }
+
+  // Verify all services exist
+  const foundServices = await Service.find({ _id: { $in: services } });
+  if (
+    !services ||
+    foundServices.length !== services.length ||
+    services.length === 0
+  ) {
+    const error = new Error("One or more services not found or none selected");
     error.statusCode = 404;
     throw error;
   }
@@ -140,7 +173,7 @@ exports.processCreateBooking = async ({
     bookingType,
     customerId,
     barberId,
-    serviceId,
+    services,
     bookingDate: requestedDateTime,
     durationMinutes,
     note,
@@ -154,7 +187,7 @@ exports.processCreateBooking = async ({
   // If created via POS or auto-assigned by staff, it might be auto-confirmed
   // We will let the controller decide, but if autoAssignedBarber is true, we confirm it
   if (autoAssignedBarber) {
-    bookingData.status = 'confirmed';
+    bookingData.status = "confirmed";
     bookingData.confirmedAt = new Date();
   }
 
@@ -166,7 +199,7 @@ exports.processCreateBooking = async ({
   try {
     await Barber.findByIdAndUpdate(barberId, { $inc: { totalBookings: 1 } });
   } catch (updateError) {
-    console.error('Error updating barber totalBookings:', updateError);
+    console.error("Error updating barber totalBookings:", updateError);
   }
 
   // Lock Schedule
@@ -177,23 +210,25 @@ exports.processCreateBooking = async ({
       timeSlot,
       durationMinutes,
       booking._id,
-      null
+      null,
     );
   } catch (scheduleError) {
     await Booking.findByIdAndDelete(booking._id);
-    const error = new Error('Failed to reserve time slots in schedule: ' + scheduleError.message);
+    const error = new Error(
+      "Failed to reserve time slots in schedule: " + scheduleError.message,
+    );
     error.statusCode = 409;
-    error.errorCode = 'SCHEDULE_UPDATE_FAILED';
+    error.errorCode = "SCHEDULE_UPDATE_FAILED";
     throw error;
   }
 
   // Return populated
   const populatedBooking = await Booking.findById(booking._id)
-    .populate('serviceId', 'name price durationMinutes')
-    .populate('barberId', 'userId specialties averageRating')
+    .populate("services", "name price durationMinutes")
+    .populate("barberId", "userId specialties averageRating")
     .populate({
-      path: 'barberId',
-      populate: { path: 'userId', select: 'name email' },
+      path: "barberId",
+      populate: { path: "userId", select: "name email" },
     });
 
   return populatedBooking;
@@ -212,7 +247,10 @@ exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
 
   // Check if barber is absent all day
   const requestedDateTime = new Date(`${date}T12:00:00`);
-  const isAbsent = await BarberAbsence.isBarberAbsent(barberId, requestedDateTime);
+  const isAbsent = await BarberAbsence.isBarberAbsent(
+    barberId,
+    requestedDateTime,
+  );
   if (isAbsent) {
     return []; // Trả về mảng rỗng nếu nghỉ cả ngày
   }
@@ -224,28 +262,41 @@ exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
   const conflictingBookings = await Booking.find({
     barberId,
     bookingDate: { $gte: startDate, $lt: endDate },
-    status: { $in: ["pending", "confirmed"] }
+    status: { $in: ["pending", "confirmed"] },
   });
 
-  conflictingBookings.sort((a, b) => new Date(a.bookingDate) - new Date(b.bookingDate));
+  conflictingBookings.sort(
+    (a, b) => new Date(a.bookingDate) - new Date(b.bookingDate),
+  );
 
   // Hàm check đụng lịch
   const checkOverlap = (start, end) => {
-    return conflictingBookings.some(booking => {
+    return conflictingBookings.some((booking) => {
       const bStart = new Date(booking.bookingDate).getTime();
       const bEnd = bStart + booking.durationMinutes * 60000;
       return start.getTime() < bEnd && end.getTime() > bStart;
     });
   };
 
-  const baseSlots = ["09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
+  const baseSlots = [
+    "09:00",
+    "10:00",
+    "11:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00",
+  ];
   const resultSlots = [];
 
   // Bước 1: Quét các base slots
   for (const time of baseSlots) {
     const slotStart = new Date(`${date}T${time}:00+07:00`);
     const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-    
+
     let isAvailable = true;
     let reason = null;
 
@@ -259,25 +310,29 @@ exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
 
   // Bước 2: Quét các khoảng hở (Gap Packing)
   for (const booking of conflictingBookings) {
-    const bEnd = new Date(new Date(booking.bookingDate).getTime() + booking.durationMinutes * 60000);
-    
+    const bEnd = new Date(
+      new Date(booking.bookingDate).getTime() + booking.durationMinutes * 60000,
+    );
+
     // Chuyển bEnd sang giờ Việt Nam để tính toán
-    const localTime = new Date(bEnd.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+    const localTime = new Date(
+      bEnd.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }),
+    );
     const hours = localTime.getHours();
     const mins = localTime.getMinutes();
-    const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-    
+    const timeStr = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+
     // Chỉ tính nếu nằm trong giờ làm việc và không phải giờ nghỉ trưa
     if (hours >= 9 && hours < 20 && hours !== 12) {
       // Ràng buộc nếu endtime vượt quá 19:00 (ca cuối) thì bỏ
-      if (hours === 19 && mins > 0) continue; 
+      if (hours === 19 && mins > 0) continue;
 
       const slotStart = bEnd;
       const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-      
+
       if (!checkOverlap(slotStart, slotEnd)) {
         // Kiểm tra xem đã có trong resultSlots chưa
-        if (!resultSlots.some(s => s.time === timeStr)) {
+        if (!resultSlots.some((s) => s.time === timeStr)) {
           resultSlots.push({ time: timeStr, available: true, reason: null });
         }
       }
@@ -286,30 +341,33 @@ exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
 
   // Bước 3: Áp dụng ràng buộc Tối đa 2 tiếng (chỉ cho 19:00) và kiểm tra giờ quá khứ
   const now = new Date();
-  const localNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+  const localNow = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }),
+  );
   const currentYear = localNow.getFullYear();
-  const currentMonth = String(localNow.getMonth() + 1).padStart(2, '0');
-  const currentDay = String(localNow.getDate()).padStart(2, '0');
+  const currentMonth = String(localNow.getMonth() + 1).padStart(2, "0");
+  const currentDay = String(localNow.getDate()).padStart(2, "0");
   const todayStr = `${currentYear}-${currentMonth}-${currentDay}`;
-  
+
   if (date === todayStr) {
     const currentHour = localNow.getHours();
     const currentMin = localNow.getMinutes();
 
     for (const slot of resultSlots) {
-      const [h, m] = slot.time.split(':').map(Number);
-      
+      const [h, m] = slot.time.split(":").map(Number);
+
       // Cản giờ trong quá khứ
       if (currentHour > h || (currentHour === h && currentMin >= m)) {
-         slot.available = false;
-         slot.reason = "Thời gian đã trôi qua";
+        slot.available = false;
+        slot.reason = "Thời gian đã trôi qua";
       }
-      
+
       // Luật Tối thiểu 2 tiếng cho 19:00
       if (slot.time === "19:00" && slot.available) {
         if (currentHour >= 17) {
           slot.available = false;
-          slot.reason = "Yêu cầu bạn đặt lịch trước tối thiểu 2 tiếng để quán có thể sẵn sàng phục vụ";
+          slot.reason =
+            "Yêu cầu bạn đặt lịch trước tối thiểu 2 tiếng để quán có thể sẵn sàng phục vụ";
         }
       }
     }
@@ -317,9 +375,9 @@ exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
 
   // Bước 4: Sort lại list từ sáng đến tối
   resultSlots.sort((a, b) => {
-    const [ah, am] = a.time.split(':').map(Number);
-    const [bh, bm] = b.time.split(':').map(Number);
-    return (ah * 60 + am) - (bh * 60 + bm);
+    const [ah, am] = a.time.split(":").map(Number);
+    const [bh, bm] = b.time.split(":").map(Number);
+    return ah * 60 + am - (bh * 60 + bm);
   });
 
   return resultSlots;

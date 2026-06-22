@@ -18,14 +18,14 @@ const {
   getTimeUntilCompletion,
 } = require("../utils/timeWindowValidation");
 
-const bookingService = require('../services/booking.service');
-const { sendSuccess } = require('../utils/response.helper');
+const bookingService = require("../services/booking.service");
+const { sendSuccess } = require("../utils/response.helper");
 
 exports.createBooking = async (req, res, next) => {
   try {
     const {
       barberId,
-      serviceId,
+      services,
       bookingDate,
       timeSlot, // "HH:MM" format
       durationMinutes,
@@ -49,7 +49,9 @@ exports.createBooking = async (req, res, next) => {
       customerId = req.userId;
     } else if (bookingType === "guest") {
       if (!customerName || !customerPhone) {
-        const error = new Error("Khách vãng lai bắt buộc phải cung cấp Tên và Số điện thoại");
+        const error = new Error(
+          "Khách vãng lai bắt buộc phải cung cấp Tên và Số điện thoại",
+        );
         error.statusCode = 400;
         throw error;
       }
@@ -59,7 +61,7 @@ exports.createBooking = async (req, res, next) => {
       bookingType,
       customerId,
       barberId,
-      serviceId,
+      services,
       bookingDate,
       timeSlot,
       durationMinutes,
@@ -71,10 +73,13 @@ exports.createBooking = async (req, res, next) => {
       customerPhone,
     });
 
-    return sendSuccess(res, 201, "Booking created successfully", { booking: populatedBooking });
+    return sendSuccess(res, 201, "Booking created successfully", {
+      booking: populatedBooking,
+    });
   } catch (err) {
     if (err.code === 11000) {
-      err.message = "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
+      err.message =
+        "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
       err.errorCode = "RACE_CONDITION_CONFLICT";
       err.statusCode = 409;
     }
@@ -109,31 +114,37 @@ exports.createBookingSinglePage = async (req, res, next) => {
       throw error;
     }
 
-    if (bookingType === 'guest') {
+    if (bookingType === "guest") {
       if (!customerName || !customerPhone) {
-        const error = new Error('Khách vãng lai cần cung cấp Tên và Số điện thoại');
+        const error = new Error(
+          "Khách vãng lai cần cung cấp Tên và Số điện thoại",
+        );
         error.statusCode = 400;
         throw error;
       }
       customerId = null;
-    } else if (bookingType === 'user') {
-      if (!customerId && !['staff', 'admin', 'manager'].includes(req.role)) {
-        const error = new Error('Bạn cần đăng nhập để đặt lịch với tư cách thành viên');
+    } else if (bookingType === "user") {
+      if (!customerId && !["staff", "admin", "manager"].includes(req.role)) {
+        const error = new Error(
+          "Bạn cần đăng nhập để đặt lịch với tư cách thành viên",
+        );
         error.statusCode = 401;
         throw error;
       }
     }
 
-    if (['staff', 'admin', 'manager'].includes(req.role)) {
+    if (["staff", "admin", "manager"].includes(req.role)) {
       if (req.body.customerId) {
         customerId = req.body.customerId;
-      } else if (bookingType === 'guest') {
+      } else if (bookingType === "guest") {
         customerId = null;
       }
     }
 
     if (!serviceId || !bookingDate || !date || !timeSlot) {
-      const error = new Error("Service, booking date, date, and time slot are required");
+      const error = new Error(
+        "Service, booking date, date, and time slot are required",
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -155,19 +166,32 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
         let autoAssignResult = null;
         const mockRes = {
-          json: (data) => { autoAssignResult = data; return data; },
+          json: (data) => {
+            autoAssignResult = data;
+            return data;
+          },
           status: (code) => ({
-            json: (data) => { autoAssignResult = { ...data, statusCode: code }; return autoAssignResult; },
+            json: (data) => {
+              autoAssignResult = { ...data, statusCode: code };
+              return autoAssignResult;
+            },
           }),
         };
 
         await barberController.autoAssignBarberForSlot(mockReq, mockRes);
 
-        if (autoAssignResult && autoAssignResult.success && autoAssignResult.assignedBarber) {
+        if (
+          autoAssignResult &&
+          autoAssignResult.success &&
+          autoAssignResult.assignedBarber
+        ) {
           finalBarberId = autoAssignResult.assignedBarber._id;
           isAutoAssigned = true;
         } else {
-          const error = new Error(autoAssignResult?.message || "No barbers available for auto-assignment");
+          const error = new Error(
+            autoAssignResult?.message ||
+              "No barbers available for auto-assignment",
+          );
           error.statusCode = 404;
           throw error;
         }
@@ -180,10 +204,12 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
     let finalDurationMinutes = durationMinutes;
     if (!finalDurationMinutes) {
-      const Service = require('../models/service.model');
-      const service = await Service.findById(serviceId);
-      if (service) {
-        finalDurationMinutes = service.durationMinutes || service.duration || 30;
+      const Service = require("../models/service.model");
+      const selectedServices = await Service.find({ _id: { $in: services } });
+      if (selectedServices.length > 0) {
+        finalDurationMinutes = selectedServices.reduce((total, s) => {
+          return total + (s.durationMinutes || s.duration || 30);
+        }, 0);
       } else {
         finalDurationMinutes = 30;
       }
@@ -236,7 +262,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
     });
   } catch (err) {
     if (err.code === 11000) {
-      err.message = "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
+      err.message =
+        "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
       err.errorCode = "RACE_CONDITION_CONFLICT";
       err.statusCode = 409;
     }
@@ -981,7 +1008,11 @@ exports.getAvailableSlots = async (req, res, next) => {
     }
 
     const bookingService = require("../services/booking.service");
-    const resultSlots = await bookingService.generateDynamicSlots(barberId, date, durationMinutes);
+    const resultSlots = await bookingService.generateDynamicSlots(
+      barberId,
+      date,
+      durationMinutes,
+    );
 
     res.json({ success: true, slots: resultSlots });
   } catch (err) {
