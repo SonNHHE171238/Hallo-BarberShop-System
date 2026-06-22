@@ -57,6 +57,34 @@ const staffController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  searchCustomerByPhone: async (req, res, next) => {
+    try {
+      const { phone } = req.query;
+      if (!phone) {
+        const error = new Error('Vui lòng cung cấp số điện thoại');
+        error.statusCode = 400;
+        throw error;
+      }
+      const User = require('../models/user.model');
+      const customer = await User.findOne({ phone: phone, role: 'customer' }).select('name phone email loyaltyPoints');
+      
+      if (!customer) {
+        return res.status(200).json({
+          success: true,
+          data: null,
+          message: 'Không tìm thấy khách hàng'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: customer
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 };
 

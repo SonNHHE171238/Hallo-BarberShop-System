@@ -8,12 +8,26 @@ exports.chat = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Message or image is required." });
     }
 
-    const responseText = await chatbotService.handleChat(message, history, imageBase64, mimeType);
+    const result = await chatbotService.handleChat(message, history, imageBase64, mimeType);
 
-    res.status(200).json({
-      success: true,
-      data: responseText
-    });
+    if (result && result.isAdvice) {
+      res.status(200).json({
+        success: true,
+        type: "hairstyle_advice",
+        data: {
+          advice: result.advice,
+          matchedServices: result.matchedServices,
+          previewImageUrl: result.previewImageUrl,
+          provider: result.provider
+        }
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        type: "text",
+        data: result
+      });
+    }
   } catch (error) {
     console.error("Chatbot Error:", error);
     next(error); // Pass to global error handler

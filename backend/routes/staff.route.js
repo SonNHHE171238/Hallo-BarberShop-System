@@ -13,5 +13,6 @@ router.get('/dashboard/upcoming-bookings', staffController.getUpcomingBookings);
 router.get('/dashboard/barbers-status', staffController.getBarbersStatus);
 router.put('/dashboard/bookings/:id/checkin', staffController.toggleCheckIn);
 router.get('/appointments', staffController.getAppointments);
+router.get('/customers/search', staffController.searchCustomerByPhone);
 
 module.exports = router;

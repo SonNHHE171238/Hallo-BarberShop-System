@@ -120,15 +120,38 @@ export default function BarberSelection({ selectedBarber, setSelectedBarber }) {
                 <div className="flex justify-center p-8">
                   <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
                 </div>
-              ) : displayedBarbers.length > 0 ? (
-                displayedBarbers.map((barber) => {
-                  const name = barber.userId?.name || "Unknown Barber";
-                  const firstChar = name.charAt(0).toUpperCase();
-                  const title = barber.specialties?.join(", ") || "Stylist";
-                  const exp = barber.experienceYears ? `${barber.experienceYears} năm kinh nghiệm` : "Đang cập nhật";
-                  const imageUrl = barber.profileImageUrl;
+              ) : (
+                <>
+                  {/* Tùy chọn Thợ ngẫu nhiên (Auto Assign) */}
+                  <div
+                    onClick={() => handleSelectBarber({ _id: 'auto', name: 'Thợ ngẫu nhiên', title: 'Hệ thống tự động sắp xếp thợ rảnh', experienceYears: 0, averageRating: 0, totalBookings: 0, specialties: [] })}
+                    className="flex items-center justify-between p-4 border-b border-outline-variant/10 cursor-pointer hover:bg-primary/10 transition-colors group bg-primary/5"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-primary/50 group-hover:border-primary transition-colors bg-primary/20 flex items-center justify-center text-primary">
+                        <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>shuffle</span>
+                      </div>
+                      <div>
+                        <div className="text-body-lg text-primary font-bold group-hover:text-primary-container transition-colors flex items-center">
+                          Chọn thợ ngẫu nhiên
+                        </div>
+                        <div className="text-body-sm text-on-surface-variant mt-0.5">
+                          Hệ thống sẽ tự động xếp thợ tốt nhất đang rảnh
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                  return (
+                  {/* Danh sách thợ thực tế */}
+                  {displayedBarbers.length > 0 ? (
+                    displayedBarbers.map((barber) => {
+                      const name = barber.userId?.name || "Unknown Barber";
+                      const firstChar = name.charAt(0).toUpperCase();
+                      const title = barber.specialties?.join(", ") || "Stylist";
+                      const exp = barber.experienceYears ? `${barber.experienceYears} năm kinh nghiệm` : "Đang cập nhật";
+                      const imageUrl = barber.profileImageUrl;
+
+                      return (
                     <div
                       key={barber._id}
                       onClick={() => handleSelectBarber(barber)}
@@ -172,6 +195,8 @@ export default function BarberSelection({ selectedBarber, setSelectedBarber }) {
                 <div className="text-center p-8 text-on-surface-variant">
                   Không tìm thấy thợ cắt phù hợp.
                 </div>
+              )}
+                </>
               )}
             </div>
           </div>

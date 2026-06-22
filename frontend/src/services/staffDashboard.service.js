@@ -31,5 +31,9 @@ export const staffDashboardService = {
     const url = `/staff/appointments${queryString ? `?${queryString}` : ''}`;
     
     return await fetchWithAuth(url);
+  },
+
+  searchCustomerByPhone: async (phone) => {
+    return await fetchWithAuth(`/staff/customers/search?phone=${encodeURIComponent(phone)}`);
   }
 };
