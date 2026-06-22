@@ -7,7 +7,7 @@ const {
   canCompleteBooking,
   getCompletionUIState,
   getTimeUntilCompletion,
-} = require("../utils/booking-time.utils");
+} = require("../utils/timeWindowValidation");
 
 class BookingAvailabilityService {
   async checkAvailability(barberId, bookingDate, durationMinutes) {
