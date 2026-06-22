@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { bookingService } from "@/services/booking.service";
 import toast from 'react-hot-toast';
+import GuestBookingModal from "@/components/booking/GuestBookingModal";
 
 export default function BookingPage() {
   const [selectedService, setSelectedService] = useState(null);
@@ -19,16 +20,27 @@ export default function BookingPage() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
 
     const handleConfirm = async () => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để đặt lịch.");
-      router.push("/login?redirect=/booking");
+      setIsGuestModalOpen(true);
       return;
     }
+    
+    await submitBooking({ bookingType: "user" });
+  };
 
+  const handleGuestSubmit = async (guestData) => {
+    await submitBooking({
+      bookingType: "guest",
+      ...guestData
+    });
+  };
+
+  const submitBooking = async (additionalPayload) => {
     if (!selectedService || !selectedDate || !selectedTime) {
       toast.error("Vui lòng chọn đầy đủ Dịch vụ và Thời gian.");
       return;
@@ -36,20 +48,18 @@ export default function BookingPage() {
 
     setIsLoading(true);
     try {
-      // Build Payload matching backend expectations
       const payload = {
         serviceId: selectedService._id || selectedService.id,
-        barberId: selectedBarber ? (selectedBarber._id || selectedBarber.id) : "auto", // Auto assign if none selected
+        barberId: selectedBarber ? (selectedBarber._id || selectedBarber.id) : "auto", 
         bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
-        date: selectedDate, // YYYY-MM-DD
-        timeSlot: selectedTime, // HH:MM
-        bookingType: "user",
+        date: selectedDate, 
+        timeSlot: selectedTime, 
         durationMinutes: selectedService.durationMinutes || selectedService.duration || 30,
+        ...additionalPayload
       };
 
       const response = await bookingService.createBookingSinglePage(payload);
       
-      // Redirect to the success page with details
       const dateObj = new Date(selectedDate);
       const dateStr = dateObj.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
       
@@ -64,6 +74,7 @@ export default function BookingPage() {
       });
       
       toast.success("Đặt lịch thành công!");
+      setIsGuestModalOpen(false);
       router.push(`/booking/success?${queryParams.toString()}`);
     } catch (error) {
       toast.error("Đặt lịch thất bại: " + (error.message || "Vui lòng thử lại"));
@@ -119,6 +130,17 @@ export default function BookingPage() {
       </main>
 
       <Footer />
+      
+      <GuestBookingModal 
+        isOpen={isGuestModalOpen}
+        onClose={() => setIsGuestModalOpen(false)}
+        onSubmit={handleGuestSubmit}
+        selectedService={selectedService}
+        selectedBarber={selectedBarber}
+        selectedDate={selectedDate}
+        selectedTime={selectedTime}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

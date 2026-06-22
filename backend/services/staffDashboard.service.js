@@ -18,11 +18,10 @@ const staffDashboardService = {
       status: { $in: ['pending', 'confirmed', 'completed'] }
     });
 
-    // 3. Khách chờ: Booking đã check-in nhưng chưa completed
+    // 3. Khách đã xong: Booking status là completed
     const waitingCustomers = await Booking.countDocuments({
       bookingDate: { $gte: todayStart, $lte: todayEnd },
-      status: { $in: ['pending', 'confirmed'] },
-      isCheckedIn: true
+      status: 'completed'
     });
 
     // 4. Doanh thu dự kiến: Tổng price của tất cả bookings hôm nay
@@ -83,8 +82,7 @@ const staffDashboardService = {
         customerPhone: b.bookingType === 'user' && b.customerId ? b.customerId.phone : (b.customerPhone || 'N/A'),
         serviceName: b.serviceId ? b.serviceId.name : 'Unknown',
         barberName: b.barberId && b.barberId.userId ? b.barberId.userId.name : 'Auto',
-        status: b.status,
-        isCheckedIn: b.isCheckedIn || false
+        status: b.status
       }));
     };
 

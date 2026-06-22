@@ -3,10 +3,13 @@
 import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useAuth } from "@/context/AuthContext";
+
 function BookingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("id");
+  const { user } = useAuth();
   
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,13 +159,23 @@ function BookingSuccessContent() {
                 Về Trang Chủ
               </button>
               <div className="grid grid-cols-2 gap-4">
-                <button 
-                  onClick={() => router.push('/customer/dashboard')}
-                  className="border border-outline-variant text-on-surface h-12 rounded-lg font-label-md flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors"
-                >
-                  <span className="material-symbols-outlined text-primary/70">account_circle</span>
-                  Xem Hồ Sơ
-                </button>
+                {user ? (
+                  <button 
+                    onClick={() => router.push('/customer/dashboard')}
+                    className="border border-outline-variant text-on-surface h-12 rounded-lg font-label-md flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-primary/70">account_circle</span>
+                    Xem Hồ Sơ
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => router.push('/login')}
+                    className="border border-outline-variant text-on-surface h-12 rounded-lg font-label-md flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-primary/70">login</span>
+                    Đăng nhập để quản lý
+                  </button>
+                )}
                 <button 
                   onClick={() => window.print()}
                   className="border border-outline-variant text-on-surface h-12 rounded-lg font-label-md flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors"

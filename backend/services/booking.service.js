@@ -136,7 +136,7 @@ exports.processCreateBooking = async ({
   }
 
   // Save Booking
-  const booking = new Booking({
+  const bookingData = {
     bookingType,
     customerId,
     barberId,
@@ -149,7 +149,16 @@ exports.processCreateBooking = async ({
     customerName,
     customerEmail,
     customerPhone,
-  });
+  };
+
+  // If created via POS or auto-assigned by staff, it might be auto-confirmed
+  // We will let the controller decide, but if autoAssignedBarber is true, we confirm it
+  if (autoAssignedBarber) {
+    bookingData.status = 'confirmed';
+    bookingData.confirmedAt = new Date();
+  }
+
+  const booking = new Booking(bookingData);
 
   await booking.save();
 
