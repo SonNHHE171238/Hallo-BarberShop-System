@@ -78,7 +78,7 @@ exports.createBooking = async (req, res, next) => {
     if (emailToSend) {
       emailService.sendBookingConfirmationEmail(emailToSend, {
         customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
-        serviceName: populatedBooking.serviceId?.name || 'Dịch vụ',
+        serviceName: (populatedBooking.services && populatedBooking.services.length > 0) ? populatedBooking.services.map(s => s.name).join(', ') : 'Dịch vụ',
         barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
         bookingDate: populatedBooking.bookingDate,
         timeSlot: timeSlot
@@ -100,7 +100,8 @@ exports.createBooking = async (req, res, next) => {
 exports.createBookingSinglePage = async (req, res, next) => {
   try {
     const {
-      serviceId,
+      serviceId, // For backward compatibility
+      services: reqServices,
       barberId, // Can be null, 'random', or actual barber ID
       bookingDate,
       timeSlot, // "HH:MM" format
@@ -115,6 +116,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
       isAutoAssign = false, // Alternative parameter name from frontend
       bookingType,
     } = req.body;
+
+    const services = reqServices && reqServices.length > 0 ? reqServices : (serviceId ? [serviceId] : []);
 
     let customerId = req.userId || null;
 
@@ -151,9 +154,9 @@ exports.createBookingSinglePage = async (req, res, next) => {
       }
     }
 
-    if (!serviceId || !bookingDate || !date || !timeSlot) {
+    if (services.length === 0 || !bookingDate || !date || !timeSlot) {
       const error = new Error(
-        "Service, booking date, date, and time slot are required",
+        "Services, booking date, date, and time slot are required",
       );
       error.statusCode = 400;
       throw error;
@@ -172,7 +175,7 @@ exports.createBookingSinglePage = async (req, res, next) => {
     if (shouldAutoAssign) {
       try {
         const barberController = require("./barber.controller");
-        const mockReq = { body: { date, timeSlot, serviceId } };
+        const mockReq = { body: { date, timeSlot, services } };
 
         let autoAssignResult = null;
         const mockRes = {
@@ -229,7 +232,7 @@ exports.createBookingSinglePage = async (req, res, next) => {
       bookingType,
       customerId,
       barberId: finalBarberId,
-      serviceId,
+      services,
       bookingDate,
       timeSlot,
       durationMinutes: finalDurationMinutes,
@@ -245,7 +248,7 @@ exports.createBookingSinglePage = async (req, res, next) => {
     if (emailToSend) {
       emailService.sendBookingConfirmationEmail(emailToSend, {
         customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
-        serviceName: populatedBooking.serviceId?.name || 'Dịch vụ',
+        serviceName: (populatedBooking.services && populatedBooking.services.length > 0) ? populatedBooking.services.map(s => s.name).join(', ') : 'Dịch vụ',
         barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
         bookingDate: populatedBooking.bookingDate,
         timeSlot: timeSlot
@@ -257,11 +260,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
       booking: populatedBooking,
       bookingDetails: {
         bookingId: populatedBooking._id,
-        service: {
-          name: populatedBooking.serviceId?.name,
-          price: populatedBooking.serviceId?.price,
-          duration: populatedBooking.durationMinutes,
-        },
+        services: populatedBooking.services,
+        duration: populatedBooking.durationMinutes,
         barber: {
           name: populatedBooking.barberId?.userId?.name || "Unknown",
           isAutoAssigned: isAutoAssigned,
@@ -324,7 +324,7 @@ exports.getMyBookings = async (req, res) => {
 
     const skip = (page - 1) * limit;
     const bookings = await Booking.find(filter)
-      .populate("serviceId", "name price durationMinutes category")
+      .populate("services", "name price durationMinutes category")
       .populate({
         path: "barberId",
         select: "userId specialties averageRating",

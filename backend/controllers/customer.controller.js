@@ -12,8 +12,11 @@ exports.getDashboardData = async (req, res, next) => {
       bookingDate: { $gte: new Date() }
     })
       .sort({ bookingDate: 1 })
-      .populate('barberId', 'name avatarUrl')
-      .populate('serviceId', 'name price durationMinutes')
+      .populate({
+        path: 'barberId',
+        populate: { path: 'userId', select: 'name avatarUrl' }
+      })
+      .populate('services', 'name price durationMinutes')
       .lean();
 
     // Mock loyalty data as requested

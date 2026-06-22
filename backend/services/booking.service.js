@@ -224,7 +224,7 @@ exports.processCreateBooking = async ({
 
   // Return populated
   const populatedBooking = await Booking.findById(booking._id)
-    .populate('serviceId', 'name price durationMinutes')
+    .populate('services', 'name price durationMinutes')
     .populate('barberId', 'userId specialties averageRating')
     .populate('customerId', 'name email phone')
     .populate({
