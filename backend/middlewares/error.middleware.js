@@ -9,7 +9,7 @@ const errorHandler = (err, req, res, next) => {
   
   // Hiển thị message nếu là lỗi 4xx (lỗi do người dùng) hoặc được đánh dấu isOperational
   const isClientError = statusCode >= 400 && statusCode < 500;
-  const message = (err.isOperational || isClientError) ? err.message : 'Internal Server Error';
+  let message = (err.isOperational || isClientError) ? err.message : 'Đã có lỗi xảy ra từ máy chủ, vui lòng thử lại sau';
   const errorCode = err.errorCode || 'INTERNAL_ERROR';
 
   // Định dạng JSON trả về chuẩn

@@ -10,6 +10,8 @@ const adminAccountRoute = require('../routes/adminAccount.route');
 const chatbotRoute = require('../routes/chatbot.route');
 const customerRoute = require('../routes/customer.route');
 const serviceRoute = require('../routes/service.route');
+const barberRoute = require('../routes/barber.route');
+const staffRoute = require('../routes/staff.route');
 const errorHandler = require('../middlewares/error.middleware');
 
 const app = express();
@@ -28,6 +30,8 @@ app.use('/api/admin/accounts', adminAccountRoute);
 app.use('/api/chatbot', chatbotRoute);
 app.use('/api/customer', customerRoute);
 app.use('/api/services', serviceRoute);
+app.use('/api/barbers', barberRoute);
+app.use('/api/staff', staffRoute);
 
 app.get('/', (req, res) => {
     res.send('Hallo BarberShop API is running');

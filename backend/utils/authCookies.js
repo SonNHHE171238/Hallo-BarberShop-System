@@ -10,7 +10,11 @@ const baseOptions = () => ({
 
 const setAuthCookies = (res, accessToken, refreshToken) => {
   const base = baseOptions();
-  const accessMs = parseExpiresToMs(process.env.JWT_ACCESS_EXPIRES || '15m');
+  const now = new Date();
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  const accessMs = endOfDay.getTime() - now.getTime();
+  
   const refreshMs = parseExpiresToMs(process.env.JWT_REFRESH_EXPIRES || '7d');
 
   res.cookie(ACCESS_COOKIE, accessToken, {

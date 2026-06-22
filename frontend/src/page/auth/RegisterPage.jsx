@@ -7,6 +7,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { authService } from '@/services/auth.service';
 import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
   const [isVisible, setIsVisible] = useState(false);
@@ -290,9 +291,9 @@ export default function RegisterPage() {
                     onClick={async () => {
                       try {
                         await authService.resendOtp(formData.email);
-                        alert("Đã gửi lại mã OTP. Vui lòng kiểm tra email.");
+                        toast.success("Đã gửi lại mã OTP. Vui lòng kiểm tra email.");
                       } catch(err) {
-                        setError("Không thể gửi lại mã OTP.");
+                        toast.error(err.message || "Không thể gửi lại mã OTP.");
                       }
                     }}
                     className="text-label-md text-on-surface-variant hover:text-primary transition-colors duration-300" 

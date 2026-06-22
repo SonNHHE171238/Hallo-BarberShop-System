@@ -12,7 +12,12 @@ const getResetTokenTtlMs = () => {
   return (Number.isFinite(minutes) && minutes > 0 ? minutes : 60) * 60 * 1000;
 };
 
-const accessExpires = () => process.env.JWT_ACCESS_EXPIRES || '15m';
+const accessExpires = () => {
+  const now = new Date();
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  return Math.floor((endOfDay.getTime() - now.getTime()) / 1000);
+};
 const refreshExpires = () => process.env.JWT_REFRESH_EXPIRES || '7d';
 
 exports.signAccessToken = (userId, role) => {

@@ -136,7 +136,7 @@ exports.processCreateBooking = async ({
   }
 
   // Save Booking
-  const booking = new Booking({
+  const bookingData = {
     bookingType,
     customerId,
     barberId,
@@ -149,7 +149,16 @@ exports.processCreateBooking = async ({
     customerName,
     customerEmail,
     customerPhone,
-  });
+  };
+
+  // If created via POS or auto-assigned by staff, it might be auto-confirmed
+  // We will let the controller decide, but if autoAssignedBarber is true, we confirm it
+  if (autoAssignedBarber) {
+    bookingData.status = 'confirmed';
+    bookingData.confirmedAt = new Date();
+  }
+
+  const booking = new Booking(bookingData);
 
   await booking.save();
 
@@ -188,4 +197,130 @@ exports.processCreateBooking = async ({
     });
 
   return populatedBooking;
+};
+
+/**
+ * Sinh danh sách khung giờ động (Dynamic Gap Packing)
+ * @param {String} barberId ID của thợ cắt
+ * @param {String} date Ngày cần kiểm tra "YYYY-MM-DD"
+ * @param {Number} durationMinutes Thời lượng của dịch vụ
+ * @returns {Array} Mảng các khung giờ { time, available, reason }
+ */
+exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
+  const BarberAbsence = require("../models/barber-absence.model");
+  const Booking = require("../models/booking.model");
+
+  // Check if barber is absent all day
+  const requestedDateTime = new Date(`${date}T12:00:00`);
+  const isAbsent = await BarberAbsence.isBarberAbsent(barberId, requestedDateTime);
+  if (isAbsent) {
+    return []; // Trả về mảng rỗng nếu nghỉ cả ngày
+  }
+
+  // Lấy các booking trong ngày (chuyển sang UTC để match database)
+  const startDate = new Date(`${date}T00:00:00+07:00`); // Vietnam Time
+  const endDate = new Date(`${date}T23:59:59+07:00`);
+
+  const conflictingBookings = await Booking.find({
+    barberId,
+    bookingDate: { $gte: startDate, $lt: endDate },
+    status: { $in: ["pending", "confirmed"] }
+  });
+
+  conflictingBookings.sort((a, b) => new Date(a.bookingDate) - new Date(b.bookingDate));
+
+  // Hàm check đụng lịch
+  const checkOverlap = (start, end) => {
+    return conflictingBookings.some(booking => {
+      const bStart = new Date(booking.bookingDate).getTime();
+      const bEnd = bStart + booking.durationMinutes * 60000;
+      return start.getTime() < bEnd && end.getTime() > bStart;
+    });
+  };
+
+  const baseSlots = ["09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
+  const resultSlots = [];
+
+  // Bước 1: Quét các base slots
+  for (const time of baseSlots) {
+    const slotStart = new Date(`${date}T${time}:00+07:00`);
+    const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+    
+    let isAvailable = true;
+    let reason = null;
+
+    if (checkOverlap(slotStart, slotEnd)) {
+      isAvailable = false;
+      reason = "Khung giờ đã có khách đặt";
+    }
+
+    resultSlots.push({ time, available: isAvailable, reason });
+  }
+
+  // Bước 2: Quét các khoảng hở (Gap Packing)
+  for (const booking of conflictingBookings) {
+    const bEnd = new Date(new Date(booking.bookingDate).getTime() + booking.durationMinutes * 60000);
+    
+    // Chuyển bEnd sang giờ Việt Nam để tính toán
+    const localTime = new Date(bEnd.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+    const hours = localTime.getHours();
+    const mins = localTime.getMinutes();
+    const timeStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+    
+    // Chỉ tính nếu nằm trong giờ làm việc và không phải giờ nghỉ trưa
+    if (hours >= 9 && hours < 20 && hours !== 12) {
+      // Ràng buộc nếu endtime vượt quá 19:00 (ca cuối) thì bỏ
+      if (hours === 19 && mins > 0) continue; 
+
+      const slotStart = bEnd;
+      const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+      
+      if (!checkOverlap(slotStart, slotEnd)) {
+        // Kiểm tra xem đã có trong resultSlots chưa
+        if (!resultSlots.some(s => s.time === timeStr)) {
+          resultSlots.push({ time: timeStr, available: true, reason: null });
+        }
+      }
+    }
+  }
+
+  // Bước 3: Áp dụng ràng buộc Tối đa 2 tiếng (chỉ cho 19:00) và kiểm tra giờ quá khứ
+  const now = new Date();
+  const localNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+  const currentYear = localNow.getFullYear();
+  const currentMonth = String(localNow.getMonth() + 1).padStart(2, '0');
+  const currentDay = String(localNow.getDate()).padStart(2, '0');
+  const todayStr = `${currentYear}-${currentMonth}-${currentDay}`;
+  
+  if (date === todayStr) {
+    const currentHour = localNow.getHours();
+    const currentMin = localNow.getMinutes();
+
+    for (const slot of resultSlots) {
+      const [h, m] = slot.time.split(':').map(Number);
+      
+      // Cản giờ trong quá khứ
+      if (currentHour > h || (currentHour === h && currentMin >= m)) {
+         slot.available = false;
+         slot.reason = "Thời gian đã trôi qua";
+      }
+      
+      // Luật Tối thiểu 2 tiếng cho 19:00
+      if (slot.time === "19:00" && slot.available) {
+        if (currentHour >= 17) {
+          slot.available = false;
+          slot.reason = "Yêu cầu bạn đặt lịch trước tối thiểu 2 tiếng để quán có thể sẵn sàng phục vụ";
+        }
+      }
+    }
+  }
+
+  // Bước 4: Sort lại list từ sáng đến tối
+  resultSlots.sort((a, b) => {
+    const [ah, am] = a.time.split(':').map(Number);
+    const [bh, bm] = b.time.split(':').map(Number);
+    return (ah * 60 + am) - (bh * 60 + bm);
+  });
+
+  return resultSlots;
 };

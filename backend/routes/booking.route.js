@@ -1,36 +1,42 @@
 const express = require('express');
 const router = express.Router();
-const bookingController = require('../controllers/booking.controller');
-const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
+
+const bookingController = require('../controllers/bookingCore.controller');
+const bookingAdminController = require('../controllers/bookingAdmin.controller');
+const bookingStatsController = require('../controllers/bookingStats.controller');
+const bookingAvailabilityController = require('../controllers/bookingAvailability.controller');
+
+const { authenticate, authorizeRoles, optionalAuthenticate } = require('../middlewares/auth.middleware');
 const {
   applyRoleBasedBookingFilter,
   requireAdminForBookingConfirmation,
   checkBookingUpdatePermission
 } = require('../middlewares/booking.middleware');
 
-// Test endpoints (must come before parameterized routes)
+// Test endpoints
 router.post('/test/booking-flow-auto-assign', bookingController.testBookingFlowAutoAssign);
 
 // Booking CRUD operations
 router.post('/', authenticate, bookingController.createBooking);
-// IMPORTANT: Specific routes must come before parameterized routes
-router.post('/single-page', authenticate, bookingController.createBookingSinglePage);
+router.post('/single-page', optionalAuthenticate, bookingController.createBookingSinglePage);
 router.get('/me', authenticate, applyRoleBasedBookingFilter, bookingController.getMyBookings);
 router.get('/all', authenticate, applyRoleBasedBookingFilter, bookingController.getAllBookings);
-router.get('/stats', authenticate, bookingController.getBookingStats);
-router.get('/chart-stats', bookingController.getBookingChartStats);
 
-// Walk-in booking endpoints (Staff/Admin only)
-router.get('/walk-in/available-slots', authenticate, authorizeRoles('admin'), bookingController.getWalkInAvailableSlots);
+// Stats
+router.get('/stats', authenticate, bookingStatsController.getBookingStats);
+router.get('/chart-stats', bookingStatsController.getBookingChartStats);
+
+// Walk-in booking
+router.get('/walk-in/available-slots', authenticate, authorizeRoles('admin'), bookingAvailabilityController.getWalkInAvailableSlots);
 router.post('/walk-in', authenticate, authorizeRoles('admin'), bookingController.createWalkInBooking);
 
 // Parameterized routes must come last
 router.get('/:id', authenticate, bookingController.getBookingDetail);
 
 // Admin-only booking management
-router.get('/pending/list', authenticate, authorizeRoles('admin'), bookingController.getPendingBookings);
-router.put('/:bookingId/confirm', authenticate, requireAdminForBookingConfirmation, bookingController.confirmBooking);
-router.post('/bulk-confirm', authenticate, requireAdminForBookingConfirmation, bookingController.bulkConfirmBookings);
+router.get('/pending/list', authenticate, authorizeRoles('admin'), bookingAdminController.getPendingBookings);
+router.put('/:bookingId/confirm', authenticate, requireAdminForBookingConfirmation, bookingAdminController.confirmBooking);
+router.post('/bulk-confirm', authenticate, requireAdminForBookingConfirmation, bookingAdminController.bulkConfirmBookings);
 router.put('/:bookingId/assign-barber', authenticate, authorizeRoles('admin'), bookingController.assignBarberToBooking);
 
 // Booking status management
@@ -39,18 +45,19 @@ router.put('/:bookingId/cancel', authenticate, bookingController.cancelBooking);
 router.put('/:bookingId', authenticate, checkBookingUpdatePermission, bookingController.updateBookingDetails);
 
 // Admin booking rejection
-router.put('/:bookingId/reject', authenticate, authorizeRoles('admin'), bookingController.rejectBooking);
+router.put('/:bookingId/reject', authenticate, authorizeRoles('admin'), bookingAdminController.rejectBooking);
 
 // Barber no-show management
-router.put('/:bookingId/no-show', authenticate, bookingController.markNoShow);
+router.put('/:bookingId/no-show', authenticate, bookingAdminController.markNoShow);
 
 // Time-based completion checking
-router.get('/:bookingId/completion-eligibility', authenticate, bookingController.checkCompletionEligibility);
+router.get('/:bookingId/completion-eligibility', authenticate, bookingAvailabilityController.checkCompletionEligibility);
 
 // Booking conflict checking
-router.post('/check-availability', authenticate, bookingController.checkAvailability);
-router.get('/conflicts', authenticate, bookingController.getBookingConflicts);
+router.post('/check-availability', authenticate, bookingAvailabilityController.checkAvailability);
+router.get('/conflicts', authenticate, bookingAvailabilityController.getBookingConflicts);
 
-
+// Route for dynamic time slots
+router.post('/available-slots', bookingController.getAvailableSlots);
 
 module.exports = router;

@@ -8,7 +8,6 @@ export const adminBarberService = {
       });
       return response;
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách barbers:', error);
       throw error;
     }
   }
