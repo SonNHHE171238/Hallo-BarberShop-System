@@ -38,161 +38,25 @@ exports.createBooking = async (req, res, next) => {
       bookingType,
     } = req.body;
 
-    const customerId = req.userId;
-
-    // Validation: Check if booking is at least 30 minutes in the future
-    const now = new Date();
-    const requestedDateTime = new Date(bookingDate);
-    const timeDifference = requestedDateTime.getTime() - now.getTime();
-    const minutesDifference = timeDifference / (1000 * 60);
-
-    if (minutesDifference < 30) {
-      return res.status(400).json({
-        message: 'Bookings must be made at least 30 minutes in advance'
-      });
+    if (!["user", "guest"].includes(bookingType)) {
+      const error = new Error('bookingType phải là "user" hoặc "guest"');
+      error.statusCode = 400;
+      throw error;
     }
 
-    // Enhanced no-show checking with detailed blocking logic
-    const isBlocked = await NoShow.isCustomerBlocked(customerId, 3);
-    if (isBlocked) {
-      const noShowCount = await NoShow.getCustomerNoShowCount(customerId);
-      return res.status(403).json({
-        message: `Booking blocked due to ${noShowCount} cancellations/no-shows. Please contact support to resolve this issue.`,
-        errorCode: 'CUSTOMER_BLOCKED',
-        details: {
-          noShowCount,
-          limit: 3,
-          contactSupport: true
-        }
-      });
+    let customerId = null;
+    if (bookingType === "user") {
+      customerId = req.userId;
+    } else if (bookingType === "guest") {
+      if (!customerName || !customerPhone) {
+        const error = new Error("Khách vãng lai bắt buộc phải cung cấp Tên và Số điện thoại");
+        error.statusCode = 400;
+        throw error;
+      }
     }
 
-    // Check if barber is absent on the requested date
-    const isBarberAbsent = await BarberAbsence.isBarberAbsent(barberId, requestedDateTime);
-    if (isBarberAbsent) {
-      return res.status(400).json({
-        message: 'Selected barber is not available on this date'
-      });
-    }
-
-    // CRITICAL: Enhanced conflict checking to prevent overlapping bookings
-    const dateStr = requestedDateTime.toISOString().split('T')[0];
-
-    // Get all existing bookings for the barber on this date
-    const barberBookings = await Booking.find({
-      barberId,
-      bookingDate: {
-        $gte: new Date(dateStr + 'T00:00:00.000Z'),
-        $lt: new Date(dateStr + 'T23:59:59.999Z')
-      },
-      status: { $in: ['pending', 'confirmed'] }
-    }).sort({ bookingDate: 1 });
-
-    // CRITICAL: Check for customer conflicts across ALL barbers on this date
-    const customerBookings = await Booking.find({
-      customerId,
-      bookingDate: {
-        $gte: new Date(dateStr + 'T00:00:00.000Z'),
-        $lt: new Date(dateStr + 'T23:59:59.999Z')
-      },
-      status: { $in: ['pending', 'confirmed'] }
-    }).populate('barberId', 'userId')
-      .populate({
-        path: 'barberId',
-        populate: {
-          path: 'userId',
-          select: 'name'
-        }
-      });
-
-    // Enhanced conflict detection with proper time overlap checking
-    const newStart = new Date(bookingDate);
-    const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
-
-    // 1. Check for barber conflicts (same barber, overlapping time)
-    const barberConflict = barberBookings.find(booking => {
-      const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(existingStart.getTime() + booking.durationMinutes * 60000);
-
-      // Proper overlap detection: new booking overlaps with existing booking
-      return (newStart < existingEnd && newEnd > existingStart);
-    });
-
-    if (barberConflict) {
-      const affectedSlots = Math.ceil(durationMinutes / 30);
-      const conflictingSlots = Math.ceil(barberConflict.durationMinutes / 30);
-
-      return res.status(409).json({
-        message: `Time slot conflict detected. Your ${durationMinutes}-minute service (${newStart.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})} - ${newEnd.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}) overlaps with an existing ${barberConflict.durationMinutes}-minute booking (${new Date(barberConflict.bookingDate).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})} - ${new Date(barberConflict.bookingDate).getTime() + barberConflict.durationMinutes * 60000 ? new Date(new Date(barberConflict.bookingDate).getTime() + barberConflict.durationMinutes * 60000).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'}) : 'N/A'}).`,
-        conflictDetails: {
-          conflictType: 'BARBER_CONFLICT',
-          conflictingTime: barberConflict.bookingDate,
-          conflictingDuration: barberConflict.durationMinutes,
-          conflictingSlots: conflictingSlots,
-          requestedTime: bookingDate,
-          requestedDuration: durationMinutes,
-          requestedSlots: affectedSlots,
-          overlapStart: newStart > new Date(barberConflict.bookingDate) ? newStart : new Date(barberConflict.bookingDate),
-          overlapEnd: newEnd < new Date(new Date(barberConflict.bookingDate).getTime() + barberConflict.durationMinutes * 60000) ? newEnd : new Date(new Date(barberConflict.bookingDate).getTime() + barberConflict.durationMinutes * 60000)
-        },
-        errorCode: 'BOOKING_CONFLICT'
-      });
-    }
-
-    // 2. Check for customer conflicts (same customer, different barber, overlapping time)
-    const customerConflict = customerBookings.find(booking => {
-      const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(existingStart.getTime() + booking.durationMinutes * 60000);
-
-      // Proper overlap detection: new booking overlaps with customer's existing booking
-      return (newStart < existingEnd && newEnd > existingStart);
-    });
-
-    if (customerConflict) {
-      const conflictingBarberName = customerConflict.barberId?.userId?.name || 'Unknown Barber';
-
-      return res.status(409).json({
-        message: `You already have a booking during this time period. Your existing ${customerConflict.durationMinutes}-minute appointment with ${conflictingBarberName} (${new Date(customerConflict.bookingDate).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})} - ${new Date(new Date(customerConflict.bookingDate).getTime() + customerConflict.durationMinutes * 60000).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}) conflicts with your requested ${durationMinutes}-minute service (${newStart.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})} - ${newEnd.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}).`,
-        conflictDetails: {
-          conflictType: 'CUSTOMER_CONFLICT',
-          conflictingBookingId: customerConflict._id,
-          conflictingBarber: conflictingBarberName,
-          conflictingTime: customerConflict.bookingDate,
-          conflictingDuration: customerConflict.durationMinutes,
-          requestedTime: bookingDate,
-          requestedDuration: durationMinutes,
-          overlapStart: newStart > new Date(customerConflict.bookingDate) ? newStart : new Date(customerConflict.bookingDate),
-          overlapEnd: newEnd < new Date(new Date(customerConflict.bookingDate).getTime() + customerConflict.durationMinutes * 60000) ? newEnd : new Date(new Date(customerConflict.bookingDate).getTime() + customerConflict.durationMinutes * 60000)
-        },
-        errorCode: 'CUSTOMER_DOUBLE_BOOKING'
-      });
-    }
-
-    // Check barber's daily booking limit
-    const Barber = require('../models/barber.model');
-    const barber = await Barber.findById(barberId);
-    if (!barber) {
-      return res.status(404).json({ message: 'Barber not found' });
-    }
-
-    // Use existing bookings count to check daily limit
-    if (barberBookings.length >= barber.maxDailyBookings) {
-      return res.status(400).json({
-        message: 'Barber has reached maximum bookings for this date',
-        errorCode: 'DAILY_LIMIT_EXCEEDED'
-      });
-    }
-
-    // Validate service exists
-    const Service = require('../models/service.model');
-    const service = await Service.findById(serviceId);
-    if (!service) {
-      return res.status(404).json({ message: 'Service not found' });
-    }
-
-    // Create the booking
-    const booking = new Booking({
-      bookingType: req.body.bookingType || 'user',
+    const populatedBooking = await bookingService.processCreateBooking({
+      bookingType,
       customerId,
       barberId,
       serviceId,
@@ -284,130 +148,14 @@ exports.createBookingSinglePage = async (req, res, next) => {
           throw error;
         }
       } catch (autoAssignError) {
-        console.error('Error in auto-assignment:', autoAssignError);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to auto-assign barber',
-          errorCode: 'AUTO_ASSIGNMENT_FAILED'
-        });
+        const error = new Error("Failed to auto-assign barber");
+        error.statusCode = 500;
+        throw error;
       }
     }
 
-    // Validate final barber
-    const Barber = require('../models/barber.model');
-    const finalBarber = await Barber.findById(finalBarberId);
-    if (!finalBarber) {
-      return res.status(404).json({
-        success: false,
-        message: 'Barber not found',
-        errorCode: 'BARBER_NOT_FOUND'
-      });
-    }
-
-    // Continue with existing validation logic...
-    // (The rest of the validation logic from the original createBooking function)
-
-    // Check if barber is absent on the requested date
-    const isBarberAbsent = await BarberAbsence.isBarberAbsent(finalBarberId, requestedDateTime);
-    if (isBarberAbsent) {
-      return res.status(400).json({
-        success: false,
-        message: 'Selected barber is not available on this date',
-        errorCode: 'BARBER_ABSENT'
-      });
-    }
-
-    // Enhanced conflict checking
-    const dateStr = requestedDateTime.toISOString().split('T')[0];
-
-    // Get all existing bookings for the barber on this date
-    const barberBookings = await Booking.find({
-      barberId: finalBarberId,
-      bookingDate: {
-        $gte: new Date(dateStr + 'T00:00:00.000Z'),
-        $lt: new Date(dateStr + 'T23:59:59.999Z')
-      },
-      status: { $in: ['pending', 'confirmed'] }
-    }).sort({ bookingDate: 1 });
-
-    // Check for customer conflicts across ALL barbers on this date
-    const customerBookings = await Booking.find({
-      customerId,
-      bookingDate: {
-        $gte: new Date(dateStr + 'T00:00:00.000Z'),
-        $lt: new Date(dateStr + 'T23:59:59.999Z')
-      },
-      status: { $in: ['pending', 'confirmed'] }
-    }).populate('barberId', 'userId')
-      .populate({
-        path: 'barberId',
-        populate: {
-          path: 'userId',
-          select: 'name'
-        }
-      });
-
-    // Enhanced conflict detection with proper time overlap checking
-    const newStart = new Date(bookingDate);
-    const newEnd = new Date(newStart.getTime() + finalDurationMinutes * 60000);
-
-    // 1. Check for barber conflicts
-    const barberConflict = barberBookings.find(booking => {
-      const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(existingStart.getTime() + booking.durationMinutes * 60000);
-      return (newStart < existingEnd && newEnd > existingStart);
-    });
-
-    if (barberConflict) {
-      return res.status(409).json({
-        success: false,
-        message: `Time slot conflict detected. The selected time overlaps with an existing booking.`,
-        errorCode: 'BOOKING_CONFLICT',
-        conflictDetails: {
-          conflictType: 'BARBER_CONFLICT',
-          conflictingTime: barberConflict.bookingDate,
-          conflictingDuration: barberConflict.durationMinutes,
-          requestedTime: bookingDate,
-          requestedDuration: finalDurationMinutes
-        }
-      });
-    }
-
-    // 2. Check for customer conflicts
-    const customerConflict = customerBookings.find(booking => {
-      const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(existingStart.getTime() + booking.durationMinutes * 60000);
-      return (newStart < existingEnd && newEnd > existingStart);
-    });
-
-    if (customerConflict) {
-      const conflictingBarberName = customerConflict.barberId?.userId?.name || 'Unknown Barber';
-      return res.status(409).json({
-        success: false,
-        message: `You already have a booking during this time period with ${conflictingBarberName}.`,
-        errorCode: 'CUSTOMER_DOUBLE_BOOKING',
-        conflictDetails: {
-          conflictType: 'CUSTOMER_CONFLICT',
-          conflictingBookingId: customerConflict._id,
-          conflictingBarber: conflictingBarberName,
-          conflictingTime: customerConflict.bookingDate,
-          conflictingDuration: customerConflict.durationMinutes
-        }
-      });
-    }
-
-    // Check barber's daily booking limit
-    if (barberBookings.length >= finalBarber.maxDailyBookings) {
-      return res.status(400).json({
-        success: false,
-        message: 'Barber has reached maximum bookings for this date',
-        errorCode: 'DAILY_LIMIT_EXCEEDED'
-      });
-    }
-
-    // Create the booking
-    const booking = new Booking({
-      bookingType: req.body.bookingType || 'user',
+    const populatedBooking = await bookingService.processCreateBooking({
+      bookingType,
       customerId,
       barberId: finalBarberId,
       serviceId,
@@ -2011,7 +1759,6 @@ exports.createBookingFromBot = async (payload, userId) => {
 
     // Tạo booking
     const booking = new Booking({
-      bookingType: 'user',
       customerId: userId,
       barberId,
       serviceId,
