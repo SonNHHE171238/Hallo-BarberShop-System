@@ -50,9 +50,6 @@ export default function Footer() {
           </div>
         </div>
       </div>
-      <div className="border-t border-outline-variant py-8 px-4 md:px-16 text-center">
-        <p className="text-on-surface-variant font-label-md text-label-md">© 2024 HALLO BARBER. All rights reserved. Precision in every cut.</p>
-      </div>
     </footer>
   );
 }

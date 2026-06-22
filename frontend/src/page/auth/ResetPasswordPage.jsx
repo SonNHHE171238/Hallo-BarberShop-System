@@ -1,15 +1,24 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import { authService } from '@/services/auth.service';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState('idle'); // 'idle', 'loading', 'success'
   const [error, setError] = useState('');
+  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const id = searchParams.get('id');
+  const token = searchParams.get('token');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
@@ -23,17 +32,29 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    if (!id || !token) {
+      setError('Đường dẫn không hợp lệ hoặc đã hết hạn.');
+      return;
+    }
+
     setStatus('loading');
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await authService.resetPassword(id, token, newPassword);
       setStatus('success');
-    }, 1500);
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+    } catch (err) {
+      setError(err.message || 'Khôi phục mật khẩu thất bại.');
+      setStatus('idle');
+    }
   };
 
   return (
-    <div className="bg-surface-obsidian text-on-surface font-body-md overflow-x-hidden selection:bg-primary selection:text-on-primary">
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4">
+    <div className="bg-surface-obsidian text-on-surface font-body-md flex flex-col min-h-screen overflow-x-hidden selection:bg-primary selection:text-on-primary">
+      <Navbar />
+      <div className="relative flex-grow flex items-center justify-center overflow-hidden p-4 mt-24 mb-16">
         
         {/* Background Gradients */}
         <div className="absolute inset-0 z-0 pointer-events-none">
@@ -160,7 +181,7 @@ export default function ResetPasswordPage() {
             <div className="mt-10 pt-8 border-t border-outline-variant/30 text-center animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <Link 
                 className="text-label-md text-on-surface-variant hover:text-primary transition-colors duration-300 flex items-center justify-center gap-2" 
-                href="/login/customer"
+                href="/login"
               >
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                 Quay lại trang đăng nhập
@@ -170,18 +191,23 @@ export default function ResetPasswordPage() {
             {/* Glowing orb bottom right */}
             <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-[64px] pointer-events-none"></div>
           </div>
-
-          <footer className="mt-8 text-center animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-            <p className="text-label-md font-playfair text-outline italic">
-              Precision in every cut. Excellence in every detail.
-            </p>
-          </footer>
         </main>
 
         <div className="fixed bottom-0 left-0 w-full h-[300px] pointer-events-none opacity-20">
           <div className="absolute bottom-0 w-full h-full bg-gradient-to-t from-primary/20 to-transparent"></div>
         </div>
       </div>
+      <div className="w-full relative z-10 mt-auto">
+        <Footer />
+      </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-surface-obsidian flex justify-center items-center text-primary font-headline-sm">Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

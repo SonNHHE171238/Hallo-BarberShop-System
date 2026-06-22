@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/booking.controller');
-const { authenticate, authorizeRoles } = require('../middlewares/authMiddleware');
+const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 const {
   applyRoleBasedBookingFilter,
   requireAdminForBookingConfirmation,
@@ -19,6 +19,11 @@ router.get('/me', authenticate, applyRoleBasedBookingFilter, bookingController.g
 router.get('/all', authenticate, applyRoleBasedBookingFilter, bookingController.getAllBookings);
 router.get('/stats', authenticate, bookingController.getBookingStats);
 router.get('/chart-stats', bookingController.getBookingChartStats);
+
+// Walk-in booking endpoints (Staff/Admin only)
+router.get('/walk-in/available-slots', authenticate, authorizeRoles('admin'), bookingController.getWalkInAvailableSlots);
+router.post('/walk-in', authenticate, authorizeRoles('admin'), bookingController.createWalkInBooking);
+
 // Parameterized routes must come last
 router.get('/:id', authenticate, bookingController.getBookingDetail);
 
@@ -47,6 +52,7 @@ router.post('/check-availability', authenticate, bookingController.checkAvailabi
 router.post('/generate-time-slots', authenticate, bookingController.generateTimeSlots);
 router.get('/conflicts', authenticate, bookingController.getBookingConflicts);
 
-
+// Route for dynamic time slots
+router.post('/available-slots', bookingController.getAvailableSlots);
 
 module.exports = router;

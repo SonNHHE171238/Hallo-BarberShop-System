@@ -13,11 +13,17 @@ const userSchema = new mongoose.Schema(
       match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     },
     phone: { type: String, default: '' },
-    password: { type: String, required: true, select: false },
+    passwordHash: { type: String, select: false }, // Cho phép null/undefined nếu đăng nhập bằng Google
+    oauthProvider: {
+      type: String,
+      enum: ['google', 'facebook', null],
+      default: null,
+    },
+    oauthId: { type: String, default: null },
     avatarUrl: { type: String, default: '' },
     role: {
       type: String,
-      enum: ['customer', 'barber', 'admin'],
+      enum: ['customer', 'barber', 'staff', 'admin'],
       default: 'customer',
     },
     status: {
@@ -30,23 +36,25 @@ const userSchema = new mongoose.Schema(
     otpExpires: { type: Date },
     resetTokenHash: { type: String, select: false },
     resetTokenExpires: { type: Date },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
 userSchema.pre('save', async function hashPassword() {
-  if (!this.isModified('password')) {
+  if (!this.isModified('passwordHash')) {
     return;
   }
-  if (typeof this.password === 'string' && /^\$2[aby]\$/.test(this.password)) {
+  if (typeof this.passwordHash === 'string' && /^\$2[aby]\$/.test(this.passwordHash)) {
     return;
   }
   const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
 });
 
 userSchema.methods.comparePassword = async function comparePassword(candidate) {
-  return bcrypt.compare(candidate, this.password);
+  if (!this.passwordHash) return false;
+  return bcrypt.compare(candidate, this.passwordHash);
 };
 
 module.exports = mongoose.model('User', userSchema);

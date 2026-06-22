@@ -158,7 +158,15 @@ barberScheduleSchema.statics.markSlotsAsBooked = async function(barberId, date, 
         const slotIndex = schedule.availableSlots.findIndex(slot => slot.time === slotTime);
 
         if (slotIndex === -1) {
-            throw new Error(`Time slot ${slotTime} not found in schedule`);
+            // It's a dynamic slot or out of bounds (like 19:00)! Just push it.
+            schedule.availableSlots.push({
+                time: slotTime,
+                isBooked: true,
+                bookingId: bookingId,
+                isBlocked: false
+            });
+            bookedSlots.push(slotTime);
+            continue;
         }
 
         const slot = schedule.availableSlots[slotIndex];

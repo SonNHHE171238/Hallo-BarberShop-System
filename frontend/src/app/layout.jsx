@@ -1,5 +1,7 @@
-import { Playfair_Display } from "next/font/google";
+import { Playfair_Display, Montserrat, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
 import "./globals.css";
+import { Providers } from './providers';
+import { Toaster } from 'react-hot-toast';
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair-display",
@@ -21,8 +23,20 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className={`${playfairDisplay.variable} bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col`}>
-        {children}
+      <body className={`${playfairDisplay.variable} font-body-md bg-surface text-on-surface antialiased overflow-x-hidden selection:bg-primary selection:text-on-primary`}>
+        <Providers>
+          {children}
+          <Toaster 
+            position="top-center"
+            toastOptions={{
+              style: {
+                background: '#1A1D1E',
+                color: '#fff',
+                border: '1px solid #444748',
+              },
+            }}
+          />
+        </Providers>
       </body>
     </html>
   );

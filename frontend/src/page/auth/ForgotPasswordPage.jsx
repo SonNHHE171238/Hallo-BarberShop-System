@@ -2,17 +2,31 @@
 
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import { authService } from '@/services/auth.service';
 
 export default function ForgotPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const cardRef = useRef(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
     if (email) {
-      setIsSubmitted(true);
+      try {
+        await authService.forgotPassword(email);
+        setIsSubmitted(true);
+      } catch (err) {
+        setError(err.message || "Không thể gửi email. Vui lòng thử lại.");
+      }
     }
+    setIsLoading(false);
   };
 
   const handleMouseMove = (e) => {
@@ -28,22 +42,19 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center justify-center p-4 selection:bg-primary selection:text-on-primary font-body-md antialiased relative overflow-hidden">
-      {/* Background Decoration */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,#4e463933,transparent_60%)]"></div>
-      </div>
+    <div className="min-h-screen bg-surface-obsidian text-on-surface flex flex-col relative overflow-hidden font-body-md">
+      {/* Top Navigation */}
+      <Navbar />
 
-      {/* Brand Header */}
-      <header className="z-10 mb-12 text-center">
-        <h1 className="text-display-lg md:text-display-lg text-[48px] leading-tight font-bold tracking-tighter text-primary uppercase">
-          HALLO BARBER
-        </h1>
-        <div className="h-px w-12 bg-primary mx-auto mt-2"></div>
-      </header>
+      <main className="relative z-10 w-full max-w-lg px-4 xl:max-w-xl flex-grow flex flex-col justify-center mx-auto mt-24 mb-16">
+        {/* Brand Header */}
+        <header className="z-10 mb-12 text-center">
+          <h1 className="text-display-lg md:text-display-lg text-[48px] leading-tight font-bold tracking-tighter text-primary uppercase">
+            HALLO BARBER
+          </h1>
+          <div className="h-px w-12 bg-primary mx-auto mt-2"></div>
+        </header>
 
-      {/* Main Card */}
-      <main className="z-10 w-full max-w-md" style={{ perspective: '1000px' }}>
         <div 
           ref={cardRef}
           onMouseMove={handleMouseMove}
@@ -70,6 +81,12 @@ export default function ForgotPasswordPage() {
               </div>
 
               <form className="space-y-6" onSubmit={handleSubmit}>
+                {error && (
+                  <div className="bg-error/10 border border-error/50 text-error px-4 py-3 rounded text-label-md">
+                    {error}
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <label className="text-label-md text-primary uppercase tracking-widest block pl-1" htmlFor="email">
                     Địa chỉ Email
@@ -92,17 +109,18 @@ export default function ForgotPasswordPage() {
                 </div>
 
                 <button 
-                  className="w-full bg-primary text-on-primary font-bold py-4 rounded-lg flex items-center justify-center gap-3 active:scale-95 transition-all duration-200 hover:bg-primary-container group shadow-lg shadow-primary/10" 
+                  className="w-full bg-primary text-on-primary font-bold py-4 rounded-lg flex items-center justify-center gap-3 active:scale-95 transition-all duration-200 hover:bg-primary-container group shadow-lg shadow-primary/10 disabled:opacity-50" 
                   type="submit"
+                  disabled={isLoading}
                 >
-                  <span className="text-label-md uppercase tracking-wider">Gửi liên kết khôi phục</span>
-                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-200">arrow_forward</span>
+                  <span className="text-label-md uppercase tracking-wider">{isLoading ? 'Đang gửi...' : 'Gửi liên kết khôi phục'}</span>
+                  {!isLoading && <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-200">arrow_forward</span>}
                 </button>
 
                 <div className="pt-4 text-center">
                   <Link 
                     className="text-label-md text-on-surface-variant hover:text-primary transition-colors duration-300 flex items-center justify-center gap-2 group" 
-                    href="/login/customer"
+                    href="/login"
                   >
                     <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform duration-200">arrow_back</span>
                     Trở về Đăng nhập
@@ -134,11 +152,9 @@ export default function ForgotPasswordPage() {
       </main>
 
       {/* Footer Identity */}
-      <footer className="z-10 mt-12 text-center text-on-surface-variant">
-        <p className="text-label-md opacity-60 uppercase tracking-widest">
-          © 2024 HALLO BARBER. Precision in every cut.
-        </p>
-      </footer>
+      <div className="w-full relative z-10 mt-auto">
+        <Footer />
+      </div>
 
       {/* Decorative Side Images for Large Screens */}
       <div className="hidden xl:block fixed right-0 top-0 h-full w-1/4 z-0 pointer-events-none opacity-40">
