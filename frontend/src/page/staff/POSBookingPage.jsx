@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import toast from 'react-hot-toast';
 
 export default function POSBookingPage() {
   // State: Customer
@@ -73,7 +74,7 @@ export default function POSBookingPage() {
 
   const handleConfirm = () => {
     if (selectedServices.length === 0 || !selectedStaff) {
-      alert("Vui lòng chọn ít nhất 1 dịch vụ và 1 Barber.");
+      toast.error("Vui lòng chọn ít nhất 1 dịch vụ và 1 Barber.");
       return;
     }
     setShowToast(true);

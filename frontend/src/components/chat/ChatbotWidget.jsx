@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import toast from 'react-hot-toast';
 
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -93,7 +94,7 @@ export default function ChatbotWidget() {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert("Kích thước ảnh quá lớn, vui lòng chọn ảnh < 5MB.");
+        toast.error("Kích thước ảnh quá lớn, vui lòng chọn ảnh < 5MB.");
         return;
       }
       const reader = new FileReader();

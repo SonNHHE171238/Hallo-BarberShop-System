@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { bookingService } from "@/services/booking.service";
+import toast from 'react-hot-toast';
 
 export default function DateTimeSelection({ selectedBarber, selectedService, selectedDate, setSelectedDate, selectedTime, setSelectedTime }) {
   const today = new Date();
@@ -203,7 +204,7 @@ export default function DateTimeSelection({ selectedBarber, selectedService, sel
                     key={index}
                     onClick={() => {
                       if (isDisabled) {
-                        alert(slot.reason || "Khung giờ này không khả dụng");
+                        toast.error(slot.reason || "Khung giờ này không khả dụng");
                       } else {
                         setSelectedTime(slot.time);
                       }

@@ -47,12 +47,6 @@ export default function StaffHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
-          <button className="hidden md:block p-2 hover:bg-surface-bright/10 rounded-full transition-transform active:scale-95 text-on-surface-variant hover:text-primary">
-            <span className="material-symbols-outlined">notifications</span>
-          </button>
-          <button className="hidden md:block p-2 hover:bg-surface-bright/10 rounded-full transition-transform active:scale-95 text-on-surface-variant hover:text-primary">
-            <span className="material-symbols-outlined">settings</span>
-          </button>
           <div className="relative hidden md:block ml-2">
             <div 
               className="w-10 h-10 rounded-full overflow-hidden border border-primary cursor-pointer hover:scale-105 transition-transform"

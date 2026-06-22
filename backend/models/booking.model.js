@@ -52,6 +52,10 @@ const bookingSchema = new Schema(
       ],
       default: "pending",
     },
+    isCheckedIn: {
+      type: Boolean,
+      default: false,
+    },
     notificationMethods: [
       {
         type: String,

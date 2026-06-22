@@ -13,7 +13,6 @@ export const bookingService = {
       });
       return response;
     } catch (error) {
-      console.error('Lỗi khi tạo booking:', error);
       throw error;
     }
   },
@@ -28,7 +27,6 @@ export const bookingService = {
       const response = await fetchWithAuth('/services', { method: 'GET' });
       return response;
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách dịch vụ:', error);
       throw error;
     }
   },
@@ -41,7 +39,6 @@ export const bookingService = {
       const response = await fetchWithAuth('/barbers', { method: 'GET' });
       return response;
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách thợ cắt:', error);
       throw error;
     }
   },
@@ -54,7 +51,6 @@ export const bookingService = {
       const response = await fetchWithAuth(`/barbers/${barberId}/absences`, { method: 'GET' });
       return response;
     } catch (error) {
-      console.error('Lỗi khi lấy lịch nghỉ của thợ cắt:', error);
       return { absentDates: [] }; // Fallback
     }
   },
@@ -70,7 +66,6 @@ export const bookingService = {
       });
       return response;
     } catch (error) {
-      console.error('Lỗi khi check availability:', error);
       throw error;
     }
   },
@@ -88,7 +83,6 @@ export const bookingService = {
       });
       return response;
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách khung giờ:', error);
       throw error;
     }
   },

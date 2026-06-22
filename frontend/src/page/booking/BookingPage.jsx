@@ -11,6 +11,7 @@ import BookingSummarySidebar from "@/components/booking/BookingSummarySidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { bookingService } from "@/services/booking.service";
+import toast from 'react-hot-toast';
 
 export default function BookingPage() {
   const [selectedService, setSelectedService] = useState(null);
@@ -21,15 +22,15 @@ export default function BookingPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const handleConfirm = async () => {
+    const handleConfirm = async () => {
     if (!user) {
-      alert("Vui lòng đăng nhập để đặt lịch.");
+      toast.error("Vui lòng đăng nhập để đặt lịch.");
       router.push("/login?redirect=/booking");
       return;
     }
 
     if (!selectedService || !selectedDate || !selectedTime) {
-      alert("Vui lòng chọn đầy đủ Dịch vụ và Thời gian.");
+      toast.error("Vui lòng chọn đầy đủ Dịch vụ và Thời gian.");
       return;
     }
 
@@ -62,9 +63,10 @@ export default function BookingPage() {
         dateStr: dateStr
       });
       
+      toast.success("Đặt lịch thành công!");
       router.push(`/booking/success?${queryParams.toString()}`);
     } catch (error) {
-      alert("Đặt lịch thất bại: " + (error.message || "Lỗi hệ thống"));
+      toast.error("Đặt lịch thất bại: " + (error.message || "Vui lòng thử lại"));
     } finally {
       setIsLoading(false);
     }

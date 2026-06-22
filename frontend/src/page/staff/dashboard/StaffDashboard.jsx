@@ -1,254 +1,354 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { staffDashboardService } from '@/services/staffDashboard.service';
+import toast from 'react-hot-toast';
 
 export default function StaffDashboard() {
+  const [metrics, setMetrics] = useState({
+    totalBookingsToday: 0,
+    waitingCustomers: 0,
+    activeBarbers: 0,
+    totalBarbers: 0
+  });
+  const [todayBookings, setTodayBookings] = useState([]);
+  const [tomorrowBookings, setTomorrowBookings] = useState([]);
+  const [barbersStatus, setBarbersStatus] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [checkInModal, setCheckInModal] = useState({ isOpen: false, bookingId: null });
+
+  const fetchData = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
+    try {
+      const [metricsRes, bookingsRes, barbersRes] = await Promise.all([
+        staffDashboardService.getMetrics(),
+        staffDashboardService.getUpcomingBookings(),
+        staffDashboardService.getBarbersStatus()
+      ]);
+      
+      // api.js tự động bóc vỏ (unwrap) { success, data } thành data
+      if (metricsRes) setMetrics(metricsRes);
+      if (bookingsRes) {
+        setTodayBookings(bookingsRes.today || []);
+        setTomorrowBookings(bookingsRes.tomorrow || []);
+      }
+      if (barbersRes) setBarbersStatus(barbersRes);
+    } catch (error) {
+      console.error(error);
+      toast.error('Không thể kết nối máy chủ');
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(true);
+    
+    // Silent polling mỗi 60s
+    const intervalId = setInterval(() => {
+      fetchData(false);
+    }, 60000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const handleUpdateCheckIn = async (isCheckedIn) => {
+    if (!checkInModal.bookingId) return;
+    try {
+      const res = await staffDashboardService.updateCheckIn(checkInModal.bookingId, isCheckedIn);
+      if (res) {
+        toast.success(res.isCheckedIn ? 'Khách đã đến' : 'Chưa có mặt thành công');
+        fetchData(false);
+      }
+      setCheckInModal({ isOpen: false, bookingId: null });
+    } catch (error) {
+      toast.error(error.message || 'Lỗi cập nhật trạng thái');
+    }
+  };
+
+  const todayStr = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[calc(100vh-100px)]">
+        <span className="material-symbols-outlined animate-spin text-primary text-5xl">progress_activity</span>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
-      {/* Dashboard Content */}
+      <div className="p-12 space-y-12 max-w-[1400px] mx-auto animate-fade-in">
+        {/* Welcome Header & Quick Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div>
+            <h2 className="font-display-lg text-4xl text-on-surface mb-2">Trang Quản Lý Tại Quầy</h2>
+            <p className="text-on-surface-variant font-body-md flex items-center">
+              <span className="material-symbols-outlined mr-2 text-sm">calendar_today</span>
+              Hôm nay là {todayStr}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/staff/pos" className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-body-md text-sm font-bold hover:brightness-110 active:scale-95 transition-all">
+              <span className="material-symbols-outlined text-lg">point_of_sale</span>
+              Mở Hệ Thống POS
+            </Link>
+          </div>
+        </div>
 
-          {/* Dashboard Content */}
-          <div className="p-12 space-y-12 max-w-[1400px] mx-auto">
-            {/* Welcome Header & Quick Actions */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-              <div>
-                <h2 className="font-display-lg text-4xl text-on-surface mb-2">Chào buổi sáng, Quản trị viên</h2>
-                <p className="text-on-surface-variant font-body-md flex items-center">
-                  <span className="material-symbols-outlined mr-2 text-sm">calendar_today</span>
-                  Hôm nay là Thứ Tư, ngày 24 tháng 5, 2024
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-6 py-3 border border-primary text-primary rounded-lg font-body-md text-sm font-bold hover:bg-primary/5 active:scale-95 transition-all">
-                  <span className="material-symbols-outlined text-lg">add_circle</span>
-                  Tạo đặt lịch mới
-                </button>
-                <Link href="/staff/pos" className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-body-md text-sm font-bold hover:brightness-110 active:scale-95 transition-all">
-                  <span className="material-symbols-outlined text-lg">point_of_sale</span>
-                  Mở POS
-                </Link>
+        {/* Metrics Row - Changed to 3 columns, removed Doanh thu dự kiến */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36 border-b-2 border-b-primary">
+            <div className="flex justify-between items-start">
+              <span className="text-on-surface-variant font-medium text-sm">Lịch hẹn hôm nay</span>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <span className="material-symbols-outlined text-primary">event_available</span>
               </div>
             </div>
-
-            {/* Metrics Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36">
-                <div className="flex justify-between items-start">
-                  <span className="text-on-surface-variant font-medium text-sm">Lịch hẹn hôm nay</span>
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <span className="material-symbols-outlined text-primary">event_available</span>
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-3xl font-bold font-headline-md text-primary">24</span>
-                  <span className="text-xs text-green-400 flex items-center bg-green-400/10 px-2 py-1 rounded">
-                    <span className="material-symbols-outlined text-xs mr-1">trending_up</span> +15%
-                  </span>
-                </div>
-              </div>
-              <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36">
-                <div className="flex justify-between items-start">
-                  <span className="text-on-surface-variant font-medium text-sm">Thợ đang hoạt động</span>
-                  <div className="p-2 bg-secondary/10 rounded-lg">
-                    <span className="material-symbols-outlined text-secondary">content_cut</span>
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-3xl font-bold font-headline-md text-on-surface">6<span className="text-on-surface-variant font-normal text-xl">/8</span></span>
-                  <span className="text-xs text-on-surface-variant">Công suất 75%</span>
-                </div>
-              </div>
-              <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36">
-                <div className="flex justify-between items-start">
-                  <span className="text-on-surface-variant font-medium text-sm">Doanh thu dự kiến</span>
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <span className="material-symbols-outlined text-primary">payments</span>
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-3xl font-bold font-headline-md text-on-surface">8.5M<span className="text-lg ml-1">₫</span></span>
-                  <span className="text-xs text-on-surface-variant">Dựa trên lịch đặt</span>
-                </div>
-              </div>
-              <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36">
-                <div className="flex justify-between items-start">
-                  <span className="text-on-surface-variant font-medium text-sm">Khách chờ</span>
-                  <div className="p-2 bg-error/10 rounded-lg">
-                    <span className="material-symbols-outlined text-error">hourglass_empty</span>
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-3xl font-bold font-headline-md text-error">3</span>
-                  <span className="text-xs text-on-surface-variant">~15 phút trung bình</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Main Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Left Column: Appointments List */}
-              <div className="lg:col-span-2 space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
-                    <span className="material-symbols-outlined mr-3 text-primary">list_alt</span>
-                    Lịch hẹn sắp tới
-                  </h3>
-                  <a className="text-xs font-bold text-primary hover:underline underline-offset-4 tracking-widest uppercase" href="#">Xem tất cả</a>
-                </div>
-                <div className="glass-card rounded-2xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b border-outline-variant bg-surface-container-high">
-                          <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Thời gian</th>
-                          <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Khách hàng</th>
-                          <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Dịch vụ</th>
-                          <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Barber</th>
-                          <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Trạng thái</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-outline-variant/30">
-                        <tr className="hover:bg-primary/5 transition-colors group">
-                          <td className="px-6 py-5 font-label-md text-primary font-bold">09:30</td>
-                          <td className="px-6 py-5">
-                            <p className="font-bold text-sm">Nguyễn Văn A</p>
-                            <p className="text-[10px] text-on-surface-variant">+84 901 *** 888</p>
-                          </td>
-                          <td className="px-6 py-5 text-sm text-on-surface-variant italic">Combo Cắt & Gội</td>
-                          <td className="px-6 py-5 text-sm font-medium">Marco V.</td>
-                          <td className="px-6 py-5">
-                            <span className="px-3 py-1 bg-surface-variant text-[10px] font-bold text-on-surface-variant rounded uppercase tracking-wider">Đang chờ</span>
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-primary/5 transition-colors group">
-                          <td className="px-6 py-5 font-label-md text-primary font-bold">10:15</td>
-                          <td className="px-6 py-5">
-                            <p className="font-bold text-sm">Trần Thị B</p>
-                            <p className="text-[10px] text-on-surface-variant">+84 988 *** 234</p>
-                          </td>
-                          <td className="px-6 py-5 text-sm text-on-surface-variant italic">Phục hồi tóc</td>
-                          <td className="px-6 py-5 text-sm font-medium">Julian K.</td>
-                          <td className="px-6 py-5">
-                            <span className="px-3 py-1 bg-primary/10 text-[10px] font-bold text-primary rounded uppercase tracking-wider">Sắp đến</span>
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-primary/5 transition-colors group">
-                          <td className="px-6 py-5 font-label-md text-primary font-bold">11:00</td>
-                          <td className="px-6 py-5">
-                            <p className="font-bold text-sm">Lê Văn C</p>
-                            <p className="text-[10px] text-on-surface-variant">+84 912 *** 999</p>
-                          </td>
-                          <td className="px-6 py-5 text-sm text-on-surface-variant italic">Cạo mặt & Massage</td>
-                          <td className="px-6 py-5 text-sm font-medium">Sasha L.</td>
-                          <td className="px-6 py-5">
-                            <span className="px-3 py-1 bg-green-400/10 text-[10px] font-bold text-green-400 rounded uppercase tracking-wider">Đã xác nhận</span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                {/* Quick Inventory Check */}
-                <div className="glass-card p-6 rounded-2xl border-l-4 border-l-primary flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <span className="material-symbols-outlined text-primary text-3xl">inventory_2</span>
-                    <div>
-                      <p className="font-bold">Sắp hết hàng!</p>
-                      <p className="text-xs text-on-surface-variant">Pomade Gỗ Đàn Hương còn 2 hũ trong kho.</p>
-                    </div>
-                  </div>
-                  <button className="text-xs font-bold text-primary hover:underline uppercase tracking-widest">Kiểm tra kho</button>
-                </div>
-              </div>
-
-              {/* Right Column: Barber Status */}
-              <div className="space-y-6">
-                <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
-                  <span className="material-symbols-outlined mr-3 text-primary">person_search</span>
-                  Trạng thái Barber
-                </h3>
-                <div className="space-y-4">
-                  <div className="glass-card p-4 rounded-xl flex items-center justify-between group">
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden">
-                          <img className="w-full h-full object-cover" alt="Barber" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhFe_nXeSjGBPV75SLjUvDv_YD4Oka0AE0YblUul_Oe6bmzbKe3G7_eW8QewneMvatlSEtaNHIe5-EV-NRhbkyfjlnqJJ8JxgAB6OHTAqnU3S1-c4Jkh-m5s2t7XyUygfpIpgf9TN7F6heC87flqKUuirb_OUh_RDI0_w2bNDJrUUZY0sHRp7avZQMECmZHtppRjbsTNcUN93cy_iZox49b6Dc2MKXjd6IOfsqXqE5smyD8rBPVhSv5m7sISGgHRmw1QMYd-b1DFVm" />
-                        </div>
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-error border-2 border-surface rounded-full"></span>
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">Marco V.</p>
-                        <p className="text-[10px] text-on-surface-variant italic">Master Barber</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-error uppercase tracking-widest bg-error/10 px-2 py-1 rounded">Đang cắt</span>
-                  </div>
-                  <div className="glass-card p-4 rounded-xl flex items-center justify-between group">
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden grayscale">
-                          <img className="w-full h-full object-cover" alt="Barber" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCt9C94gSFt1__JWG7eshAQ8r6bHA9mebwNONw5vFaoAAuBRiv6_0ZSlV2tIeo8Z_HgV4LpzY5dY0Kl8PQ_6UX_mB6kKi5iPGr4kxFlBjUaUqaQinzpGOZVwrykowLy8GHdVAWPTwL9wU1HZnDNgKDt6uyrzNmUefKDZMF6uLkpXDQsioXb1RrAeUzEHpzsp11cqOnwLxfvIN_mR_2q25HR041kK7WMEF7KZ5LvIZZChPgT6HTK2WkM9MwDXKNxEi0fMeZPtlM3qNyi" />
-                        </div>
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-on-surface-variant border-2 border-surface rounded-full"></span>
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">Julian K.</p>
-                        <p className="text-[10px] text-on-surface-variant italic">Senior Barber</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-variant px-2 py-1 rounded">Đang nghỉ</span>
-                  </div>
-                  <div className="glass-card p-4 rounded-xl flex items-center justify-between group">
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden group-hover:grayscale-0 transition-all">
-                          <img className="w-full h-full object-cover" alt="Barber" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA46lkz0bQ1nlyEUOFgOU3NMRgtoVR-I5XNyKJLiTeIU1Aw5wfc_fCxEkOKQvbdKVeWZODo5TEwE9PVurl0og8XD0nGAWyF82cu4OFsRKf4C8ObRlPha8XSaStIxguxMuRN6NWtM0DV6FMLbGkK1AD0-4k-4Y9o-iyuRqp45ZSSciBgwOYs853KG6fFm3cBrqnL7MeCqtgth9b_Mpz0tVbCtFoyEulr5Nro56Lbgtlw3CtRCKYWIraVvKP_F9rJK7XXcBADm8SBpQa4" />
-                        </div>
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface rounded-full animate-pulse"></span>
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">Sasha L.</p>
-                        <p className="text-[10px] text-on-surface-variant italic">Senior Barber</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest bg-green-500/10 px-2 py-1 rounded">Sẵn sàng</span>
-                  </div>
-                  <div className="glass-card p-4 rounded-xl flex items-center justify-between group">
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden">
-                          <img className="w-full h-full object-cover" alt="Barber" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfieutpL-NHpVc-Wkt-q1oSyJkK4f9wbIp8WLAvp3wclXiGlk4z4ItWcPFxUSthd8LI32M4EfFoLPk-3V_z9tYB9IUJsTZsxRv17s_A6p04evWUZFSX5CUyaPbp1DxiEz1cjqNyYktj16ch6HapMdhoUXNnaaUiYCzfIzV9v9m9cTGPr5s8Pnt-Kn1Vvg6O5DukEj4SaVB0Cw5fE2RPC4Qo9A0CU4Y6bOTXvHtIgCSQo40YLJRjSC9-WFpxCNX0da5_hVe5E1VPohR" />
-                        </div>
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface rounded-full"></span>
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">Victor R.</p>
-                        <p className="text-[10px] text-on-surface-variant italic">Junior Stylist</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest bg-green-500/10 px-2 py-1 rounded">Sẵn sàng</span>
-                  </div>
-                </div>
-
-                {/* Shift Overview */}
-                <div className="glass-card p-6 rounded-2xl space-y-4">
-                  <p className="font-bold text-sm flex items-center">
-                    <span className="material-symbols-outlined mr-2 text-primary">schedule</span>
-                    Ca làm việc hiện tại
-                  </p>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-on-surface-variant">Thời gian còn lại</span>
-                      <span className="text-on-surface">4h 15p</span>
-                    </div>
-                    <div className="w-full bg-surface-variant h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-primary h-full w-[65%] shadow-[0_0_10px_rgba(233,193,118,0.4)]"></div>
-                    </div>
-                    <p className="text-[10px] text-on-surface-variant italic text-center">Kết thúc lúc 18:00</p>
-                  </div>
-                </div>
-              </div>
+            <div className="flex items-end justify-between">
+              <span className="text-3xl font-bold font-headline-md text-primary">{metrics.totalBookingsToday}</span>
+              <span className="text-xs text-on-surface-variant">Lượt khách</span>
             </div>
           </div>
+          <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36 border-b-2 border-b-secondary">
+            <div className="flex justify-between items-start">
+              <span className="text-on-surface-variant font-medium text-sm">Thợ đang hoạt động</span>
+              <div className="p-2 bg-secondary/10 rounded-lg">
+                <span className="material-symbols-outlined text-secondary">content_cut</span>
+              </div>
+            </div>
+            <div className="flex items-end justify-between">
+              <span className="text-3xl font-bold font-headline-md text-on-surface">
+                {metrics.activeBarbers}
+                <span className="text-on-surface-variant font-normal text-xl">/{metrics.totalBarbers}</span>
+              </span>
+              <span className="text-xs text-on-surface-variant">Sẵn sàng</span>
+            </div>
+          </div>
+          <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36 border-b-2 border-b-error">
+            <div className="flex justify-between items-start">
+              <span className="text-on-surface-variant font-medium text-sm">Khách chờ (Đã có mặt)</span>
+              <div className="p-2 bg-error/10 rounded-lg">
+                <span className="material-symbols-outlined text-error">hourglass_empty</span>
+              </div>
+            </div>
+            <div className="flex items-end justify-between">
+              <span className="text-3xl font-bold font-headline-md text-error">{metrics.waitingCustomers}</span>
+              <span className="text-xs text-on-surface-variant">Đang chờ phục vụ</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Appointments List (Today & Tomorrow) */}
+          <div className="lg:col-span-2 space-y-12">
+            
+            {/* Lịch hẹn hôm nay */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
+                  <span className="material-symbols-outlined mr-3 text-primary">today</span>
+                  Lịch hẹn hôm nay
+                </h3>
+              </div>
+              <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-outline-variant bg-surface-container-high">
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Thời gian</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Khách hàng</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Dịch vụ</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Barber</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Check-in</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/30">
+                      {todayBookings.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-10 text-center text-on-surface-variant">Không có lịch hẹn nào hôm nay</td>
+                        </tr>
+                      ) : (
+                        todayBookings.map((booking) => (
+                          <tr key={booking._id} className="hover:bg-primary/5 transition-colors group">
+                            <td className="px-6 py-5 font-label-md text-primary font-bold">{booking.time}</td>
+                            <td className="px-6 py-5">
+                              <p className="font-bold text-sm">{booking.customerName}</p>
+                              <p className="text-[10px] text-on-surface-variant">{booking.customerPhone}</p>
+                            </td>
+                            <td className="px-6 py-5 text-sm text-on-surface-variant italic">{booking.serviceName}</td>
+                            <td className="px-6 py-5 text-sm font-medium">{booking.barberName}</td>
+                            <td className="px-6 py-5">
+                              <button
+                                onClick={() => setCheckInModal({ isOpen: true, bookingId: booking._id })}
+                                className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
+                                  booking.isCheckedIn 
+                                  ? 'bg-green-500/20 text-green-500 hover:bg-error/10 hover:text-error' 
+                                  : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
+                                }`}
+                                title={booking.isCheckedIn ? "Bấm để Hủy Check-in" : "Bấm để Check-in"}
+                              >
+                                <span className="material-symbols-outlined text-[14px]">
+                                  {booking.isCheckedIn ? 'how_to_reg' : 'person_cancel'}
+                                </span>
+                                {booking.isCheckedIn ? 'Đã có mặt' : 'Chưa có mặt'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Lịch hẹn ngày mai */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
+                  <span className="material-symbols-outlined mr-3 text-secondary">event_upcoming</span>
+                  Lịch hẹn ngày mai
+                </h3>
+              </div>
+              <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-outline-variant bg-surface-container-high">
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Thời gian</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Khách hàng</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Dịch vụ</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Barber</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Check-in</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/30">
+                      {tomorrowBookings.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-10 text-center text-on-surface-variant">Không có lịch hẹn nào ngày mai</td>
+                        </tr>
+                      ) : (
+                        tomorrowBookings.map((booking) => (
+                          <tr key={booking._id} className="hover:bg-primary/5 transition-colors group opacity-80 hover:opacity-100">
+                            <td className="px-6 py-5 font-label-md text-primary font-bold">{booking.time}</td>
+                            <td className="px-6 py-5">
+                              <p className="font-bold text-sm">{booking.customerName}</p>
+                              <p className="text-[10px] text-on-surface-variant">{booking.customerPhone}</p>
+                            </td>
+                            <td className="px-6 py-5 text-sm text-on-surface-variant italic">{booking.serviceName}</td>
+                            <td className="px-6 py-5 text-sm font-medium">{booking.barberName}</td>
+                            <td className="px-6 py-5">
+                              <button
+                                onClick={() => setCheckInModal({ isOpen: true, bookingId: booking._id })}
+                                className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
+                                  booking.isCheckedIn 
+                                  ? 'bg-green-500/20 text-green-500 hover:bg-error/10 hover:text-error' 
+                                  : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
+                                }`}
+                                title={booking.isCheckedIn ? "Bấm để Hủy Check-in" : "Bấm để Check-in"}
+                              >
+                                <span className="material-symbols-outlined text-[14px]">
+                                  {booking.isCheckedIn ? 'how_to_reg' : 'person_cancel'}
+                                </span>
+                                {booking.isCheckedIn ? 'Đã có mặt' : 'Chưa có mặt'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+
+          {/* Right Column: Barber Status */}
+          <div className="space-y-6">
+            <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
+              <span className="material-symbols-outlined mr-3 text-primary">person_search</span>
+              Trạng thái barber hôm nay
+            </h3>
+            <div className="space-y-4">
+              {barbersStatus.length === 0 ? (
+                <div className="glass-card p-6 text-center text-on-surface-variant text-sm rounded-xl">Không có thợ nào hoạt động</div>
+              ) : (
+                barbersStatus.map(barber => {
+                  let statusClass = 'bg-green-500/10 text-green-500 border-green-500/20';
+                  let ringClass = 'bg-green-500';
+                  let imgClass = 'grayscale-0';
+                  
+                  if (barber.status === 'Nghỉ phép') {
+                    statusClass = 'bg-surface-variant text-on-surface-variant border-outline-variant';
+                    ringClass = 'bg-on-surface-variant';
+                    imgClass = 'grayscale opacity-70';
+                  }
+
+                  return (
+                    <div key={barber._id} className="glass-card p-4 rounded-xl flex items-center justify-between group">
+                      <div className="flex items-center space-x-4">
+                        <div className="relative">
+                          <div className={`w-12 h-12 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden transition-all ${imgClass}`}>
+                            <img className="w-full h-full object-cover" alt={barber.name} src={barber.image} />
+                          </div>
+                          <span className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-surface rounded-full ${ringClass}`}></span>
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm">{barber.name}</p>
+                          <p className="text-[10px] text-on-surface-variant italic">{barber.role}</p>
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest border px-2 py-1 rounded ${statusClass}`}>
+                        {barber.status}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Check-in Modal */}
+      {checkInModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-obsidian/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface-container-high rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-outline-variant">
+            <div className="p-6 text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                <span className="material-symbols-outlined text-primary text-3xl">how_to_reg</span>
+              </div>
+              <h3 className="font-headline-sm text-xl text-on-surface font-bold">Xác nhận trạng thái khách hàng</h3>
+              <p className="text-sm text-on-surface-variant">Khách đã tới cửa hàng chưa?</p>
+              
+              <div className="flex flex-col gap-3 pt-4">
+                <button 
+                  onClick={() => handleUpdateCheckIn(true)}
+                  className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20"
+                >
+                  Đã có mặt
+                </button>
+                <button 
+                  onClick={() => handleUpdateCheckIn(false)}
+                  className="w-full py-3 bg-surface-variant text-on-surface font-bold rounded-xl hover:bg-outline-variant active:scale-95 transition-all"
+                >
+                  Chưa có mặt
+                </button>
+              </div>
+              <button 
+                onClick={() => setCheckInModal({ isOpen: false, bookingId: null })}
+                className="mt-4 text-xs font-bold text-on-surface-variant hover:underline uppercase tracking-widest"
+              >
+                Hủy bỏ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
