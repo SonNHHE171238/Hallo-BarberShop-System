@@ -24,8 +24,8 @@ export default function NextAppointment({ appointment }) {
   
   // Format status map
   const statusMap = {
-    pending: { label: 'CHỜ XÁC NHẬN', icon: 'schedule', colorClass: 'text-secondary bg-secondary/10 border-secondary/40' },
-    confirmed: { label: 'ĐÃ XÁC NHẬN', icon: 'verified', colorClass: 'text-primary-container bg-primary-container/10 border-primary-container/40' }
+    pending: { label: 'CHƯA TỚI', icon: 'schedule', colorClass: 'text-secondary bg-secondary/10 border-secondary/40' },
+    confirmed: { label: 'KHÁCH ĐÃ ĐẾN', icon: 'how_to_reg', colorClass: 'text-green-600 bg-green-500/10 border-green-500/40' }
   };
   
   const statusInfo = statusMap[appointment.status] || statusMap.pending;
