@@ -49,7 +49,6 @@ router.get('/:bookingId/completion-eligibility', authenticate, bookingController
 
 // Booking conflict checking
 router.post('/check-availability', authenticate, bookingController.checkAvailability);
-router.post('/generate-time-slots', authenticate, bookingController.generateTimeSlots);
 router.get('/conflicts', authenticate, bookingController.getBookingConflicts);
 
 // Route for dynamic time slots
