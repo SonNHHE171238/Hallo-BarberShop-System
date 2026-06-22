@@ -8,8 +8,8 @@ const { sendPasswordResetEmail } = require('../services/email.service');
 const { OAuth2Client } = require('google-auth-library');
 
 const getResetTokenTtlMs = () => {
-  const minutes = parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '60', 10);
-  return (Number.isFinite(minutes) && minutes > 0 ? minutes : 60) * 60 * 1000;
+  const minutes = parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '10', 10);
+  return (Number.isFinite(minutes) && minutes > 0 ? minutes : 10) * 60 * 1000;
 };
 
 const accessExpires = () => {

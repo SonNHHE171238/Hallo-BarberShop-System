@@ -74,8 +74,8 @@ exports.sendPasswordResetEmail = async (to, resetLink) => {
     throw new Error('Email is not configured (set EMAIL_USER and EMAIL_PASS in .env)');
   }
 
-  const minutes = parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '60', 10);
-  const ttlMinutes = Number.isFinite(minutes) && minutes > 0 ? minutes : 60;
+  const minutes = parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '10', 10);
+  const ttlMinutes = Number.isFinite(minutes) && minutes > 0 ? minutes : 10;
   const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
 
   await transport.sendMail({
@@ -102,7 +102,6 @@ exports.sendPasswordResetEmail = async (to, resetLink) => {
         <p style="text-align: center; margin: 24px 0;">
           <a href="${resetLink}" style="background: #c9a227; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Đặt lại mật khẩu</a>
         </p>
-        <p style="color: #666; font-size: 14px;">Hoặc copy link: <br/><a href="${resetLink}">${resetLink}</a></p>
         <p style="color: #666; font-size: 14px;">Liên kết có hiệu lực trong <strong>${ttlMinutes} phút</strong>.</p>
         <p>Trân trọng,<br/>Barbershop</p>
       </div>
