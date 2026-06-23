@@ -86,4 +86,26 @@ export const bookingService = {
       throw error;
     }
   },
+
+  /**
+   * API for Barber Dashboard
+   */
+  getBarberTodayBookings: async () => {
+    try {
+      return await fetchWithAuth('/bookings/barber/today', { method: 'GET' });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  updateBookingStatus: async (bookingId, status) => {
+    try {
+      return await fetchWithAuth(`/bookings/${bookingId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 };

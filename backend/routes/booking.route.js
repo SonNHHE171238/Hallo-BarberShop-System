@@ -20,6 +20,7 @@ router.post('/test/booking-flow-auto-assign', bookingController.testBookingFlowA
 router.post('/', authenticate, bookingController.createBooking);
 router.post('/single-page', optionalAuthenticate, bookingController.createBookingSinglePage);
 router.get('/me', authenticate, applyRoleBasedBookingFilter, bookingController.getMyBookings);
+router.get('/barber/today', authenticate, authorizeRoles('barber', 'admin'), bookingController.getBarberTodayBookings);
 router.get('/all', authenticate, applyRoleBasedBookingFilter, bookingController.getAllBookings);
 
 // Stats
