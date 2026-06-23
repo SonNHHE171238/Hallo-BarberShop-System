@@ -41,8 +41,8 @@ export default function NextAppointment({ appointment }) {
             LỊCH HẸN SẮP TỚI
           </div>
           <div className="font-label-md text-xs text-primary-container uppercase tracking-[0.2em] mb-2">{day}/{month}</div>
-          <h2 className="font-headline-md text-2xl text-on-surface serif-title">{appointment.serviceId?.name || 'Dịch vụ'}</h2>
-          <p className="font-body-md text-on-surface-variant mt-2 italic">Tinh hoa sự lịch lãm cùng Nghệ nhân Barber {appointment.barberId?.name || 'Ngẫu nhiên'}</p>
+          <h2 className="font-headline-md text-2xl text-on-surface serif-title">{appointment.services && appointment.services.length > 0 ? appointment.services.map(s => s.name).join(', ') : 'Dịch vụ'}</h2>
+          <p className="font-body-md text-on-surface-variant mt-2 italic">Tinh hoa sự lịch lãm cùng Nghệ nhân Barber {appointment.barberId?.userId?.name || 'Ngẫu nhiên'}</p>
         </div>
         <div className={`border rounded px-4 py-2 flex items-center gap-2 self-start sm:self-auto ${statusInfo.colorClass}`}>
           <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{statusInfo.icon}</span>
@@ -65,8 +65,8 @@ export default function NextAppointment({ appointment }) {
           </div>
         </div>
         <div className="flex gap-4 w-full sm:w-auto">
-          <button className="flex-1 sm:flex-none px-8 py-3 border border-outline text-on-surface font-label-md text-xs uppercase tracking-widest hover:bg-surface-variant transition-colors rounded">Đổi lịch</button>
-          <button className="flex-1 sm:flex-none px-8 py-3 bg-primary-container text-on-primary-container font-label-md text-xs uppercase tracking-widest hover:opacity-90 transition-opacity rounded font-bold">Chi tiết</button>
+          <Link href="/booking" className="flex-1 sm:flex-none px-8 py-3 border border-outline text-on-surface font-label-md text-xs uppercase tracking-widest hover:bg-surface-variant transition-colors rounded text-center">Đổi lịch</Link>
+          <button className="flex-1 sm:flex-none px-8 py-3 bg-primary-container text-on-primary-container font-label-md text-xs uppercase tracking-widest hover:opacity-90 transition-opacity rounded font-bold" onClick={() => console.log('Chi tiết clicked')}>Chi tiết</button>
         </div>
       </div>
     </div>

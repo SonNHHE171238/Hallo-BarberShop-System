@@ -79,7 +79,11 @@ export default function ChatbotWidget() {
       });
       const data = await res.json();
       if (data.success) {
-        setMessages((prev) => [...prev, { role: "ai", content: data.data }]);
+        if (data.type === 'hairstyle_advice') {
+          setMessages((prev) => [...prev, { role: "ai", isAdvice: true, data: data.data }]);
+        } else {
+          setMessages((prev) => [...prev, { role: "ai", content: data.data }]);
+        }
       } else {
         setMessages((prev) => [...prev, { role: "system", content: "Lỗi kết nối với máy chủ AI." }]);
       }
@@ -144,25 +148,85 @@ export default function ChatbotWidget() {
 
           {/* Messages Area */}
           <div className="flex-1 p-4 overflow-y-auto bg-surface-container-lowest/50 custom-scrollbar flex flex-col gap-4">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl p-3 text-sm font-body-md flex flex-col gap-2 ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-on-primary rounded-br-none shadow-md shadow-primary/10'
-                      : msg.role === 'system'
-                      ? 'bg-surface-container border border-outline-variant text-on-surface-variant italic text-center w-full rounded-xl text-xs'
-                      : 'bg-surface-container-high border border-outline-gold/30 text-on-surface rounded-bl-none shadow-sm'
-                  }`}
-                  style={{ whiteSpace: 'pre-wrap' }}
-                >
-                  {msg.image && (
-                    <img src={msg.image} alt="User Upload" className="max-w-full rounded-lg object-contain" />
-                  )}
-                  {msg.content && <span>{msg.content}</span>}
+            {messages.map((msg, idx) => {
+              if (msg.isAdvice) {
+                const { advice, previewImageUrl, matchedServices } = msg.data;
+                return (
+                  <div key={idx} className="flex justify-start">
+                    <div className="max-w-[95%] rounded-2xl p-4 text-sm font-body-md bg-surface-container-high border border-outline-gold/30 text-on-surface rounded-bl-none shadow-sm flex flex-col gap-3">
+                      <div className="font-bold text-primary">💈 Kết quả Phân tích & Tư vấn</div>
+                      <div className="text-sm">
+                        <p><strong>Dáng mặt:</strong> {advice?.faceShape}</p>
+                        <p><strong>Nhận xét tóc:</strong> {advice?.currentHairObservation}</p>
+                        <p className="mt-2 text-primary font-medium">{advice?.overallAdvice}</p>
+                      </div>
+
+                      {previewImageUrl && (
+                        <div className="mt-2">
+                          <p className="font-semibold text-xs uppercase tracking-wider text-on-surface-variant mb-1">Ảnh mô phỏng (AI Preview):</p>
+                          <img src={previewImageUrl} alt="AI Preview" className="w-full h-auto rounded-xl border border-outline-variant shadow-md" onError={(e) => e.target.style.display = 'none'} />
+                        </div>
+                      )}
+
+                      {advice?.recommendedStyles && advice.recommendedStyles.length > 0 && (
+                        <div className="mt-2">
+                          <p className="font-semibold text-xs uppercase tracking-wider text-on-surface-variant mb-2">Đề xuất hàng đầu:</p>
+                          <div className="flex flex-col gap-2">
+                            {advice.recommendedStyles.slice(0, 3).map((style, sIdx) => (
+                              <div key={sIdx} className="bg-surface-container p-3 rounded-lg border border-outline-variant/50">
+                                <p className="font-bold text-primary">{style.styleName}</p>
+                                <p className="text-xs text-on-surface-variant mt-1">{style.description}</p>
+                                <p className="text-xs text-secondary mt-1"><strong>Lý do:</strong> {style.whyItFits}</p>
+                                <p className="text-xs italic text-on-surface mt-1 bg-surface-container-highest p-1.5 rounded">Ghi chú cho thợ: "{style.barberInstruction}"</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {matchedServices && matchedServices.length > 0 && (
+                        <div className="mt-2">
+                          <p className="font-semibold text-xs uppercase tracking-wider text-on-surface-variant mb-1">Dịch vụ phù hợp tại Shop:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {matchedServices.map((svc, svcIdx) => (
+                              <span key={svcIdx} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20">
+                                {svc.name} - {svc.price.toLocaleString('vi-VN')}đ
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {advice?.barberNote && (
+                        <div className="mt-2 p-2 bg-error/10 text-error rounded-lg text-xs font-medium border border-error/20">
+                          <strong>Lời nhắn cho thợ:</strong> {advice.barberNote}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[85%] rounded-2xl p-3 text-sm font-body-md flex flex-col gap-2 ${
+                      msg.role === 'user'
+                        ? 'bg-primary text-on-primary rounded-br-none shadow-md shadow-primary/10'
+                        : msg.role === 'system'
+                        ? 'bg-surface-container border border-outline-variant text-on-surface-variant italic text-center w-full rounded-xl text-xs'
+                        : 'bg-surface-container-high border border-outline-gold/30 text-on-surface rounded-bl-none shadow-sm'
+                    }`}
+                    style={{ whiteSpace: 'pre-wrap' }}
+                  >
+                    {msg.image && (
+                      <img src={msg.image} alt="User Upload" className="max-w-full rounded-lg object-contain" />
+                    )}
+                    {msg.content && <span>{msg.content}</span>}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             
             {/* Lựa chọn mode */}
             {!mode && messages.length > 0 && (

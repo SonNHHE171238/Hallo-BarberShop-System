@@ -13,10 +13,10 @@ export const staffDashboardService = {
     return await fetchWithAuth('/staff/dashboard/barbers-status');
   },
   
-  updateCheckIn: async (bookingId, isCheckedIn) => {
-    return await fetchWithAuth(`/staff/dashboard/bookings/${bookingId}/checkin`, {
+  updateStatus: async (bookingId, status) => {
+    return await fetchWithAuth(`/staff/dashboard/bookings/${bookingId}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ isCheckedIn })
+      body: JSON.stringify({ status })
     });
   },
 
@@ -31,5 +31,9 @@ export const staffDashboardService = {
     const url = `/staff/appointments${queryString ? `?${queryString}` : ''}`;
     
     return await fetchWithAuth(url);
+  },
+
+  searchCustomerByPhone: async (phone) => {
+    return await fetchWithAuth(`/staff/customers/search?phone=${encodeURIComponent(phone)}`);
   }
 };

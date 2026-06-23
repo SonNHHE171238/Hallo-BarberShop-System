@@ -28,14 +28,26 @@ const staffController = {
     }
   },
 
-  toggleCheckIn: async (req, res, next) => {
+  updateStatus: async (req, res, next) => {
     try {
       const { id } = req.params;
-      const { isCheckedIn } = req.body;
-      if (typeof isCheckedIn !== 'boolean') {
-        return res.status(400).json({ success: false, message: 'isCheckedIn must be a boolean' });
+      const { status } = req.body;
+      
+      const Booking = require('../models/booking.model');
+      
+      let updateData = { status };
+      if (status === 'completed') {
+        updateData.completedAt = new Date();
+      } else if (status === 'no_show') {
+        updateData.noShowAt = new Date();
+        updateData.noShowBy = req.userId;
+      } else if (status === 'confirmed') {
+        updateData.confirmedAt = new Date();
+        updateData.confirmedBy = req.userId;
       }
-      const updatedBooking = await staffDashboardService.updateCheckIn(id, isCheckedIn);
+
+      const updatedBooking = await Booking.findByIdAndUpdate(id, updateData, { new: true });
+      
       return res.status(200).json({
         success: true,
         message: 'Cập nhật trạng thái thành công',
@@ -53,6 +65,34 @@ const staffController = {
       return res.status(200).json({
         success: true,
         data
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  searchCustomerByPhone: async (req, res, next) => {
+    try {
+      const { phone } = req.query;
+      if (!phone) {
+        const error = new Error('Vui lòng cung cấp số điện thoại');
+        error.statusCode = 400;
+        throw error;
+      }
+      const User = require('../models/user.model');
+      const customer = await User.findOne({ phone: phone, role: 'customer' }).select('name phone email loyaltyPoints');
+      
+      if (!customer) {
+        return res.status(200).json({
+          success: true,
+          data: null,
+          message: 'Không tìm thấy khách hàng'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: customer
       });
     } catch (error) {
       next(error);

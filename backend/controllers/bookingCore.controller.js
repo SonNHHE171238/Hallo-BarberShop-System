@@ -19,13 +19,14 @@ const {
 } = require("../utils/timeWindowValidation");
 
 const bookingService = require('../services/booking.service');
+const emailService = require('../services/email.service');
 const { sendSuccess } = require('../utils/response.helper');
 
 exports.createBooking = async (req, res, next) => {
   try {
     const {
       barberId,
-      serviceId,
+      services,
       bookingDate,
       timeSlot, // "HH:MM" format
       durationMinutes,
@@ -49,7 +50,9 @@ exports.createBooking = async (req, res, next) => {
       customerId = req.userId;
     } else if (bookingType === "guest") {
       if (!customerName || !customerPhone) {
-        const error = new Error("Khách vãng lai bắt buộc phải cung cấp Tên và Số điện thoại");
+        const error = new Error(
+          "Khách vãng lai bắt buộc phải cung cấp Tên và Số điện thoại",
+        );
         error.statusCode = 400;
         throw error;
       }
@@ -59,7 +62,7 @@ exports.createBooking = async (req, res, next) => {
       bookingType,
       customerId,
       barberId,
-      serviceId,
+      services,
       bookingDate,
       timeSlot,
       durationMinutes,
@@ -71,10 +74,22 @@ exports.createBooking = async (req, res, next) => {
       customerPhone,
     });
 
+    const emailToSend = customerEmail || populatedBooking.customerId?.email;
+    if (emailToSend) {
+      emailService.sendBookingConfirmationEmail(emailToSend, {
+        customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
+        serviceName: (populatedBooking.services && populatedBooking.services.length > 0) ? populatedBooking.services.map(s => s.name).join(', ') : 'Dịch vụ',
+        barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
+        bookingDate: populatedBooking.bookingDate,
+        timeSlot: timeSlot
+      }).catch(err => console.error('Failed to send confirmation email', err));
+    }
+
     return sendSuccess(res, 201, "Booking created successfully", { booking: populatedBooking });
   } catch (err) {
     if (err.code === 11000) {
-      err.message = "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
+      err.message =
+        "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
       err.errorCode = "RACE_CONDITION_CONFLICT";
       err.statusCode = 409;
     }
@@ -85,7 +100,8 @@ exports.createBooking = async (req, res, next) => {
 exports.createBookingSinglePage = async (req, res, next) => {
   try {
     const {
-      serviceId,
+      serviceId, // For backward compatibility
+      services: reqServices,
       barberId, // Can be null, 'random', or actual barber ID
       bookingDate,
       timeSlot, // "HH:MM" format
@@ -101,15 +117,47 @@ exports.createBookingSinglePage = async (req, res, next) => {
       bookingType,
     } = req.body;
 
-    const customerId = req.userId;
+    const services = reqServices && reqServices.length > 0 ? reqServices : (serviceId ? [serviceId] : []);
+
+    let customerId = req.userId || null;
+
     if (!["user", "guest"].includes(bookingType)) {
       const error = new Error('bookingType phải là "user" hoặc "guest"');
       error.statusCode = 400;
       throw error;
     }
 
-    if (!serviceId || !bookingDate || !date || !timeSlot) {
-      const error = new Error("Service, booking date, date, and time slot are required");
+    if (bookingType === "guest") {
+      if (!customerName || !customerPhone) {
+        const error = new Error(
+          "Khách vãng lai cần cung cấp Tên và Số điện thoại",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+      customerId = null;
+    } else if (bookingType === "user") {
+      if (!customerId && !["staff", "admin", "manager"].includes(req.role)) {
+        const error = new Error(
+          "Bạn cần đăng nhập để đặt lịch với tư cách thành viên",
+        );
+        error.statusCode = 401;
+        throw error;
+      }
+    }
+
+    if (["staff", "admin", "manager"].includes(req.role)) {
+      if (req.body.customerId) {
+        customerId = req.body.customerId;
+      } else if (bookingType === "guest") {
+        customerId = null;
+      }
+    }
+
+    if (services.length === 0 || !bookingDate || !date || !timeSlot) {
+      const error = new Error(
+        "Services, booking date, date, and time slot are required",
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -127,23 +175,36 @@ exports.createBookingSinglePage = async (req, res, next) => {
     if (shouldAutoAssign) {
       try {
         const barberController = require("./barber.controller");
-        const mockReq = { body: { date, timeSlot, serviceId } };
+        const mockReq = { body: { date, timeSlot, services } };
 
         let autoAssignResult = null;
         const mockRes = {
-          json: (data) => { autoAssignResult = data; return data; },
+          json: (data) => {
+            autoAssignResult = data;
+            return data;
+          },
           status: (code) => ({
-            json: (data) => { autoAssignResult = { ...data, statusCode: code }; return autoAssignResult; },
+            json: (data) => {
+              autoAssignResult = { ...data, statusCode: code };
+              return autoAssignResult;
+            },
           }),
         };
 
         await barberController.autoAssignBarberForSlot(mockReq, mockRes);
 
-        if (autoAssignResult && autoAssignResult.success && autoAssignResult.assignedBarber) {
+        if (
+          autoAssignResult &&
+          autoAssignResult.success &&
+          autoAssignResult.assignedBarber
+        ) {
           finalBarberId = autoAssignResult.assignedBarber._id;
           isAutoAssigned = true;
         } else {
-          const error = new Error(autoAssignResult?.message || "No barbers available for auto-assignment");
+          const error = new Error(
+            autoAssignResult?.message ||
+              "No barbers available for auto-assignment",
+          );
           error.statusCode = 404;
           throw error;
         }
@@ -156,10 +217,12 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
     let finalDurationMinutes = durationMinutes;
     if (!finalDurationMinutes) {
-      const Service = require('../models/service.model');
-      const service = await Service.findById(serviceId);
-      if (service) {
-        finalDurationMinutes = service.durationMinutes || service.duration || 30;
+      const Service = require("../models/service.model");
+      const selectedServices = await Service.find({ _id: { $in: services } });
+      if (selectedServices.length > 0) {
+        finalDurationMinutes = selectedServices.reduce((total, s) => {
+          return total + (s.durationMinutes || s.duration || 30);
+        }, 0);
       } else {
         finalDurationMinutes = 30;
       }
@@ -169,7 +232,7 @@ exports.createBookingSinglePage = async (req, res, next) => {
       bookingType,
       customerId,
       barberId: finalBarberId,
-      serviceId,
+      services,
       bookingDate,
       timeSlot,
       durationMinutes: finalDurationMinutes,
@@ -181,16 +244,24 @@ exports.createBookingSinglePage = async (req, res, next) => {
       customerPhone,
     });
 
+    const emailToSend = customerEmail || populatedBooking.customerId?.email;
+    if (emailToSend) {
+      emailService.sendBookingConfirmationEmail(emailToSend, {
+        customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
+        serviceName: (populatedBooking.services && populatedBooking.services.length > 0) ? populatedBooking.services.map(s => s.name).join(', ') : 'Dịch vụ',
+        barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
+        bookingDate: populatedBooking.bookingDate,
+        timeSlot: timeSlot
+      }).catch(err => console.error('Failed to send confirmation email', err));
+    }
+
     return res.status(201).json({
       success: true,
       booking: populatedBooking,
       bookingDetails: {
         bookingId: populatedBooking._id,
-        service: {
-          name: populatedBooking.serviceId?.name,
-          price: populatedBooking.serviceId?.price,
-          duration: populatedBooking.durationMinutes,
-        },
+        services: populatedBooking.services,
+        duration: populatedBooking.durationMinutes,
         barber: {
           name: populatedBooking.barberId?.userId?.name || "Unknown",
           isAutoAssigned: isAutoAssigned,
@@ -212,7 +283,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
     });
   } catch (err) {
     if (err.code === 11000) {
-      err.message = "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
+      err.message =
+        "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
       err.errorCode = "RACE_CONDITION_CONFLICT";
       err.statusCode = 409;
     }
@@ -252,7 +324,7 @@ exports.getMyBookings = async (req, res) => {
 
     const skip = (page - 1) * limit;
     const bookings = await Booking.find(filter)
-      .populate("serviceId", "name price durationMinutes category")
+      .populate("services", "name price durationMinutes category")
       .populate({
         path: "barberId",
         select: "userId specialties averageRating",
@@ -945,85 +1017,6 @@ exports.cancelBooking = async (req, res) => {
   }
 };
 
-// Check availability for a specific time slot
-exports.checkAvailability = async (req, res) => {
-  try {
-    const { barberId, bookingDate, durationMinutes } = req.body;
-
-    if (!barberId || !bookingDate || !durationMinutes) {
-      return res.status(400).json({
-        message: "Barber ID, booking date, and duration are required",
-      });
-    }
-
-    const requestedDateTime = new Date(bookingDate);
-
-    // Check if barber is absent
-    const isAbsent = await BarberAbsence.isBarberAbsent(
-      barberId,
-      requestedDateTime,
-    );
-    if (isAbsent) {
-      return res.json({
-        available: false,
-        reason: "Barber is absent on this date",
-      });
-    }
-
-    // Check for conflicts
-    const dateStr = requestedDateTime.toISOString().split("T")[0];
-    const conflictingBookings = await Booking.find({
-      barberId,
-      bookingDate: {
-        $gte: new Date(dateStr + "T00:00:00.000Z"),
-        $lt: new Date(dateStr + "T23:59:59.999Z"),
-      },
-      status: { $in: ["pending", "confirmed"] },
-    });
-
-    // Check for time overlaps
-    const newStart = new Date(bookingDate);
-    const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
-
-    const hasConflict = conflictingBookings.some((booking) => {
-      const existingStart = new Date(booking.bookingDate);
-      const existingEnd = new Date(
-        existingStart.getTime() + booking.durationMinutes * 60000,
-      );
-      return newStart < existingEnd && newEnd > existingStart;
-    });
-
-    if (hasConflict) {
-      return res.json({
-        available: false,
-        reason: "Time slot conflicts with existing booking",
-        conflictingBookings: conflictingBookings.map((booking) => ({
-          id: booking._id,
-          date: booking.bookingDate,
-          duration: booking.durationMinutes,
-        })),
-      });
-    }
-
-    // Check daily booking limit
-    const Barber = require("../models/barber.model");
-    const barber = await Barber.findById(barberId);
-    if (conflictingBookings.length >= barber.maxDailyBookings) {
-      return res.json({
-        available: false,
-        reason: "Barber has reached maximum bookings for this date",
-      });
-    }
-
-    res.json({
-      available: true,
-      message: "Time slot is available",
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
 // Sinh danh sách khung giờ động (Dynamic Gap Packing)
 exports.getAvailableSlots = async (req, res, next) => {
   try {
@@ -1036,86 +1029,15 @@ exports.getAvailableSlots = async (req, res, next) => {
     }
 
     const bookingService = require("../services/booking.service");
-    const resultSlots = await bookingService.generateDynamicSlots(barberId, date, durationMinutes);
+    const resultSlots = await bookingService.generateDynamicSlots(
+      barberId,
+      date,
+      durationMinutes,
+    );
 
     res.json({ success: true, slots: resultSlots });
   } catch (err) {
     next(err);
-  }
-};
-
-// Get booking conflicts for admin dashboard
-exports.getBookingConflicts = async (req, res) => {
-  try {
-    const { startDate, endDate } = req.query;
-
-    const filter = {
-      status: { $in: ["pending", "confirmed"] },
-    };
-
-    if (startDate || endDate) {
-      filter.bookingDate = {};
-      if (startDate) filter.bookingDate.$gte = new Date(startDate);
-      if (endDate) filter.bookingDate.$lte = new Date(endDate);
-    }
-
-    const bookings = await Booking.find(filter)
-      .populate("barberId", "userId")
-      .populate("serviceId", "name")
-      .populate("customerId", "name email")
-      .sort({ bookingDate: 1 });
-
-    // Group by barber and date to find conflicts
-    const conflicts = [];
-    const barberBookings = {};
-
-    bookings.forEach((booking) => {
-      const barberId = booking.barberId._id.toString();
-      const dateStr = booking.bookingDate.toISOString().split("T")[0];
-      const key = `${barberId}-${dateStr}`;
-
-      if (!barberBookings[key]) {
-        barberBookings[key] = [];
-      }
-      barberBookings[key].push(booking);
-    });
-
-    // Check for overlaps within each barber's daily bookings
-    Object.values(barberBookings).forEach((dayBookings) => {
-      if (dayBookings.length > 1) {
-        for (let i = 0; i < dayBookings.length; i++) {
-          for (let j = i + 1; j < dayBookings.length; j++) {
-            const booking1 = dayBookings[i];
-            const booking2 = dayBookings[j];
-
-            const start1 = new Date(booking1.bookingDate);
-            const end1 = new Date(
-              start1.getTime() + booking1.durationMinutes * 60000,
-            );
-            const start2 = new Date(booking2.bookingDate);
-            const end2 = new Date(
-              start2.getTime() + booking2.durationMinutes * 60000,
-            );
-
-            if (start1 < end2 && start2 < end1) {
-              conflicts.push({
-                type: "time_overlap",
-                bookings: [booking1, booking2],
-                barber: booking1.barberId,
-                date: start1.toISOString().split("T")[0],
-              });
-            }
-          }
-        }
-      }
-    });
-
-    res.json({
-      conflicts,
-      totalConflicts: conflicts.length,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
   }
 };
 
@@ -1194,60 +1116,6 @@ exports.getBookingDetail = async (req, res) => {
 };
 
 // Check if a booking can be completed based on time window
-exports.checkCompletionEligibility = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    const { userId, role: userRole } = req.user;
-
-    // Find the booking
-    const booking = await Booking.findById(bookingId)
-      .populate("serviceId", "name durationMinutes")
-      .populate("customerId", "name")
-      .populate("barberId", "name");
-
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    // Check if user has permission to complete this booking
-    const isBarber =
-      userRole === "barber" && booking.barberId.toString() === userId;
-    const isAdmin = userRole === "admin";
-
-    if (!isBarber && !isAdmin) {
-      return res.status(403).json({
-        message:
-          "You can only check completion eligibility for your own bookings",
-      });
-    }
-
-    // Get completion eligibility information
-    const completionCheck = canCompleteBooking(booking, userRole, 15); // 15-minute grace period
-    const uiState = getCompletionUIState(booking, userRole, 15);
-    const timeUntilCompletion = getTimeUntilCompletion(booking);
-
-    res.json({
-      bookingId: booking._id,
-      canComplete: completionCheck.canComplete,
-      reason: completionCheck.reason,
-      timeInfo: completionCheck.timeInfo,
-      uiState: uiState,
-      timeUntilCompletion: timeUntilCompletion,
-      booking: {
-        id: booking._id,
-        customerName: booking.customerId?.name || "Unknown",
-        serviceName: booking.serviceId?.name || "Unknown",
-        bookingDate: booking.bookingDate,
-        durationMinutes: booking.durationMinutes,
-        status: booking.status,
-      },
-    });
-  } catch (error) {
-    console.error("Error checking completion eligibility:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
 // Admin reject booking
 exports.rejectBooking = async (req, res) => {
   try {
@@ -2151,172 +2019,6 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to test booking flow",
-    });
-  }
-};
-
-// Get available slots for walk-in bookings
-exports.getWalkInAvailableSlots = async (req, res) => {
-  try {
-    const { serviceId, service_id, date } = req.query;
-    const finalServiceId = serviceId || service_id;
-
-    if (!finalServiceId || !date) {
-      return res.status(400).json({
-        success: false,
-        message: "Service ID and date are required",
-      });
-    }
-
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid date format. Use YYYY-MM-DD",
-      });
-    }
-
-    // Get service to determine duration
-    const Service = require("../models/service.model");
-    const service = await Service.findById(finalServiceId);
-    if (!service) {
-      return res.status(404).json({
-        success: false,
-        message: "Service not found",
-      });
-    }
-
-    const durationMinutes = service.durationMinutes || 30;
-
-    // Get all active barbers
-    const Barber = require("../models/barber.model");
-    const barbers = await Barber.find({ isAvailable: true }).populate(
-      "userId",
-      "name profileImageUrl",
-    );
-
-    // Get current date time to filter out past slots if date is today
-    const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
-    const isToday = date === todayStr;
-
-    // Determine current hour and minute if it is today
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-
-    const availableSlotsMap = {}; // { timeSlot: [barbers] }
-
-    for (const barber of barbers) {
-      // Check if barber is absent
-      const dateObj = new Date(`${date}T00:00:00.000Z`);
-      const isAbsent = await BarberAbsence.isBarberAbsent(barber._id, dateObj);
-      if (isAbsent) {
-        continue;
-      }
-
-      // Ensure barber schedule is initialized for the date
-      await BarberSchedule.getAvailableSlots(barber._id, date);
-
-      // Get barber schedule
-      const schedule = await BarberSchedule.findOne({
-        barberId: barber._id,
-        date,
-      });
-      if (!schedule || schedule.isOffDay) {
-        continue;
-      }
-
-      const slotDuration = schedule.slotDuration || 30;
-      const slotsNeeded = Math.ceil(durationMinutes / slotDuration);
-
-      // Map schedule slots by time for O(1) lookup
-      const slotsByTime = {};
-      schedule.availableSlots.forEach((slot) => {
-        slotsByTime[slot.time] = slot;
-      });
-
-      // Filter slots that are available and have enough consecutive free slots
-      for (const slot of schedule.availableSlots) {
-        // Skip booked or blocked slots
-        if (slot.isBooked || slot.isBlocked) {
-          continue;
-        }
-
-        // If today, skip slots in the past
-        if (isToday) {
-          const [slotHour, slotMin] = slot.time.split(":").map(Number);
-          if (
-            slotHour < currentHour ||
-            (slotHour === currentHour && slotMin < currentMinute)
-          ) {
-            continue;
-          }
-        }
-
-        // Check if there are enough consecutive slots starting from this slot
-        let isConsecutiveAvailable = true;
-        let tempHour = parseInt(slot.time.split(":")[0]);
-        let tempMinute = parseInt(slot.time.split(":")[1]);
-
-        for (let i = 0; i < slotsNeeded; i++) {
-          const checkTimeStr = `${tempHour.toString().padStart(2, "0")}:${tempMinute.toString().padStart(2, "0")}`;
-          const currentSlot = slotsByTime[checkTimeStr];
-
-          if (!currentSlot || currentSlot.isBooked || currentSlot.isBlocked) {
-            isConsecutiveAvailable = false;
-            break;
-          }
-
-          // Move to next slot time
-          tempMinute += slotDuration;
-          if (tempMinute >= 60) {
-            tempHour += Math.floor(tempMinute / 60);
-            tempMinute = tempMinute % 60;
-          }
-        }
-
-        if (isConsecutiveAvailable) {
-          if (!availableSlotsMap[slot.time]) {
-            availableSlotsMap[slot.time] = [];
-          }
-          availableSlotsMap[slot.time].push({
-            _id: barber._id,
-            name: barber.userId?.name || "Unknown",
-            profileImageUrl:
-              barber.profileImageUrl || barber.userId?.profileImageUrl,
-            specialties: barber.specialties || [],
-            experienceYears: barber.experienceYears || 0,
-            averageRating: barber.averageRating || 0,
-          });
-        }
-      }
-    }
-
-    // Convert map to sorted array
-    const sortedSlots = Object.keys(availableSlotsMap)
-      .sort((a, b) => a.localeCompare(b))
-      .map((time) => ({
-        timeSlot: time,
-        barbers: availableSlotsMap[time],
-      }));
-
-    res.json({
-      success: true,
-      service: {
-        _id: service._id,
-        name: service.name,
-        durationMinutes,
-        price: service.price,
-      },
-      date,
-      availableSlots: sortedSlots,
-    });
-  } catch (err) {
-    console.error("Error in getWalkInAvailableSlots:", err);
-    res.status(500).json({
-      success: false,
-      message: err.message || "Internal server error",
     });
   }
 };

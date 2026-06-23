@@ -53,12 +53,12 @@ export default function StaffDashboard() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleUpdateCheckIn = async (isCheckedIn) => {
+  const handleStatusUpdate = async (status) => {
     if (!checkInModal.bookingId) return;
     try {
-      const res = await staffDashboardService.updateCheckIn(checkInModal.bookingId, isCheckedIn);
-      if (res) {
-        toast.success(res.isCheckedIn ? 'Khách đã đến' : 'Chưa có mặt thành công');
+      const res = await staffDashboardService.updateStatus(checkInModal.bookingId, status);
+      if (res && res.success) {
+        toast.success(status === 'completed' ? 'Đã đánh dấu hoàn thành' : 'Đã cập nhật trạng thái');
         fetchData(false);
       }
       setCheckInModal({ isOpen: false, bookingId: null });
@@ -162,7 +162,7 @@ export default function StaffDashboard() {
                         <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Khách hàng</th>
                         <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Dịch vụ</th>
                         <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Barber</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Check-in</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Trạng Thái</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/30">
@@ -181,20 +181,20 @@ export default function StaffDashboard() {
                             <td className="px-6 py-5 text-sm text-on-surface-variant italic">{booking.serviceName}</td>
                             <td className="px-6 py-5 text-sm font-medium">{booking.barberName}</td>
                             <td className="px-6 py-5">
-                              <button
-                                onClick={() => setCheckInModal({ isOpen: true, bookingId: booking._id })}
-                                className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
-                                  booking.isCheckedIn 
-                                  ? 'bg-green-500/20 text-green-500 hover:bg-error/10 hover:text-error' 
-                                  : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
-                                }`}
-                                title={booking.isCheckedIn ? "Bấm để Hủy Check-in" : "Bấm để Check-in"}
-                              >
-                                <span className="material-symbols-outlined text-[14px]">
-                                  {booking.isCheckedIn ? 'how_to_reg' : 'person_cancel'}
-                                </span>
-                                {booking.isCheckedIn ? 'Đã có mặt' : 'Chưa có mặt'}
-                              </button>
+                                <button
+                                  onClick={() => setCheckInModal({ isOpen: true, bookingId: booking._id })}
+                                  className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
+                                    booking.status === 'completed' 
+                                    ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant' 
+                                    : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
+                                  }`}
+                                  title={booking.status === 'completed' ? "Đổi trạng thái" : "Bấm để Hoàn thành"}
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">
+                                    {booking.status === 'completed' ? 'check_circle' : 'pending_actions'}
+                                  </span>
+                                  {booking.status === 'completed' ? 'Đã xong' : 'Chờ xử lý'}
+                                </button>
                             </td>
                           </tr>
                         ))
@@ -222,7 +222,7 @@ export default function StaffDashboard() {
                         <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Khách hàng</th>
                         <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Dịch vụ</th>
                         <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Barber</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Check-in</th>
+                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Trạng thái</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/30">
@@ -244,16 +244,16 @@ export default function StaffDashboard() {
                               <button
                                 onClick={() => setCheckInModal({ isOpen: true, bookingId: booking._id })}
                                 className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
-                                  booking.isCheckedIn 
-                                  ? 'bg-green-500/20 text-green-500 hover:bg-error/10 hover:text-error' 
+                                  booking.status === 'completed' 
+                                  ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant' 
                                   : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
                                 }`}
-                                title={booking.isCheckedIn ? "Bấm để Hủy Check-in" : "Bấm để Check-in"}
+                                title={booking.status === 'completed' ? "Đổi trạng thái" : "Bấm để Hoàn thành"}
                               >
                                 <span className="material-symbols-outlined text-[14px]">
-                                  {booking.isCheckedIn ? 'how_to_reg' : 'person_cancel'}
+                                  {booking.status === 'completed' ? 'check_circle' : 'pending_actions'}
                                 </span>
-                                {booking.isCheckedIn ? 'Đã có mặt' : 'Chưa có mặt'}
+                                {booking.status === 'completed' ? 'Đã xong' : 'Chờ xử lý'}
                               </button>
                             </td>
                           </tr>
@@ -327,16 +327,22 @@ export default function StaffDashboard() {
               
               <div className="flex flex-col gap-3 pt-4">
                 <button 
-                  onClick={() => handleUpdateCheckIn(true)}
+                  onClick={() => handleStatusUpdate('completed')}
                   className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20"
                 >
-                  Đã có mặt
+                  Đánh dấu Đã Hoàn Thành
                 </button>
                 <button 
-                  onClick={() => handleUpdateCheckIn(false)}
+                  onClick={() => handleStatusUpdate('no_show')}
+                  className="w-full py-3 bg-error text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
+                >
+                  Khách Không Đến (No Show)
+                </button>
+                <button 
+                  onClick={() => handleStatusUpdate('confirmed')}
                   className="w-full py-3 bg-surface-variant text-on-surface font-bold rounded-xl hover:bg-outline-variant active:scale-95 transition-all"
                 >
-                  Chưa có mặt
+                  Quay lại trạng thái Chờ
                 </button>
               </div>
               <button 

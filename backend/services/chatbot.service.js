@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Service = require('../models/service.model');
 const Barber = require('../models/barber.model');
+const { systemPrompt: aiAdvicePrompt, responseSchema: adviceSchema } = require('../utils/geminiSchema');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -73,42 +74,30 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
     throw new Error("GEMINI_API_KEY is not configured in backend.");
   }
 
+  // --- LUỒNG 2: Xử lý Ảnh (AI Hairstyle Advice) ---
+  if (imageBase64 && mimeType) {
+    return handleHairstyleAdvice(message, imageBase64, mimeType);
+  }
+
+  // --- LUỒNG 1: Xử lý Text thông thường (gemini-3.1-flash-lite) ---
   const model = genAI.getGenerativeModel({
     model: "gemini-3.1-flash-lite",
     systemInstruction: systemInstruction,
     tools: geminiTools,
   });
 
-  // Convert history format if needed (e.g., from { role: 'user', content: '...' } to Gemini's { role: 'user', parts: [{ text: '...' }] })
   const formattedHistory = history ? history.map(msg => ({
     role: msg.role === 'ai' ? 'model' : 'user',
     parts: [{ text: msg.content }]
   })) : [];
 
-  const chatSession = model.startChat({
-    history: formattedHistory,
-  });
-
-  let messageContent = [];
-  if (message) {
-    messageContent.push(message);
-  }
-  if (imageBase64 && mimeType) {
-    messageContent.push({
-      inlineData: {
-        data: imageBase64,
-        mimeType: mimeType
-      }
-    });
-  }
-
-  let response = await chatSession.sendMessage(messageContent);
+  const chatSession = model.startChat({ history: formattedHistory });
+  let response = await chatSession.sendMessage(message || "");
 
   // Xử lý Function Calling nếu có
   let functionCalls = response.response.functionCalls();
   if (functionCalls && functionCalls.length > 0) {
-    const call = functionCalls[0]; // Assuming only one call for simplicity
-
+    const call = functionCalls[0]; 
     let functionResult = "";
     if (call.name === "getShopServices") {
       functionResult = await tools.getShopServices();
@@ -116,7 +105,6 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
       functionResult = await tools.getAvailableBarbers();
     }
 
-    // Gửi kết quả function call lại cho Gemini
     response = await chatSession.sendMessage([{
       functionResponse: {
         name: call.name,
@@ -126,4 +114,70 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
   }
 
   return response.response.text();
+};
+
+const handleHairstyleAdvice = async (message, imageBase64, mimeType) => {
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    systemInstruction: aiAdvicePrompt,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: adviceSchema,
+    }
+  });
+
+  const messageContent = [];
+  if (message) {
+    messageContent.push(message);
+  } else {
+    messageContent.push("Hãy tư vấn kiểu tóc cho tôi dựa trên bức ảnh này.");
+  }
+  
+  messageContent.push({
+    inlineData: {
+      data: imageBase64,
+      mimeType: mimeType
+    }
+  });
+
+  const response = await model.generateContent(messageContent);
+  const jsonText = response.response.text();
+  
+  let adviceData;
+  try {
+    adviceData = JSON.parse(jsonText);
+  } catch (err) {
+    console.error("Gemini JSON parse error:", err);
+    throw new Error("Lỗi phân tích hình ảnh từ AI.");
+  }
+
+  // 1. Tạo Pollinations Image URL từ previewPrompt đầu tiên
+  let previewImageUrl = null;
+  if (adviceData.recommendedStyles && adviceData.recommendedStyles.length > 0) {
+    const previewPrompt = adviceData.recommendedStyles[0].previewPrompt;
+    if (previewPrompt) {
+      const encodedPrompt = encodeURIComponent(previewPrompt);
+      previewImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true`;
+    }
+  }
+
+  // 2. Query MongoDB để lấy thông tin dịch vụ
+  let matchedServices = [];
+  if (adviceData.suggestedServiceNames && adviceData.suggestedServiceNames.length > 0) {
+    matchedServices = await Service.find({ 
+      name: { $in: adviceData.suggestedServiceNames }, 
+      isActive: true 
+    }).select('name price durationMinutes _id');
+  }
+
+  return {
+    isAdvice: true,
+    advice: adviceData,
+    matchedServices: matchedServices,
+    previewImageUrl: previewImageUrl,
+    provider: {
+      analysis: "gemini-2.5-flash",
+      imagePreview: "pollinations"
+    }
+  };
 };

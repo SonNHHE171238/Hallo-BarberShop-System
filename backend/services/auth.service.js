@@ -8,8 +8,8 @@ const { sendPasswordResetEmail } = require('../services/email.service');
 const { OAuth2Client } = require('google-auth-library');
 
 const getResetTokenTtlMs = () => {
-  const minutes = parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '60', 10);
-  return (Number.isFinite(minutes) && minutes > 0 ? minutes : 60) * 60 * 1000;
+  const minutes = parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '10', 10);
+  return (Number.isFinite(minutes) && minutes > 0 ? minutes : 10) * 60 * 1000;
 };
 
 const accessExpires = () => {
@@ -222,7 +222,7 @@ exports.processForgotPassword = async (email) => {
   const resetLink = `${clientUrl}/reset-password?id=${user._id}&token=${plainToken}`;
 
   try {
-    await sendPasswordResetEmail(user.email, resetLink);
+    await sendPasswordResetEmail(user.email, resetLink, user.name);
   } catch (err) {
     const error = new Error('Could not send password reset email. Please try again later.');
     error.statusCode = 502;
