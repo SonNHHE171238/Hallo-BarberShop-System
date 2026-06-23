@@ -1099,6 +1099,37 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
+exports.getBarberTodayBookings = async (req, res, next) => {
+  try {
+    const Barber = require('../models/barber.model');
+    const barber = await Barber.findOne({ userId: req.userId });
+    if (!barber) {
+      return res.status(404).json({ message: 'Barber not found' });
+    }
+
+    // Get today's start and end date string "YYYY-MM-DD"
+    const today = new Date();
+    // Use local time for Vietnam if needed, or just let DB string match if bookingDate is YYYY-MM-DD
+    // Assuming bookingDate is stored as "YYYY-MM-DD"
+    // To be safe, just get the local YYYY-MM-DD
+    const tzOffset = today.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+
+    const bookings = await Booking.find({
+      barberId: barber._id,
+      bookingDate: localISOTime
+    })
+      .populate('customerId', 'name email phone')
+      .populate('serviceId', 'name price durationMinutes type')
+      .sort({ timeSlot: 1 })
+      .lean();
+
+    res.status(200).json({ bookings });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getBookingDetail = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
