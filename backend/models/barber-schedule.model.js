@@ -381,6 +381,92 @@ barberScheduleSchema.statics.getRealTimeAvailability = async function(barberId, 
     };
 };
 
+// Static method to generate available start times for a given service duration
+barberScheduleSchema.statics.generateAvailableStartTimes = async function(barberId, date, durationMinutes, fromTime = null) {
+    if (!barberId || !date || !durationMinutes) {
+        throw new Error('barberId, date, and durationMinutes are required');
+    }
+
+    // Ensure the schedule exists and reflects real-time slot state
+    const availability = await this.getRealTimeAvailability(barberId, date, fromTime);
+
+    if (!availability.available) {
+        return {
+            available: false,
+            reason: availability.reason || 'No availability for this date',
+            slots: []
+        };
+    }
+
+    const schedule = await this.findOne({ barberId, date });
+    if (!schedule) {
+        throw new Error('Schedule not found after availability refresh');
+    }
+
+    const requiredSlots = Math.max(1, Math.ceil(durationMinutes / schedule.slotDuration));
+    const slots = [];
+
+    for (let i = 0; i <= schedule.availableSlots.length - requiredSlots; i++) {
+        const startSlot = schedule.availableSlots[i];
+        if (startSlot.isBooked || startSlot.isBlocked) continue;
+        if (fromTime && startSlot.time < fromTime) continue;
+
+        let isValidRange = true;
+        for (let j = 0; j < requiredSlots; j++) {
+            const slot = schedule.availableSlots[i + j];
+            if (!slot || slot.isBooked || slot.isBlocked) {
+                isValidRange = false;
+                break;
+            }
+
+            if (j > 0) {
+                const prevTime = schedule.availableSlots[i + j - 1].time;
+                if (!isTimeContiguous(prevTime, slot.time, schedule.slotDuration)) {
+                    isValidRange = false;
+                    break;
+                }
+            }
+        }
+
+        if (!isValidRange) continue;
+
+        const endTime = addMinutesToTime(startSlot.time, durationMinutes);
+        slots.push({
+            startTime: startSlot.time,
+            endTime,
+            requiredSlots,
+            durationMinutes
+        });
+    }
+
+    return {
+        available: slots.length > 0,
+        slots,
+        slotDuration: schedule.slotDuration,
+        requiredSlots,
+        durationMinutes
+    };
+};
+
+// Helper used by generateAvailableStartTimes
+function isTimeContiguous(prevTime, nextTime, slotDuration) {
+    const prevMinutes = convertTimeToMinutes(prevTime);
+    const nextMinutes = convertTimeToMinutes(nextTime);
+    return nextMinutes - prevMinutes === slotDuration;
+}
+
+function addMinutesToTime(time, minutesToAdd) {
+    const totalMinutes = convertTimeToMinutes(time) + minutesToAdd;
+    const hour = Math.floor(totalMinutes / 60) % 24;
+    const minute = totalMinutes % 60;
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+}
+
+function convertTimeToMinutes(time) {
+    const [hour, minute] = time.split(':').map(Number);
+    return hour * 60 + minute;
+}
+
 // Helper function to calculate which time slots are needed for a service duration
 function calculateSlotsForDuration(startTime, durationMinutes, slotDuration = 30) {
     const slots = [];
