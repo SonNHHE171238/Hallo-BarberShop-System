@@ -7,7 +7,7 @@ exports.getActiveBarbers = async (req, res, next) => {
     const barbers = await Barber.find({ 
       $or: [{ isAvailable: true }, { isAvailable: { $exists: false } }] 
     })
-      .populate('userId', 'name email phone profileImageUrl')
+      .populate('userId', 'name email phone avatarUrl')
       .sort({ averageRating: -1, totalBookings: -1 })
       .lean();
 

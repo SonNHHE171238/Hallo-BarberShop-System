@@ -241,3 +241,48 @@ exports.googleLogin = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      const error = new Error('Vui lòng nhập mật khẩu hiện tại và mật khẩu mới');
+      error.statusCode = 400;
+      throw error;
+    }
+    
+    if (String(newPassword).length < 6) {
+      const error = new Error('Mật khẩu mới phải có ít nhất 6 ký tự');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await authService.changeUserPassword(req.userId, currentPassword, newPassword);
+
+    return sendSuccess(res, 200, 'Đổi mật khẩu thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { phone, avatarUrl } = req.body;
+    
+    const updatedUser = await authService.updateUserProfile(req.userId, { phone, avatarUrl });
+
+    return sendSuccess(res, 200, 'Cập nhật thông tin thành công', {
+      user: {
+        id: updatedUser._id.toString(),
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        avatarUrl: updatedUser.avatarUrl || '',
+        status: updatedUser.status,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

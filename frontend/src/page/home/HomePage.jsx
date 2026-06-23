@@ -1,6 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { authService } from "@/services/auth.service";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
@@ -12,6 +14,24 @@ import Barbers from "@/components/home/Barbers";
 import Testimonials from "@/components/home/Testimonials";
 
 export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    authService.getMe().then(data => {
+      if (data && data.user) {
+        if (data.user.role === 'barber') {
+          router.push('/barber/dashboard');
+        } else if (data.user.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else if (data.user.role === 'staff') {
+          router.push('/staff/dashboard');
+        }
+      }
+    }).catch(() => {
+      // Ignored: Not logged in or normal customer
+    });
+  }, [router]);
+
   return (
     <div className="bg-background min-h-screen text-on-surface">
       {/* 1. Header Navigation */}

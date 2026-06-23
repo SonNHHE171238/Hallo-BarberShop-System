@@ -354,3 +354,49 @@ exports.loginWithGoogle = async (accessToken) => {
 
   return user;
 };
+
+exports.changeUserPassword = async (userId, currentPassword, newPassword) => {
+  const user = await User.findById(userId).select('+passwordHash');
+  if (!user || user.status !== 'active') {
+    const error = new Error('Không tìm thấy người dùng hoặc tài khoản đã bị khóa');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // If the user registered via Google, they might not have a passwordHash yet.
+  if (!user.passwordHash) {
+    const error = new Error('Tài khoản này được đăng nhập qua Google và chưa có mật khẩu. Sử dụng Quên mật khẩu để tạo mới.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const match = await bcrypt.compare(String(currentPassword), user.passwordHash);
+  if (!match) {
+    const error = new Error('Mật khẩu hiện tại không chính xác');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  user.passwordHash = String(newPassword);
+  await user.save();
+};
+
+exports.updateUserProfile = async (userId, updateData) => {
+  const user = await User.findById(userId);
+  if (!user || user.status !== 'active') {
+    const error = new Error('Không tìm thấy người dùng hoặc tài khoản đã bị khóa');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (updateData.phone !== undefined) {
+    user.phone = String(updateData.phone).trim();
+  }
+  
+  if (updateData.avatarUrl !== undefined) {
+    user.avatarUrl = String(updateData.avatarUrl).trim();
+  }
+
+  await user.save();
+  return user;
+};
