@@ -1024,6 +1024,26 @@ exports.checkAvailability = async (req, res) => {
   }
 };
 
+// Sinh danh sách khung giờ động (Dynamic Gap Packing)
+exports.getAvailableSlots = async (req, res, next) => {
+  try {
+    const { barberId, date, durationMinutes = 30 } = req.body;
+
+    if (!barberId || !date) {
+      const error = new Error("Barber ID and date are required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const bookingService = require("../services/booking.service");
+    const resultSlots = await bookingService.generateDynamicSlots(barberId, date, durationMinutes);
+
+    res.json({ success: true, slots: resultSlots });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Get booking conflicts for admin dashboard
 exports.getBookingConflicts = async (req, res) => {
   try {

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const serviceController = require("../controllers/service.controller");
-const { authenticate, authorizeRoles } = require("../middlewares/authMiddleware");
+const { authenticate, authorizeRoles } = require("../middlewares/auth.Middleware");
 
 // ==========================================
 // PUBLIC ENDPOINTS (Khách hàng & Nhìn công khai)
