@@ -23,11 +23,13 @@ const bookingSchema = new Schema(
       ref: "Barber",
       required: true,
     },
-    serviceId: {
-      type: Schema.Types.ObjectId,
-      ref: "Service",
-      required: true,
-    },
+    services: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Service",
+        required: true,
+      },
+    ],
     bookingDate: {
       type: Date,
       required: true,
