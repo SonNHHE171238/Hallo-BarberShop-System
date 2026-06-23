@@ -18,9 +18,9 @@ const {
   getTimeUntilCompletion,
 } = require("../utils/timeWindowValidation");
 
-const bookingService = require('../services/booking.service');
-const emailService = require('../services/email.service');
-const { sendSuccess } = require('../utils/response.helper');
+const bookingService = require("../services/booking.service");
+const emailService = require("../services/email.service");
+const { sendSuccess } = require("../utils/response.helper");
 
 exports.createBooking = async (req, res, next) => {
   try {
@@ -29,7 +29,6 @@ exports.createBooking = async (req, res, next) => {
       services,
       bookingDate,
       timeSlot, // "HH:MM" format
-      durationMinutes,
       note,
       notificationMethods,
       autoAssignedBarber,
@@ -65,7 +64,6 @@ exports.createBooking = async (req, res, next) => {
       services,
       bookingDate,
       timeSlot,
-      durationMinutes,
       note,
       notificationMethods,
       autoAssignedBarber,
@@ -76,16 +74,26 @@ exports.createBooking = async (req, res, next) => {
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
     if (emailToSend) {
-      emailService.sendBookingConfirmationEmail(emailToSend, {
-        customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
-        serviceName: (populatedBooking.services && populatedBooking.services.length > 0) ? populatedBooking.services.map(s => s.name).join(', ') : 'Dịch vụ',
-        barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
-        bookingDate: populatedBooking.bookingDate,
-        timeSlot: timeSlot
-      }).catch(err => console.error('Failed to send confirmation email', err));
+      emailService
+        .sendBookingConfirmationEmail(emailToSend, {
+          customerName:
+            customerName || populatedBooking.customerId?.name || "Quý khách",
+          serviceName:
+            populatedBooking.services && populatedBooking.services.length > 0
+              ? populatedBooking.services.map((s) => s.name).join(", ")
+              : "Dịch vụ",
+          barberName: populatedBooking.barberId?.userId?.name || "Thợ cắt",
+          bookingDate: populatedBooking.bookingDate,
+          timeSlot: timeSlot,
+        })
+        .catch((err) =>
+          console.error("Failed to send confirmation email", err),
+        );
     }
 
-    return sendSuccess(res, 201, "Booking created successfully", { booking: populatedBooking });
+    return sendSuccess(res, 201, "Booking created successfully", {
+      booking: populatedBooking,
+    });
   } catch (err) {
     if (err.code === 11000) {
       err.message =
@@ -106,7 +114,6 @@ exports.createBookingSinglePage = async (req, res, next) => {
       bookingDate,
       timeSlot, // "HH:MM" format
       date, // "YYYY-MM-DD" format
-      durationMinutes,
       note,
       notificationMethods,
       customerName,
@@ -117,7 +124,12 @@ exports.createBookingSinglePage = async (req, res, next) => {
       bookingType,
     } = req.body;
 
-    const services = reqServices && reqServices.length > 0 ? reqServices : (serviceId ? [serviceId] : []);
+    const services =
+      reqServices && reqServices.length > 0
+        ? reqServices
+        : serviceId
+          ? [serviceId]
+          : [];
 
     let customerId = req.userId || null;
 
@@ -215,19 +227,6 @@ exports.createBookingSinglePage = async (req, res, next) => {
       }
     }
 
-    let finalDurationMinutes = durationMinutes;
-    if (!finalDurationMinutes) {
-      const Service = require("../models/service.model");
-      const selectedServices = await Service.find({ _id: { $in: services } });
-      if (selectedServices.length > 0) {
-        finalDurationMinutes = selectedServices.reduce((total, s) => {
-          return total + (s.durationMinutes || s.duration || 30);
-        }, 0);
-      } else {
-        finalDurationMinutes = 30;
-      }
-    }
-
     const populatedBooking = await bookingService.processCreateBooking({
       bookingType,
       customerId,
@@ -235,7 +234,6 @@ exports.createBookingSinglePage = async (req, res, next) => {
       services,
       bookingDate,
       timeSlot,
-      durationMinutes: finalDurationMinutes,
       note,
       notificationMethods,
       autoAssignedBarber: isAutoAssigned,
@@ -246,13 +244,21 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
     if (emailToSend) {
-      emailService.sendBookingConfirmationEmail(emailToSend, {
-        customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
-        serviceName: (populatedBooking.services && populatedBooking.services.length > 0) ? populatedBooking.services.map(s => s.name).join(', ') : 'Dịch vụ',
-        barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
-        bookingDate: populatedBooking.bookingDate,
-        timeSlot: timeSlot
-      }).catch(err => console.error('Failed to send confirmation email', err));
+      emailService
+        .sendBookingConfirmationEmail(emailToSend, {
+          customerName:
+            customerName || populatedBooking.customerId?.name || "Quý khách",
+          serviceName:
+            populatedBooking.services && populatedBooking.services.length > 0
+              ? populatedBooking.services.map((s) => s.name).join(", ")
+              : "Dịch vụ",
+          barberName: populatedBooking.barberId?.userId?.name || "Thợ cắt",
+          bookingDate: populatedBooking.bookingDate,
+          timeSlot: timeSlot,
+        })
+        .catch((err) =>
+          console.error("Failed to send confirmation email", err),
+        );
     }
 
     return res.status(201).json({
@@ -2027,7 +2033,7 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
 exports.createWalkInBooking = async (req, res) => {
   try {
     const {
-      serviceId,
+      services,
       barberId,
       bookingDate,
       timeSlot,
@@ -2037,12 +2043,12 @@ exports.createWalkInBooking = async (req, res) => {
       customerEmail,
       note,
       notificationMethods,
-      durationMinutes,
     } = req.body;
 
     // Validate required fields
     if (
-      !serviceId ||
+      !services ||
+      services.length === 0 ||
       !bookingDate ||
       !date ||
       !timeSlot ||
@@ -2059,17 +2065,20 @@ exports.createWalkInBooking = async (req, res) => {
 
     // Validate service exists
     const Service = require("../models/service.model");
-    const service = await Service.findById(serviceId);
-    if (!service) {
+    const foundServices = await Service.find({ _id: { $in: services } });
+    if (foundServices.length !== services.length || services.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Service not found",
+        message: "One or more services not found",
         errorCode: "SERVICE_NOT_FOUND",
       });
     }
 
-    const finalDurationMinutes =
-      durationMinutes || service.durationMinutes || 30;
+    let finalDurationMinutes = 0;
+    foundServices.forEach((service) => {
+      finalDurationMinutes += service.durationMinutes || service.duration || 30;
+    });
+
     const requestedDateTime = new Date(bookingDate);
     requestedDateTime.setSeconds(0, 0);
 
@@ -2089,7 +2098,7 @@ exports.createWalkInBooking = async (req, res) => {
 
         // Create a mock request/response to call the auto-assign function
         const mockReq = {
-          body: { date, timeSlot, serviceId },
+          body: { date, timeSlot, services },
         };
 
         let autoAssignResult = null;
@@ -2215,9 +2224,8 @@ exports.createWalkInBooking = async (req, res) => {
       bookingType: "guest",
       customerId: null,
       barberId: finalBarberId,
-      serviceId,
+      services,
       bookingDate: requestedDateTime,
-      durationMinutes: finalDurationMinutes,
       note,
       notificationMethods,
       autoAssignedBarber: isAutoAssigned,
