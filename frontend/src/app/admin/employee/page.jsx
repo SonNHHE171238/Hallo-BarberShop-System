@@ -112,8 +112,8 @@ export default function AdminStaffPage() {
             role: b.experienceYears >= 5 ? "Master Barber" : "Junior Barber",
             type: "barber",
             avatar: u.avatarUrl,
-            rating: 5.0, // Mock vì chưa có tính năng Review
-            reviews: 0,
+            rating: b.rating || b.averageRating || 5.0, 
+            reviews: b.reviewCount || 0,
             revenue: "-",
             status: u.status,
             shift: `${b.preferredWorkingHours?.start || '08:00'} - ${b.preferredWorkingHours?.end || '20:00'}`,
@@ -122,12 +122,27 @@ export default function AdminStaffPage() {
           };
         });
 
-        // Ghép chung với Staff Khác (Lễ tân, Thợ phụ) từ MockData (vì backend chưa có API cho Staff Khác)
-        const otherStaff = mockStaff.filter(s => s.type === "staff");
-        setStaffList([...apiBarbers, ...otherStaff]);
+        // Xử lý dữ liệu Staff Khác (nếu có)
+        const apiStaffs = (response.staffs || []).map(u => ({
+            id: u._id.substring(u._id.length - 6).toUpperCase(),
+            name: u.name,
+            role: "Lễ tân / Thợ phụ",
+            type: "staff",
+            avatar: u.avatarUrl,
+            rating: null,
+            reviews: null,
+            revenue: "-",
+            status: u.status,
+            shift: "Ca Hành Chính",
+            email: u.email,
+            phone: u.phone || "Chưa cập nhật"
+        }));
+
+        // Gộp cả 2 danh sách lại để hiển thị
+        setStaffList([...apiBarbers, ...apiStaffs]);
       } catch (error) {
         console.error("Lỗi khi tải danh sách nhân viên:", error);
-        setStaffList(mockStaff); // Fallback về toàn bộ mockData nếu lỗi
+        setStaffList([]); 
       } finally {
         setIsLoading(false);
       }
@@ -141,6 +156,12 @@ export default function AdminStaffPage() {
     return staff.type === activeTab;
   });
 
+  const totalStaff = staffList.length;
+  const activeStaff = staffList.filter(s => s.status === 'active').length;
+  const avgRating = totalStaff > 0 
+    ? (staffList.reduce((acc, curr) => acc + curr.rating, 0) / totalStaff).toFixed(1) 
+    : '0.0';
+
   return (
     <div className="flex-1 flex flex-col relative w-full h-full min-h-screen">
       {/* Page Content */}
@@ -150,36 +171,32 @@ export default function AdminStaffPage() {
           <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-6 rounded-lg flex flex-col justify-between">
             <span className="text-outline text-xs uppercase tracking-widest font-medium">Tổng nhân sự</span>
             <div className="mt-4 flex items-end justify-between">
-              <span className="text-4xl font-bold text-primary">16</span>
+              <span className="text-4xl font-bold text-primary">{totalStaff}</span>
               <span className="text-green-400 text-xs flex items-center">
-                <span className="material-symbols-outlined text-sm mr-1">trending_up</span>+2 tháng này
+                <span className="material-symbols-outlined text-sm mr-1">trending_up</span>+Mới
               </span>
             </div>
           </div>
           <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-6 rounded-lg flex flex-col justify-between border-l-4 border-l-primary">
             <span className="text-outline text-xs uppercase tracking-widest font-medium">Đang hoạt động</span>
             <div className="mt-4 flex items-end justify-between">
-              <span className="text-4xl font-bold text-on-surface">12</span>
+              <span className="text-4xl font-bold text-on-surface">{activeStaff}</span>
               <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-bold">LIVE NOW</span>
             </div>
           </div>
           <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-6 rounded-lg flex flex-col justify-between">
             <span className="text-outline text-xs uppercase tracking-widest font-medium">Doanh thu TB/Barber</span>
             <div className="mt-4 flex items-end justify-between">
-              <span className="text-2xl font-bold text-on-surface">32.7M</span>
+              <span className="text-2xl font-bold text-on-surface">-</span>
               <span className="text-outline text-xs">VNĐ / tháng</span>
             </div>
           </div>
           <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-6 rounded-lg flex flex-col justify-between">
             <span className="text-outline text-xs uppercase tracking-widest font-medium">Đánh giá trung bình</span>
             <div className="mt-4 flex items-end justify-between">
-              <span className="text-4xl font-bold text-on-surface">4.8</span>
+              <span className="text-4xl font-bold text-on-surface">{avgRating}</span>
               <div className="flex text-primary">
                 <span className="material-symbols-outlined icon-fill">star</span>
-                <span className="material-symbols-outlined icon-fill">star</span>
-                <span className="material-symbols-outlined icon-fill">star</span>
-                <span className="material-symbols-outlined icon-fill">star</span>
-                <span className="material-symbols-outlined icon-fill">star_half</span>
               </div>
             </div>
           </div>

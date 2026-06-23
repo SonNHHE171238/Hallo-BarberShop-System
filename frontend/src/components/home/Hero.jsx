@@ -17,7 +17,7 @@ export default function Hero() {
         <h1 className="font-display-lg text-display-lg md:text-[96px] text-on-surface uppercase mb-2 tracking-tighter leading-none">
           Hallo Barber
         </h1>
-        <p className="font-headline-sm text-headline-sm text-outline mb-10 tracking-widest uppercase">Since Barbershop MMXVI</p>
+        <p className="font-headline-sm text-headline-sm text-outline mb-10 tracking-widest uppercase"> Tạo dấu ấn qua mái tóc của bạn</p>
         <div className="flex flex-col md:flex-row gap-4 justify-center">
           <Link href="/booking">
             <button className="bg-primary text-on-primary px-12 py-4 rounded-lg font-headline-sm text-headline-sm hover:bg-primary-container transition-all active:scale-95">

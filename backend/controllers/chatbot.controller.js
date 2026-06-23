@@ -21,6 +21,24 @@ exports.chat = async (req, res, next) => {
           provider: result.provider
         }
       });
+    } else if (result && result.isBarberMenu) {
+      res.status(200).json({
+        success: true,
+        type: "barber_menu",
+        data: {
+          text: result.text,
+          barbers: result.barbers
+        }
+      });
+    } else if (result && result.isMenu) {
+      res.status(200).json({
+        success: true,
+        type: "menu",
+        data: {
+          text: result.text,
+          services: result.services
+        }
+      });
     } else {
       res.status(200).json({
         success: true,

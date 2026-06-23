@@ -186,14 +186,16 @@ export default function StaffDashboard() {
                                   className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
                                     booking.status === 'completed' 
                                     ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant' 
+                                    : booking.status === 'confirmed'
+                                    ? 'bg-green-800/20 text-green-700 border border-green-700/50 hover:bg-green-800/30'
                                     : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
                                   }`}
-                                  title={booking.status === 'completed' ? "Đổi trạng thái" : "Bấm để Hoàn thành"}
+                                  title="Đổi trạng thái"
                                 >
                                   <span className="material-symbols-outlined text-[14px]">
-                                    {booking.status === 'completed' ? 'check_circle' : 'pending_actions'}
+                                    {booking.status === 'completed' ? 'check_circle' : booking.status === 'confirmed' ? 'how_to_reg' : 'pending_actions'}
                                   </span>
-                                  {booking.status === 'completed' ? 'Đã xong' : 'Chờ xử lý'}
+                                  {booking.status === 'completed' ? 'Đã xong' : booking.status === 'confirmed' ? 'Khách đã đến' : 'Chưa tới'}
                                 </button>
                             </td>
                           </tr>
@@ -246,14 +248,16 @@ export default function StaffDashboard() {
                                 className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
                                   booking.status === 'completed' 
                                   ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant' 
+                                  : booking.status === 'confirmed'
+                                  ? 'bg-green-800/20 text-green-700 border border-green-700/50 hover:bg-green-800/30'
                                   : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
                                 }`}
-                                title={booking.status === 'completed' ? "Đổi trạng thái" : "Bấm để Hoàn thành"}
+                                title="Đổi trạng thái"
                               >
                                 <span className="material-symbols-outlined text-[14px]">
-                                  {booking.status === 'completed' ? 'check_circle' : 'pending_actions'}
+                                  {booking.status === 'completed' ? 'check_circle' : booking.status === 'confirmed' ? 'how_to_reg' : 'pending_actions'}
                                 </span>
-                                {booking.status === 'completed' ? 'Đã xong' : 'Chờ xử lý'}
+                                {booking.status === 'completed' ? 'Đã xong' : booking.status === 'confirmed' ? 'Khách đã đến' : 'Chưa tới'}
                               </button>
                             </td>
                           </tr>
@@ -327,6 +331,12 @@ export default function StaffDashboard() {
               
               <div className="flex flex-col gap-3 pt-4">
                 <button 
+                  onClick={() => handleStatusUpdate('confirmed')}
+                  className="w-full py-3 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 active:scale-95 transition-all shadow-md shadow-green-700/20"
+                >
+                  Khách Đã Đến
+                </button>
+                <button 
                   onClick={() => handleStatusUpdate('completed')}
                   className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20"
                 >
@@ -339,10 +349,10 @@ export default function StaffDashboard() {
                   Khách Không Đến (No Show)
                 </button>
                 <button 
-                  onClick={() => handleStatusUpdate('confirmed')}
+                  onClick={() => handleStatusUpdate('pending')}
                   className="w-full py-3 bg-surface-variant text-on-surface font-bold rounded-xl hover:bg-outline-variant active:scale-95 transition-all"
                 >
-                  Quay lại trạng thái Chờ
+                  Đưa về Chưa Tới (Pending)
                 </button>
               </div>
               <button 

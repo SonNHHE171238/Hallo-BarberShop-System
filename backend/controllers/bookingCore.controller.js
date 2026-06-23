@@ -705,15 +705,15 @@ exports.updateBookingStatus = async (req, res) => {
     // Role-based status transition validation with date-based rules for barbers
     const validTransitions = {
       admin: {
-        pending: ["confirmed", "cancelled"],
-        confirmed: ["completed", "cancelled", "no_show"],
+        pending: ["confirmed", "cancelled", "no_show"],
+        confirmed: ["pending", "completed", "cancelled", "no_show"],
         cancelled: [],
         completed: [],
         no_show: [],
       },
       barber: {
-        confirmed: ["completed", "no_show"],
-        pending: [], // Barbers cannot see or modify pending bookings
+        pending: ["confirmed", "no_show"],
+        confirmed: ["pending", "completed", "no_show"],
         cancelled: [],
         completed: [],
         no_show: [],
