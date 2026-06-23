@@ -171,11 +171,12 @@ const geminiTools = [{
 const systemInstruction = `Bạn là một trợ lý ảo tư vấn khách hàng và Booking Agent cho Hallo BarberShop.
 Nhiệm vụ của bạn là tư vấn nhiệt tình, thân thiện, và giúp khách hàng CHỐT ĐẶT LỊCH.
 Quy trình hoạt động:
-1. Mỗi khi người dùng hỏi về dịch vụ hoặc thợ, HÃY SỬ DỤNG FUNCTION CALLING (getShopServices hoặc getAvailableBarbers) ĐỂ LẤY THÔNG TIN. KHÔNG tự bịa data.
-2. Khi khách hàng có ý định đặt lịch, AI cần chủ động hỏi các thông tin còn thiếu một cách tự nhiên (đừng hỏi một lượt như cái máy): Tên, Số điện thoại, Dịch vụ muốn làm, Ngày, Giờ, và Thợ cắt (có yêu cầu thợ nào không hay tự sắp xếp). Ngày hiện tại (tham khảo): ${new Date().toISOString().split('T')[0]}.
-3. CHỈ KHI thu thập đủ thông tin: Gọi tool 'bookAppointment' để lưu vào hệ thống. KHÔNG tự bịa số điện thoại hoặc tên.
-4. Sau khi gọi tool 'bookAppointment', đọc kết quả (success hay failed). Nếu thành công, chúc mừng khách. Nếu thất bại (trùng lịch), thông báo lý do và gợi ý khách đổi giờ khác.
-Giá tiền trả về từ database là VNĐ, hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
+1. Mỗi khi người dùng hỏi về dịch vụ hoặc thợ, HÃY SỬ DỤNG FUNCTION CALLING (getShopServices hoặc getAvailableBarbers) ĐỂ LẤY THÔNG TIN. KHÔNG tự bịa data. Hệ thống sẽ tự động hiển thị Menu tương tác cho khách hàng dựa trên kết quả.
+2. Sau khi khách hàng chọn xong từ Menu và gửi lại danh sách dịch vụ, hãy tính TỔNG TIỀN dựa vào bảng giá và báo cho khách.
+3. Khi khách hàng có ý định đặt lịch, chủ động hỏi các thông tin còn thiếu một cách tự nhiên: Tên, Số điện thoại, Ngày, Giờ, và Thợ cắt. Ngày hiện tại: ${new Date().toISOString().split('T')[0]}.
+4. CHỈ KHI thu thập đủ thông tin: Gọi tool 'bookAppointment' để lưu vào hệ thống. KHÔNG tự bịa số điện thoại hoặc tên.
+5. Sau khi gọi tool 'bookAppointment', báo kết quả thành công hoặc gợi ý đổi giờ nếu trùng lịch.
+Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
 
 exports.handleChat = async (message, history, imageBase64, mimeType) => {
   if (!process.env.GEMINI_API_KEY) {
@@ -204,13 +205,26 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
 
   // Xử lý Function Calling nếu có
   let functionCalls = response.response.functionCalls();
-  if (functionCalls && functionCalls.length > 0) {
+  let menuServices = null; // Biến tạm lưu danh sách dịch vụ nếu AI gọi getShopServices
+  let menuBarbers = null; // Biến tạm lưu danh sách thợ nếu AI gọi getAvailableBarbers
+
+  while (functionCalls && functionCalls.length > 0) {
     const call = functionCalls[0];
     let functionResult = "";
     if (call.name === "getShopServices") {
       functionResult = await tools.getShopServices();
+      try {
+        menuServices = JSON.parse(functionResult);
+      } catch (e) {
+        console.error("Failed to parse getShopServices result:", e);
+      }
     } else if (call.name === "getAvailableBarbers") {
       functionResult = await tools.getAvailableBarbers();
+      try {
+        menuBarbers = JSON.parse(functionResult);
+      } catch (e) {
+        console.error("Failed to parse getAvailableBarbers result:", e);
+      }
     } else if (call.name === "bookAppointment") {
       functionResult = await tools.bookAppointment(call.args);
     }
@@ -221,6 +235,45 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
         response: { result: functionResult }
       }
     }]);
+    
+    functionCalls = response.response.functionCalls();
+  }
+
+  const messageLower = message ? message.toLowerCase() : "";
+  
+  // Fallback cho Dịch vụ
+  if (!menuServices && (messageLower.includes("dịch vụ") || messageLower.includes("menu") || messageLower.includes("bảng giá") || messageLower.includes("làm tóc") || messageLower.includes("cắt tóc") || messageLower.includes("uốn") || messageLower.includes("nhuộm"))) {
+    try {
+      const rawServices = await tools.getShopServices();
+      menuServices = JSON.parse(rawServices);
+    } catch (e) {
+      console.error("Fallback getShopServices failed:", e);
+    }
+  }
+
+  // Fallback cho Thợ
+  if (!menuBarbers && (messageLower.includes("thợ") || messageLower.includes("barber") || messageLower.includes("người cắt") || messageLower.includes("ai cắt"))) {
+    try {
+      const rawBarbers = await tools.getAvailableBarbers();
+      menuBarbers = JSON.parse(rawBarbers);
+    } catch (e) {
+      console.error("Fallback getAvailableBarbers failed:", e);
+    }
+  }
+  
+  // Ưu tiên trả về Menu Barber nếu có thông tin thợ, ngược lại nếu có dịch vụ thì trả về Menu Dịch vụ
+  if (menuBarbers && menuBarbers.length > 0 && !menuBarbers.error) {
+    return {
+      isBarberMenu: true,
+      text: response.response.text() || "Mời bạn chọn thợ ở Menu bên dưới nhé:",
+      barbers: menuBarbers
+    };
+  } else if (menuServices && menuServices.length > 0 && !menuServices.error) {
+    return {
+      isMenu: true,
+      text: response.response.text() || "Mời bạn chọn dịch vụ ở Menu bên dưới nhé:",
+      services: menuServices
+    };
   }
 
   return response.response.text();

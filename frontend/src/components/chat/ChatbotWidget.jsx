@@ -10,6 +10,12 @@ export default function ChatbotWidget() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuData, setMenuData] = useState([]);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [isBarberMenuOpen, setIsBarberMenuOpen] = useState(false);
+  const [barberData, setBarberData] = useState([]);
+  const [selectedBarber, setSelectedBarber] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -52,7 +58,7 @@ export default function ChatbotWidget() {
     const imageToSend = selectedImage;
     setInput("");
     setSelectedImage(null);
-    
+
     // Convert current messages to history format
     const history = messages.filter(m => m.role === 'user' || m.role === 'ai').map(m => ({
       role: m.role,
@@ -60,7 +66,7 @@ export default function ChatbotWidget() {
     }));
 
     setMessages((prev) => [
-      ...prev, 
+      ...prev,
       { role: "user", content: userMsg, image: imageToSend?.preview }
     ]);
     setIsLoading(true);
@@ -81,6 +87,10 @@ export default function ChatbotWidget() {
       if (data.success) {
         if (data.type === 'hairstyle_advice') {
           setMessages((prev) => [...prev, { role: "ai", isAdvice: true, data: data.data }]);
+        } else if (data.type === 'menu') {
+          setMessages((prev) => [...prev, { role: "ai", isMenu: true, content: data.data.text, services: data.data.services }]);
+        } else if (data.type === 'barber_menu') {
+          setMessages((prev) => [...prev, { role: "ai", isBarberMenu: true, content: data.data.text, barbers: data.data.barbers }]);
         } else {
           setMessages((prev) => [...prev, { role: "ai", content: data.data }]);
         }
@@ -184,7 +194,7 @@ export default function ChatbotWidget() {
                                 <p className="font-bold text-primary">{style.styleName}</p>
                                 <p className="text-xs text-on-surface-variant mt-1">{style.description}</p>
                                 <p className="text-xs text-secondary mt-1"><strong>Lý do:</strong> {style.whyItFits}</p>
-                                <p className="text-xs italic text-on-surface mt-1 bg-surface-container-highest p-1.5 rounded">Ghi chú cho thợ: "{style.barberInstruction}"</p>
+                                <p className="text-xs italic text-on-surface mt-1 bg-surface-container-highest p-1.5 rounded">Ghi chú cho thợ: &quot;{style.barberInstruction}&quot;</p>
                               </div>
                             ))}
                           </div>
@@ -203,7 +213,7 @@ export default function ChatbotWidget() {
                           </div>
                         </div>
                       )}
-                      
+
                       {advice?.barberNote && (
                         <div className="mt-2 p-2 bg-error/10 text-error rounded-lg text-xs font-medium border border-error/20">
                           <strong>Lời nhắn cho thợ:</strong> {advice.barberNote}
@@ -211,19 +221,52 @@ export default function ChatbotWidget() {
                       )}
                     </div>
                   </div>
+                )
+              }
+
+              if (msg.isMenu) {
+                return (
+                  <div key={idx} className="flex justify-start">
+                    <div className="max-w-[85%] rounded-2xl p-3 text-sm font-body-md flex flex-col gap-2 bg-surface-container-high border border-outline-gold/30 text-on-surface rounded-bl-none shadow-sm">
+                      {msg.content && <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>}
+                      <button
+                        onClick={() => { setMenuData(msg.services); setSelectedServices([]); setIsMenuOpen(true); }}
+                        className="mt-2 bg-primary text-on-primary py-2 px-4 rounded-xl text-xs uppercase tracking-wider font-bold hover:bg-primary-fixed transition-colors text-center shadow-md flex justify-center items-center gap-2"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        Mở Menu Dịch Vụ
+                      </button>
+                    </div>
+                  </div>
                 );
+              }
+
+              if (msg.isBarberMenu) {
+                return (
+                  <div key={idx} className="flex justify-start">
+                    <div className="max-w-[85%] rounded-2xl p-3 text-sm font-body-md flex flex-col gap-2 bg-surface-container-high border border-outline-gold/30 text-on-surface rounded-bl-none shadow-sm">
+                      {msg.content && <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>}
+                      <button 
+                        onClick={() => { setBarberData(msg.barbers); setSelectedBarber(null); setIsBarberMenuOpen(true); }}
+                        className="mt-2 bg-secondary text-on-secondary py-2 px-4 rounded-xl text-xs uppercase tracking-wider font-bold hover:bg-secondary-fixed transition-colors text-center shadow-md flex justify-center items-center gap-2"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        Mở Danh Sách Thợ
+                      </button>
+                    </div>
+                  </div>
+                )
               }
 
               return (
                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[85%] rounded-2xl p-3 text-sm font-body-md flex flex-col gap-2 ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-on-primary rounded-br-none shadow-md shadow-primary/10'
-                        : msg.role === 'system'
+                    className={`max-w-[85%] rounded-2xl p-3 text-sm font-body-md flex flex-col gap-2 ${msg.role === 'user'
+                      ? 'bg-primary text-on-primary rounded-br-none shadow-md shadow-primary/10'
+                      : msg.role === 'system'
                         ? 'bg-surface-container border border-outline-variant text-on-surface-variant italic text-center w-full rounded-xl text-xs'
                         : 'bg-surface-container-high border border-outline-gold/30 text-on-surface rounded-bl-none shadow-sm'
-                    }`}
+                      }`}
                     style={{ whiteSpace: 'pre-wrap' }}
                   >
                     {msg.image && (
@@ -234,17 +277,17 @@ export default function ChatbotWidget() {
                 </div>
               );
             })}
-            
+
             {/* Lựa chọn mode */}
             {!mode && messages.length > 0 && (
               <div className="flex flex-col gap-2 mt-2">
-                <button 
+                <button
                   onClick={() => selectMode('staff')}
                   className="bg-transparent border border-outline-variant text-on-surface hover:text-primary hover:border-primary px-4 py-2.5 rounded-xl font-label-md uppercase tracking-wider text-[11px] transition-all"
                 >
                   Nhắn tin với Nhân viên
                 </button>
-                <button 
+                <button
                   onClick={() => selectMode('ai')}
                   className="bg-primary text-on-primary hover:bg-primary-fixed border border-primary px-4 py-2.5 rounded-xl font-label-md uppercase tracking-wider text-[11px] transition-all shadow-md shadow-primary/20"
                 >
@@ -283,14 +326,14 @@ export default function ChatbotWidget() {
             <form onSubmit={sendMessage} className="flex gap-2 relative items-center">
               {mode === 'ai' && (
                 <>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    ref={fileInputRef} 
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
                     onChange={handleImageChange}
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="text-on-surface-variant hover:text-primary transition-colors p-1"
@@ -307,11 +350,11 @@ export default function ChatbotWidget() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  mode === 'ai' 
-                    ? "Nhập câu hỏi của bạn..." 
-                    : mode === 'staff' 
-                    ? "Tính năng đang phát triển..." 
-                    : "Vui lòng chọn đối tượng chat"
+                  mode === 'ai'
+                    ? "Nhập câu hỏi của bạn..."
+                    : mode === 'staff'
+                      ? "Tính năng đang phát triển..."
+                      : "Vui lòng chọn đối tượng chat"
                 }
                 disabled={mode !== 'ai'}
                 className="flex-1 px-4 py-2.5 bg-surface-container-lowest border border-outline-variant text-on-surface placeholder-outline-variant rounded-full focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-body-md text-sm disabled:opacity-50 disabled:bg-surface-container transition-all"
@@ -326,6 +369,173 @@ export default function ChatbotWidget() {
                 </svg>
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Menu Modal Overlay */}
+      {isMenuOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-4 rounded-2xl">
+          <div className="bg-surface w-full max-w-sm rounded-2xl shadow-xl flex flex-col max-h-[90%] overflow-hidden border border-outline-variant">
+            <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-high">
+              <h3 className="font-bold text-primary">Chọn Dịch Vụ</h3>
+              <button onClick={() => setIsMenuOpen(false)} className="text-on-surface-variant hover:text-error">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto custom-scrollbar flex flex-col gap-3">
+              {menuData.map((svc, i) => (
+                <label key={i} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedServices.includes(svc.name) ? 'border-primary bg-primary/10' : 'border-outline-variant bg-surface-container'}`}>
+                  <input
+                    type="checkbox"
+                    className="mt-1 w-4 h-4 text-primary bg-surface-container-highest border-outline-variant rounded focus:ring-primary focus:ring-2"
+                    checked={selectedServices.includes(svc.name)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedServices(prev => [...prev, svc.name]);
+                      } else {
+                        setSelectedServices(prev => prev.filter(s => s !== svc.name));
+                      }
+                    }}
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-sm text-on-surface">{svc.name}</p>
+                    <p className="text-xs text-secondary mt-0.5">{svc.price.toLocaleString('vi-VN')} VNĐ</p>
+                    {svc.description && <p className="text-[11px] text-on-surface-variant mt-1 leading-snug">{svc.description}</p>}
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="p-4 border-t border-outline-variant bg-surface-container-high">
+              <button
+                onClick={() => {
+                  if (selectedServices.length > 0) {
+                    setIsMenuOpen(false);
+                    const userMsg = `Tôi muốn đặt các dịch vụ: ${selectedServices.join(', ')}`;
+
+                    const history = messages.filter(m => m.role === 'user' || m.role === 'ai').map(m => ({ role: m.role, content: m.content }));
+                    setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+                    setIsLoading(true);
+
+                    fetch("http://localhost:5000/api/chatbot", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ message: userMsg, history }),
+                    }).then(res => res.json()).then(data => {
+                      if (data.success) {
+                        if (data.type === 'hairstyle_advice') {
+                          setMessages((prev) => [...prev, { role: "ai", isAdvice: true, data: data.data }]);
+                        } else if (data.type === 'menu') {
+                          setMessages((prev) => [...prev, { role: "ai", isMenu: true, content: data.data.text, services: data.data.services }]);
+                        } else if (data.type === 'barber_menu') {
+                          setMessages((prev) => [...prev, { role: "ai", isBarberMenu: true, content: data.data.text, barbers: data.data.barbers }]);
+                        } else {
+                          setMessages((prev) => [...prev, { role: "ai", content: data.data }]);
+                        }
+                      } else {
+                        setMessages((prev) => [...prev, { role: "system", content: "Lỗi kết nối với máy chủ AI." }]);
+                      }
+                    }).catch(error => {
+                      setMessages((prev) => [...prev, { role: "system", content: "Không thể kết nối với server." }]);
+                    }).finally(() => setIsLoading(false));
+                  } else {
+                    toast.error('Vui lòng chọn ít nhất 1 dịch vụ');
+                  }
+                }}
+                className="w-full bg-primary text-on-primary py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-primary-fixed shadow-md shadow-primary/20"
+              >
+                Xác nhận Lựa Chọn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Barber Modal Overlay */}
+      {isBarberMenuOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-4 rounded-2xl">
+          <div className="bg-surface w-full max-w-sm rounded-2xl shadow-xl flex flex-col max-h-[90%] overflow-hidden border border-outline-variant">
+            <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-high">
+              <h3 className="font-bold text-primary">Chọn Thợ Cắt Tóc</h3>
+              <button onClick={() => setIsBarberMenuOpen(false)} className="text-on-surface-variant hover:text-error">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto custom-scrollbar flex flex-col gap-3">
+              <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedBarber === 'Any' ? 'border-primary bg-primary/10' : 'border-outline-variant bg-surface-container'}`}>
+                <input 
+                  type="radio" 
+                  name="barberSelection"
+                  className="w-4 h-4 text-primary bg-surface-container-highest border-outline-variant focus:ring-primary focus:ring-2"
+                  checked={selectedBarber === 'Any'}
+                  onChange={() => setSelectedBarber('Any')}
+                />
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-on-surface">Bất kỳ thợ nào</p>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5">Tiệm sẽ tự sắp xếp thợ phù hợp cho bạn</p>
+                </div>
+              </label>
+
+              {barberData.map((barber, i) => (
+                <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedBarber === barber.name ? 'border-primary bg-primary/10' : 'border-outline-variant bg-surface-container'}`}>
+                  <input 
+                    type="radio" 
+                    name="barberSelection"
+                    className="w-4 h-4 text-primary bg-surface-container-highest border-outline-variant focus:ring-primary focus:ring-2"
+                    checked={selectedBarber === barber.name}
+                    onChange={() => setSelectedBarber(barber.name)}
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-sm text-on-surface">{barber.name}</p>
+                    <p className="text-xs text-secondary mt-0.5">Kinh nghiệm: {barber.experienceYears} năm</p>
+                    {barber.specialties && barber.specialties.length > 0 && (
+                      <p className="text-[11px] text-on-surface-variant mt-0.5">Chuyên môn: {barber.specialties.join(', ')}</p>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="p-4 border-t border-outline-variant bg-surface-container-high">
+              <button 
+                onClick={() => {
+                  if (selectedBarber) {
+                    setIsBarberMenuOpen(false);
+                    const userMsg = selectedBarber === 'Any' ? `Tôi không yêu cầu thợ cụ thể, tiệm tự sắp xếp nhé` : `Tôi muốn đặt thợ: ${selectedBarber}`;
+                    
+                    const history = messages.filter(m => m.role === 'user' || m.role === 'ai').map(m => ({ role: m.role, content: m.content }));
+                    setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+                    setIsLoading(true);
+                    
+                    fetch("http://localhost:5000/api/chatbot", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ message: userMsg, history }),
+                    }).then(res => res.json()).then(data => {
+                      if (data.success) {
+                        if (data.type === 'hairstyle_advice') {
+                          setMessages((prev) => [...prev, { role: "ai", isAdvice: true, data: data.data }]);
+                        } else if (data.type === 'menu') {
+                          setMessages((prev) => [...prev, { role: "ai", isMenu: true, content: data.data.text, services: data.data.services }]);
+                        } else if (data.type === 'barber_menu') {
+                          setMessages((prev) => [...prev, { role: "ai", isBarberMenu: true, content: data.data.text, barbers: data.data.barbers }]);
+                        } else {
+                          setMessages((prev) => [...prev, { role: "ai", content: data.data }]);
+                        }
+                      } else {
+                        setMessages((prev) => [...prev, { role: "system", content: "Lỗi kết nối với máy chủ AI." }]);
+                      }
+                    }).catch(error => {
+                      setMessages((prev) => [...prev, { role: "system", content: "Không thể kết nối với server." }]);
+                    }).finally(() => setIsLoading(false));
+                  } else {
+                    toast.error('Vui lòng chọn 1 thợ hoặc tuỳ chọn Bất kỳ');
+                  }
+                }}
+                className="w-full bg-primary text-on-primary py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-primary-fixed shadow-md shadow-primary/20"
+              >
+                Xác nhận Lựa Chọn
+              </button>
+            </div>
           </div>
         </div>
       )}
