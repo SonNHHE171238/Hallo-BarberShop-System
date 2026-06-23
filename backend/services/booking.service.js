@@ -34,7 +34,7 @@ exports.processCreateBooking = async ({
 
   if (minutesDifference < 30) {
     const error = new Error(
-      "Bookings must be made at least 30 minutes in advance",
+      "Vui lòng đặt lịch trước ít nhất 30 phút",
     );
     error.statusCode = 400;
     error.errorCode = "BOOKING_TOO_SOON";
@@ -47,7 +47,7 @@ exports.processCreateBooking = async ({
     if (isBlocked) {
       const noShowCount = await NoShow.getCustomerNoShowCount(customerId);
       const error = new Error(
-        `Booking blocked due to ${noShowCount} cancellations/no-shows.`,
+        `Chức năng đặt lịch bị khóa do bạn đã hủy/không đến ${noShowCount} lần.`,
       );
       error.statusCode = 403;
       error.errorCode = "CUSTOMER_BLOCKED";
@@ -61,7 +61,7 @@ exports.processCreateBooking = async ({
     requestedDateTime,
   );
   if (isBarberAbsent) {
-    const error = new Error("Selected barber is not available on this date");
+    const error = new Error("Thợ cắt tóc đã chọn không làm việc vào ngày này");
     error.statusCode = 400;
     error.errorCode = "BARBER_ABSENT";
     throw error;
@@ -92,7 +92,7 @@ exports.processCreateBooking = async ({
 
   if (barberConflict) {
     const error = new Error(
-      `Time slot conflict detected. Your ${durationMinutes}-minute service overlaps with an existing booking.`,
+      `Khung giờ không đủ để phục vụ. Dịch vụ ${durationMinutes} phút của bạn bị trùng với một lịch hẹn khác.`,
     );
     error.statusCode = 409;
     error.errorCode = "BOOKING_CONFLICT";
@@ -120,7 +120,7 @@ exports.processCreateBooking = async ({
 
     if (customerConflict) {
       const error = new Error(
-        `You already have a booking during this time period.`,
+        `Bạn đã có một lịch đặt trong khoảng thời gian này.`,
       );
       error.statusCode = 409;
       error.errorCode = "CUSTOMER_DOUBLE_BOOKING";
@@ -131,14 +131,14 @@ exports.processCreateBooking = async ({
   // Barber Daily Limit
   const barber = await Barber.findById(barberId);
   if (!barber) {
-    const error = new Error("Barber not found");
+    const error = new Error("Không tìm thấy thợ cắt tóc");
     error.statusCode = 404;
     throw error;
   }
 
   if (barberBookings.length >= barber.maxDailyBookings) {
     const error = new Error(
-      "Barber has reached maximum bookings for this date",
+      "Thợ cắt tóc đã đạt giới hạn lịch đặt tối đa trong ngày",
     );
     error.statusCode = 400;
     error.errorCode = "DAILY_LIMIT_EXCEEDED";
@@ -149,7 +149,7 @@ exports.processCreateBooking = async ({
   const uniqueServices = new Set(services);
   if (uniqueServices.size !== services.length) {
     const error = new Error(
-      "You cannot select the same service more than once",
+      "Bạn không thể chọn cùng một dịch vụ nhiều lần",
     );
     error.statusCode = 400;
     error.errorCode = "DUPLICATE_SERVICES";
@@ -163,7 +163,7 @@ exports.processCreateBooking = async ({
     foundServices.length !== services.length ||
     services.length === 0
   ) {
-    const error = new Error("One or more services not found or none selected");
+    const error = new Error("Một hoặc nhiều dịch vụ không tồn tại hoặc chưa được chọn");
     error.statusCode = 404;
     throw error;
   }

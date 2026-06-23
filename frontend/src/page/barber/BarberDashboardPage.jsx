@@ -72,30 +72,6 @@ export default function BarberDashboardPage() {
         <ScheduleTimeline />
       </main>
 
-      {/* Footer Component */}
-      <footer className="bg-surface-container-lowest text-primary font-body-md text-body-md w-full py-section-padding border-t border-outline-gold mt-auto">
-        <div className="max-w-7xl mx-auto px-gutter grid grid-cols-1 md:grid-cols-2 lg:gap-section-gap">
-          {/* Brand & Copyright */}
-          <div className="flex flex-col gap-6 mb-8 md:mb-0">
-            <div className="font-display-lg text-[32px] text-primary font-bold tracking-tighter serif-heading">
-              HALLO BARBER
-            </div>
-            <p className="text-on-surface-variant uppercase text-[10px] tracking-[0.4em]">© 2024 HALLO BARBER. BẢO LƯU MỌI QUYỀN.</p>
-          </div>
-
-          {/* Links */}
-          <div className="grid grid-cols-2 gap-8 md:justify-items-end">
-            <div className="flex flex-col gap-4">
-              <Link className="text-on-surface-variant hover:text-primary transition-colors text-[12px] uppercase tracking-widest" href="#">Vị Trí</Link>
-              <Link className="text-on-surface-variant hover:text-primary transition-colors text-[12px] uppercase tracking-widest" href="#">Liên Hệ</Link>
-            </div>
-            <div className="flex flex-col gap-4">
-              <Link className="text-on-surface-variant hover:text-primary transition-colors text-[12px] uppercase tracking-widest" href="#">Chính Sách Bảo Mật</Link>
-              <Link className="text-on-surface-variant hover:text-primary transition-colors text-[12px] uppercase tracking-widest" href="#">Điều Khoản Dịch Vụ</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
