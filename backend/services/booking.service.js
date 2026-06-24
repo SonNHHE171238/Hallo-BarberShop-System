@@ -50,10 +50,12 @@ exports.processCreateBooking = async ({
     throw error;
   }
 
-  // Calculate total duration in minutes from selected services
+  // Calculate total duration in minutes and totalPrice from selected services
   let durationMinutes = 0;
+  let totalPrice = 0;
   foundServices.forEach((service) => {
     durationMinutes += service.duration || 30;
+    totalPrice += service.price || 0;
   });
 
   // Time Buffer Validation (30 mins advance)
@@ -180,6 +182,7 @@ exports.processCreateBooking = async ({
     services,
     bookingDate: requestedDateTime,
     durationMinutes,
+    totalPrice,
     note,
     notificationMethods,
     autoAssignedBarber,

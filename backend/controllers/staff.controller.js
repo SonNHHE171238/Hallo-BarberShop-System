@@ -40,10 +40,8 @@ const staffController = {
         updateData.completedAt = new Date();
       } else if (status === 'no_show') {
         updateData.noShowAt = new Date();
-        updateData.noShowBy = req.userId;
       } else if (status === 'confirmed') {
         updateData.confirmedAt = new Date();
-        updateData.confirmedBy = req.userId;
       }
 
       const updatedBooking = await Booking.findByIdAndUpdate(id, updateData, { new: true });

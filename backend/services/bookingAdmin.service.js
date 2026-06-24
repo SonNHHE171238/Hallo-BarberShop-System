@@ -49,7 +49,6 @@ class BookingAdminService {
 
     booking.status = 'confirmed';
     booking.confirmedAt = new Date();
-    booking.confirmedBy = adminId;
     await booking.save();
 
     return await Booking.findById(bookingId)
@@ -58,8 +57,7 @@ class BookingAdminService {
         populate: { path: 'userId', select: 'name email' }
       })
       .populate('serviceId', 'name price durationMinutes')
-      .populate('customerId', 'name email phone')
-      .populate('confirmedBy', 'name email');
+      .populate('customerId', 'name email phone');
   }
 
   async rejectBooking(bookingId, adminId, reason, note) {
@@ -72,7 +70,6 @@ class BookingAdminService {
 
     booking.status = 'rejected';
     booking.rejectedAt = new Date();
-    booking.rejectedBy = adminId;
     booking.rejectionReason = reason || 'other';
     if (note) booking.rejectionNote = note;
     
@@ -116,8 +113,7 @@ class BookingAdminService {
         populate: { path: 'userId', select: 'name email' }
       })
       .populate('serviceId', 'name price durationMinutes')
-      .populate('customerId', 'name email phone')
-      .populate('rejectedBy', 'name email');
+      .populate('customerId', 'name email phone');
   }
 
   async markNoShow(bookingId, adminId, note) {
@@ -131,7 +127,6 @@ class BookingAdminService {
 
     booking.status = 'no_show';
     booking.noShowAt = new Date();
-    booking.noShowBy = adminId;
     if (note) booking.noShowNote = note;
     
     await booking.save();
@@ -171,8 +166,7 @@ class BookingAdminService {
         populate: { path: 'userId', select: 'name email' }
       })
       .populate('serviceId', 'name price durationMinutes')
-      .populate('customerId', 'name email phone')
-      .populate('noShowBy', 'name email');
+      .populate('customerId', 'name email phone');
   }
 }
 

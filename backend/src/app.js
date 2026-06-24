@@ -17,7 +17,9 @@ const errorHandler = require('../middlewares/error.middleware');
 const app = express();
 
 app.use(cors({
-    origin: (process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:3000,http://localhost:3001,http://localhost:5173').split(','),
+    origin: function (origin, callback) {
+        callback(null, true); // Bỏ qua lỗi CORS khi truy cập từ thiết bị khác trong mạng LAN
+    },
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

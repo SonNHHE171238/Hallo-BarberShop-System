@@ -249,7 +249,6 @@ exports.getMyBookings = async (req, res) => {
           select: "name email phone",
         },
       })
-      .populate("confirmedBy", "name email")
       .sort(sort)
       .skip(skip)
       .limit(Number(limit));
@@ -814,7 +813,6 @@ exports.getAllBookings = async (req, res) => {
       })
       .populate("serviceId", "name price durationMinutes")
       .populate("customerId", "name email phone")
-      .populate("confirmedBy", "name email")
       .sort({ bookingDate: -1 })
       .skip(skip)
       .limit(Number(limit));
@@ -1566,7 +1564,6 @@ exports.createWalkInBooking = async (req, res) => {
       customerPhone,
       status: "confirmed",
       confirmedAt: new Date(),
-      confirmedBy: req.userId,
     });
 
     await booking.save();
@@ -1619,8 +1616,7 @@ exports.createWalkInBooking = async (req, res) => {
           path: "userId",
           select: "name email profileImageUrl",
         },
-      })
-      .populate("confirmedBy", "name email");
+      });
 
     res.status(201).json({
       success: true,

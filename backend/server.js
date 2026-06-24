@@ -27,7 +27,7 @@ if (process.env.USE_LOCAL_DB === 'true') {
 mongoose.connect(dbUri)
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
     });
   })
@@ -42,7 +42,7 @@ mongoose.connect(dbUri)
         try {
             await mongoose.connect(localUri);
             console.log('✅ Connected to MongoDB LOCAL successfully (Fallback)');
-            app.listen(PORT, () => {
+            app.listen(PORT, '0.0.0.0', () => {
                 console.log(`🚀 Server running on port ${PORT}`);
             });
         } catch (fallbackErr) {

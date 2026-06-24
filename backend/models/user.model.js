@@ -38,7 +38,48 @@ const userSchema = new mongoose.Schema(
     resetTokenExpires: { type: Date },
     isDeleted: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    toJSON: {
+      transform: function (doc, ret) {
+        // Ép thứ tự các trường trả về khi convert sang JSON
+        return {
+          id: ret._id,
+          name: ret.name,
+          email: ret.email,
+          phone: ret.phone,
+          role: ret.role,
+          status: ret.status,
+          avatarUrl: ret.avatarUrl,
+          oauthProvider: ret.oauthProvider,
+          oauthId: ret.oauthId,
+          isVerified: ret.isVerified,
+          isDeleted: ret.isDeleted,
+          createdAt: ret.createdAt,
+          updatedAt: ret.updatedAt,
+        };
+      }
+    },
+    toObject: {
+      transform: function (doc, ret) {
+        return {
+          id: ret._id,
+          name: ret.name,
+          email: ret.email,
+          phone: ret.phone,
+          role: ret.role,
+          status: ret.status,
+          avatarUrl: ret.avatarUrl,
+          oauthProvider: ret.oauthProvider,
+          oauthId: ret.oauthId,
+          isVerified: ret.isVerified,
+          isDeleted: ret.isDeleted,
+          createdAt: ret.createdAt,
+          updatedAt: ret.updatedAt,
+        };
+      }
+    }
+  }
 );
 
 userSchema.pre('save', async function hashPassword() {
