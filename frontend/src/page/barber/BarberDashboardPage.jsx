@@ -41,7 +41,7 @@ export default function BarberDashboardPage() {
               </div>
             </div>
             {/* Mobile Menu Toggle */}
-            <button 
+            <button
               className="md:hidden text-on-surface-variant p-2 rounded-md hover:bg-surface-variant transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
@@ -51,10 +51,9 @@ export default function BarberDashboardPage() {
         </div>
 
         {/* Mobile Menu Dropdown */}
-        <div 
-          className={`md:hidden absolute top-full left-0 w-full bg-surface-container-lowest border-b border-outline-gold shadow-lg transition-all duration-300 overflow-hidden ${
-            isMobileMenuOpen ? "max-h-screen opacity-100 py-4" : "max-h-0 opacity-0 py-0"
-          }`}
+        <div
+          className={`md:hidden absolute top-full left-0 w-full bg-surface-container-lowest border-b border-outline-gold shadow-lg transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? "max-h-screen opacity-100 py-4" : "max-h-0 opacity-0 py-0"
+            }`}
         >
           <div className="flex flex-col px-4 space-y-4">
             <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="#">Dịch Vụ</Link>
