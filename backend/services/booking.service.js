@@ -387,3 +387,60 @@ exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
 
   return resultSlots;
 };
+
+
+exports.processCreateSinglePageBooking = async (data) => {
+  const Service = require("../models/service.model");
+  const barberService = require("./barber.service");
+  
+  let {
+    services,
+    barberId,
+    bookingDate,
+    timeSlot,
+    date,
+    note,
+    notificationMethods,
+    customerName,
+    customerEmail,
+    customerPhone,
+    bookingType,
+    customerId,
+    autoAssignBarber
+  } = data;
+
+  const foundServices = await Service.find({ _id: { $in: services } });
+  let durationMinutes = 0;
+  foundServices.forEach((service) => {
+    durationMinutes += service.duration || 30;
+  });
+
+  const shouldAutoAssign = !barberId || barberId === "random" || barberId === "auto" || autoAssignBarber;
+
+  if (shouldAutoAssign) {
+    const assignedBarber = await barberService.autoAssignBarberService({
+      date,
+      timeSlot,
+      durationMinutes
+    });
+    barberId = assignedBarber._id;
+  }
+
+  // Delegate to processCreateBooking
+  const populatedBooking = await exports.processCreateBooking({
+    bookingType,
+    customerId,
+    barberId,
+    services,
+    bookingDate,
+    timeSlot,
+    note,
+    notificationMethods,
+    autoAssignedBarber: shouldAutoAssign,
+    customerName,
+    customerEmail,
+    customerPhone,
+  });
+
+  return { populatedBooking, shouldAutoAssign };
+};

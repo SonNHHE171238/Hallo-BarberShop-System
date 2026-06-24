@@ -26,6 +26,8 @@ router.get('/all', authenticate, applyRoleBasedBookingFilter, bookingController.
 // Stats
 router.get('/stats', authenticate, bookingStatsController.getBookingStats);
 router.get('/chart-stats', bookingStatsController.getBookingChartStats);
+router.get('/admin/metrics', authenticate, authorizeRoles('admin'), bookingStatsController.getAdminDashboardMetrics);
+router.get('/admin/top-barbers', authenticate, authorizeRoles('admin'), bookingStatsController.getAdminTopBarbers);
 
 // Walk-in booking
 router.get('/walk-in/available-slots', authenticate, authorizeRoles('admin'), bookingAvailabilityController.getWalkInAvailableSlots);

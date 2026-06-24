@@ -15,19 +15,25 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
-  const { login, loginWithGoogle } = useAuth();
+  const { user, isLoading: isAuthLoading, login, loginWithGoogle } = useAuth();
 
-  const handleRedirect = (user) => {
-    if (user?.role === 'admin') {
+  const handleRedirect = (userObj) => {
+    if (userObj?.role === 'admin') {
       router.push("/admin/dashboard");
-    } else if (user?.role === 'staff') {
+    } else if (userObj?.role === 'staff') {
       router.push("/staff/dashboard");
-    } else if (user?.role === 'barber') {
+    } else if (userObj?.role === 'barber') {
       router.push("/barber/dashboard");
     } else {
       router.push("/customer/dashboard");
     }
   };
+
+  React.useEffect(() => {
+    if (!isAuthLoading && user) {
+      handleRedirect(user);
+    }
+  }, [user, isAuthLoading, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

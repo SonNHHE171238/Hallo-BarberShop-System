@@ -107,5 +107,34 @@ export const bookingService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  /**
+   * API for Customer Booking History
+   */
+  getMyBookings: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.status) queryParams.append('status', params.status);
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+      
+      const queryString = queryParams.toString();
+      const url = queryString ? `/bookings/me?${queryString}` : '/bookings/me';
+      
+      return await fetchWithAuth(url, { method: 'GET' });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  cancelBooking: async (bookingId) => {
+    try {
+      return await fetchWithAuth(`/bookings/${bookingId}/cancel`, {
+        method: 'PUT'
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 };

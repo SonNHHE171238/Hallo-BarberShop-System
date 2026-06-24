@@ -4,24 +4,18 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/auth.service";
+import { useAuth } from "@/context/AuthContext";
 
 export default function BarberHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const { user, logout } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    authService.getMe().then(data => {
-      if (data && data.user) setUser(data.user);
-    }).catch(err => console.error("Lỗi lấy thông tin:", err));
-  }, []);
 
   const handleLogout = async () => {
     if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
       try {
-        await authService.logout();
-        router.push("/login");
+        await logout();
       } catch (err) {
         console.error("Lỗi đăng xuất:", err);
       }
