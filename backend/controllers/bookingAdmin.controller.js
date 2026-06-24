@@ -23,7 +23,7 @@ exports.getPendingBookings = async (req, res) => {
     };
 
     if (barberId) filter.barberId = barberId;
-    if (serviceId) filter.serviceId = serviceId;
+    if (serviceId) filter.services = serviceId;
     if (startDate || endDate) {
       filter.bookingDate = {};
       if (startDate) filter.bookingDate.$gte = new Date(startDate);

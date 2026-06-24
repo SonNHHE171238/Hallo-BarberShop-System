@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AdminHeader({ onMenuClick }) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const getPageTitle = () => {
     if (pathname.includes('/admin/employee')) return 'Quản Lý Nhân Viên';
@@ -27,6 +30,36 @@ export default function AdminHeader({ onMenuClick }) {
         <button className="text-on-surface-variant hover:text-primary transition-colors active:scale-95">
           <span className="material-symbols-outlined">settings</span>
         </button>
+
+        {/* User Profile Dropdown */}
+        <div className="relative">
+          <div 
+            onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+            className="flex items-center gap-3 p-1.5 pl-3 rounded-full hover:bg-surface-container cursor-pointer transition-colors border border-outline-gold/30"
+          >
+            <div className="flex flex-col text-right hidden sm:flex">
+              <span className="font-body-md text-sm font-semibold text-on-surface leading-tight truncate uppercase tracking-tighter">{user?.name || 'Quản trị viên'}</span>
+              <span className="font-label-md text-[10px] text-primary truncate uppercase tracking-widest">Admin</span>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary flex items-center justify-center font-headline-sm text-primary flex-shrink-0">
+              {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+            </div>
+          </div>
+
+          {/* Profile Menu Popup */}
+          <div className={`absolute top-full right-0 mt-2 w-48 bg-surface-container-high border border-outline-gold rounded-lg shadow-xl overflow-hidden transition-all duration-200 origin-top-right ${isProfileMenuOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
+            <button 
+              onClick={() => {
+                setIsProfileMenuOpen(false);
+                logout();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-error hover:bg-error/10 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">logout</span>
+              <span className="font-label-md text-sm uppercase tracking-widest">Đăng xuất</span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   );

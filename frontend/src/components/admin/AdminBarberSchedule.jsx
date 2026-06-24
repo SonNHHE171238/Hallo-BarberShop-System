@@ -23,10 +23,10 @@ export default function AdminBarberSchedule({
     handleOpenEdit,
     handleToggleStatus
 }) {
-    if (selectedBarber.id === 'empty') {
+    if (!selectedBarber) {
         return (
             <section className="rounded-3xl border border-outline-gold bg-surface-container-low p-6 shadow-2xl shadow-black/5 flex items-center justify-center min-h-[400px]">
-                <p className="text-on-surface-variant">Chọn một barber từ danh sách để xem chi tiết</p>
+                <p className="text-on-surface-variant">Vui lòng chọn hoặc tạo mới một thợ cắt tóc để xem chi tiết.</p>
             </section>
         );
     }

@@ -6,25 +6,6 @@ import AdminBarberForm from '@/components/admin/AdminBarberForm';
 import AdminBarberList from '@/components/admin/AdminBarberList';
 import AdminBarberSchedule from '@/components/admin/AdminBarberSchedule';
 
-const initialBarber = {
-    id: 'empty',
-    name: 'Không có barber',
-    email: '',
-    phone: '',
-    avatarUrl: '',
-    bio: '',
-    specialties: [],
-    expertiseTags: [],
-    hairTypeExpertise: [],
-    styleExpertise: [],
-    certifications: [],
-    languages: [],
-    workingSince: '',
-    experienceYears: '',
-    rating: 0,
-    status: 'inactive',
-    scheduleSummary: [],
-};
 
 function Badge({ children, variant = 'default' }) {
     const styles = {
@@ -41,8 +22,8 @@ function Badge({ children, variant = 'default' }) {
 }
 
 export default function AdminBarberManagement() {
-    const [barbers, setBarbers] = useState([initialBarber]);
-    const [selectedBarber, setSelectedBarber] = useState(initialBarber);
+    const [barbers, setBarbers] = useState([]);
+    const [selectedBarber, setSelectedBarber] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [formOpen, setFormOpen] = useState(false);
@@ -87,8 +68,8 @@ export default function AdminBarberManagement() {
                 const selected = mappedBarbers.find((barber) => barber.id === selectedId) || mappedBarbers[0];
                 setSelectedBarber(selected);
             } else {
-                setBarbers([initialBarber]);
-                setSelectedBarber(initialBarber);
+                setBarbers([]);
+                setSelectedBarber(null);
             }
         } catch (fetchError) {
             setError(fetchError.message || 'Không thể tải danh sách barber.');
@@ -207,7 +188,6 @@ export default function AdminBarberManagement() {
                         searchTerm={searchTerm}
                         setSearchTerm={setSearchTerm}
                         setSelectedBarber={setSelectedBarber}
-                        initialBarber={initialBarber}
                     />
                     <AdminBarberSchedule
                         selectedBarber={selectedBarber}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { bookingService } from "@/services/booking.service";
 import toast from 'react-hot-toast';
 
-export default function DateTimeSelection({ selectedBarber, selectedService, selectedDate, setSelectedDate, selectedTime, setSelectedTime }) {
+export default function DateTimeSelection({ selectedBarber, selectedServices = [], selectedDate, setSelectedDate, selectedTime, setSelectedTime }) {
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
@@ -20,9 +20,9 @@ export default function DateTimeSelection({ selectedBarber, selectedService, sel
   const daysInMonthCount = new Date(currentYear, currentMonth + 1, 0).getDate();
   const daysInMonth = Array.from({ length: daysInMonthCount }, (_, i) => i + 1);
 
-  // Fetch available dynamic slots whenever date, barber, or service changes
+  // Fetch available dynamic slots whenever date, barber, or services changes
   useEffect(() => {
-    if (!selectedDate || !selectedBarber || !selectedService) {
+    if (!selectedDate || !selectedBarber || selectedServices.length === 0) {
       setAvailableSlots([]);
       return;
     }
@@ -33,7 +33,7 @@ export default function DateTimeSelection({ selectedBarber, selectedService, sel
         const payload = {
           barberId: selectedBarber._id || selectedBarber.id,
           date: selectedDate,
-          durationMinutes: selectedService.durationMinutes || selectedService.duration || 30
+          durationMinutes: selectedServices.reduce((total, s) => total + (s.durationMinutes || s.duration || 30), 0)
         };
         const res = await bookingService.getAvailableSlots(payload);
         const slots = (res && res.data && res.data.slots) ? res.data.slots : (res && res.slots) ? res.slots : null;
@@ -55,7 +55,7 @@ export default function DateTimeSelection({ selectedBarber, selectedService, sel
     };
     
     fetchSlots();
-  }, [selectedDate, selectedBarber, selectedService]);
+  }, [selectedDate, selectedBarber, selectedServices]);
 
   
   // Fetch absences when barber changes

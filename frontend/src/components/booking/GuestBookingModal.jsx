@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedService, selectedBarber, selectedDate, selectedTime, isLoading }) {
+export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedServices = [], selectedBarber, selectedDate, selectedTime, isLoading }) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -118,9 +118,17 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
           </h3>
           <div className="space-y-6 relative z-10">
             <div>
-              <p className="text-xs text-on-surface-variant uppercase tracking-widest mb-1">Dịch vụ</p>
-              <p className="font-bold text-on-surface">{selectedService?.name}</p>
-              <p className="text-sm text-primary">{selectedService?.price?.toLocaleString()}đ</p>
+              <p className="text-xs text-on-surface-variant uppercase tracking-widest mb-1">Dịch vụ ({selectedServices.length})</p>
+              {selectedServices.map(service => (
+                <div key={service._id} className="flex justify-between items-center mb-1 border-b border-outline-variant/20 pb-1 last:border-0">
+                  <p className="font-bold text-on-surface text-sm">{service.name}</p>
+                  <p className="text-sm text-primary">{service.price?.toLocaleString()}đ</p>
+                </div>
+              ))}
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-outline-variant">
+                 <p className="font-bold text-on-surface">Tổng:</p>
+                 <p className="font-bold text-primary text-lg">{selectedServices.reduce((total, s) => total + (s.price || 0), 0).toLocaleString()}đ</p>
+              </div>
             </div>
             <div>
               <p className="text-xs text-on-surface-variant uppercase tracking-widest mb-1">Barber</p>

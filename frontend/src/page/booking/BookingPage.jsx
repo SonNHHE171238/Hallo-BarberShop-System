@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import GuestBookingModal from "@/components/booking/GuestBookingModal";
 
 export default function BookingPage() {
-  const [selectedService, setSelectedService] = useState(null);
+  const [selectedServices, setSelectedServices] = useState([]);
   const [selectedBarber, setSelectedBarber] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
@@ -41,7 +41,7 @@ export default function BookingPage() {
   };
 
   const submitBooking = async (additionalPayload) => {
-    if (!selectedService || !selectedDate || !selectedTime) {
+    if (selectedServices.length === 0 || !selectedDate || !selectedTime) {
       toast.error("Vui lòng chọn đầy đủ Dịch vụ và Thời gian.");
       return;
     }
@@ -49,12 +49,12 @@ export default function BookingPage() {
     setIsLoading(true);
     try {
       const payload = {
-        serviceId: selectedService._id || selectedService.id,
+        services: selectedServices.map(s => s._id || s.id),
         barberId: selectedBarber ? (selectedBarber._id || selectedBarber.id) : "auto", 
         bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
         date: selectedDate, 
         timeSlot: selectedTime, 
-        durationMinutes: selectedService.durationMinutes || selectedService.duration || 30,
+        durationMinutes: selectedServices.reduce((total, s) => total + (s.durationMinutes || s.duration || 30), 0),
         ...additionalPayload
       };
 
@@ -65,8 +65,8 @@ export default function BookingPage() {
       
       const queryParams = new URLSearchParams({
         id: (response.booking && response.booking._id) || response._id || "NEW",
-        service: selectedService.name,
-        price: selectedService.price,
+        service: selectedServices.map(s => s.name).join(', '),
+        price: selectedServices.reduce((total, s) => total + (s.price || 0), 0),
         barber: selectedBarber ? selectedBarber.name : "Barber Auto",
         title: selectedBarber ? (selectedBarber.title || "Stylist") : "Stylist",
         time: selectedTime,
@@ -90,23 +90,23 @@ export default function BookingPage() {
       <main className="pt-24 pb-32 flex-grow">
         <div className="max-w-[1200px] mx-auto px-4 md:px-16">
           <BookingStepper 
-            hasService={!!selectedService} 
+            hasService={selectedServices.length > 0} 
             hasBarber={!!selectedBarber} 
             hasTime={!!(selectedDate && selectedTime)} 
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-12">
             <div className="lg:col-span-8 space-y-12">
-              <ServiceSelection selectedService={selectedService} setSelectedService={setSelectedService} />
+              <ServiceSelection selectedServices={selectedServices} setSelectedServices={setSelectedServices} />
               
-              {selectedService && (
+              {selectedServices.length > 0 && (
                 <BarberSelection selectedBarber={selectedBarber} setSelectedBarber={setSelectedBarber} />
               )}
               
-              {selectedService && selectedBarber && (
+              {selectedServices.length > 0 && selectedBarber && (
                 <DateTimeSelection 
                   selectedBarber={selectedBarber}
-                  selectedService={selectedService}
+                  selectedServices={selectedServices}
                   selectedDate={selectedDate} 
                   setSelectedDate={setSelectedDate} 
                   selectedTime={selectedTime} 
@@ -115,9 +115,9 @@ export default function BookingPage() {
               )}
             </div>
 
-            {selectedService && selectedBarber && selectedDate && selectedTime && (
+            {selectedServices.length > 0 && selectedBarber && selectedDate && selectedTime && (
               <BookingSummarySidebar 
-                selectedService={selectedService} 
+                selectedServices={selectedServices} 
                 selectedBarber={selectedBarber} 
                 selectedDate={selectedDate} 
                 selectedTime={selectedTime}
@@ -135,7 +135,7 @@ export default function BookingPage() {
         isOpen={isGuestModalOpen}
         onClose={() => setIsGuestModalOpen(false)}
         onSubmit={handleGuestSubmit}
-        selectedService={selectedService}
+        selectedServices={selectedServices}
         selectedBarber={selectedBarber}
         selectedDate={selectedDate}
         selectedTime={selectedTime}

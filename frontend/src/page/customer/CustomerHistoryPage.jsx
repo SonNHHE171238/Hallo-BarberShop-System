@@ -9,11 +9,21 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { bookingService } from "@/services/booking.service";
 import toast from "react-hot-toast";
+import BookingHistoryFilter from "@/components/customer/BookingHistoryFilter";
 
 export default function CustomerHistoryPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all");
+  
+  const initialFilters = {
+    status: 'all',
+    dateRange: { from: null, to: null },
+    services: [],
+    barbers: []
+  };
+  const [activeFilters, setActiveFilters] = useState(initialFilters);
+  const [tempFilters, setTempFilters] = useState(initialFilters);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const fetcher = async () => {
     const response = await bookingService.getMyBookings();
@@ -51,7 +61,73 @@ export default function CustomerHistoryPage() {
   };
 
   // Filter & Search Logic
-  const filteredBookings = bookings.filter((booking) => { const searchMatch = booking.serviceId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) || booking.barberId?.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase()); let filterMatch = true; if (filter === 'pending') { filterMatch = booking.status === 'pending' || booking.status === 'confirmed'; } else if (filter === 'completed') { filterMatch = booking.status === 'completed'; } else if (filter === 'cancelled') { filterMatch = booking.status === 'cancelled' || booking.status === 'no_show'; } return searchMatch && filterMatch; });
+  const { availableServices, availableBarbers } = React.useMemo(() => {
+    const servicesMap = new Map();
+    const barbersMap = new Map();
+    
+    bookings.forEach(b => {
+      // Services
+      if (b.services && b.services.length > 0) {
+        b.services.forEach(s => {
+          if (s && s._id) servicesMap.set(s._id, { id: s._id, name: s.name });
+        });
+      } else if (b.serviceId) {
+        servicesMap.set(b.serviceId._id, { id: b.serviceId._id, name: b.serviceId.name });
+      }
+      
+      // Barbers
+      if (b.barberId && b.barberId.userId) {
+        barbersMap.set(b.barberId._id, {
+          id: b.barberId._id,
+          name: b.barberId.userId.name,
+          avatarUrl: b.barberId.userId.avatarUrl || b.barberId.profileImageUrl
+        });
+      }
+    });
+    
+    return {
+      availableServices: Array.from(servicesMap.values()),
+      availableBarbers: Array.from(barbersMap.values())
+    };
+  }, [bookings]);
+
+  const filteredBookings = bookings.filter((booking) => { 
+    const searchMatch = booking.serviceId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        (booking.services && booking.services.some(s => s.name?.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+                        booking.barberId?.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase()); 
+                        
+    if (!searchMatch) return false;
+
+    // Status
+    if (activeFilters.status !== 'all') {
+      if (activeFilters.status === 'pending' && !['pending', 'confirmed'].includes(booking.status)) return false;
+      if (activeFilters.status === 'completed' && booking.status !== 'completed') return false;
+      if (activeFilters.status === 'cancelled' && !['cancelled', 'no_show', 'rejected'].includes(booking.status)) return false;
+    }
+    
+    // Date Range
+    const bDate = new Date(booking.bookingDate);
+    if (activeFilters.dateRange.from && bDate < activeFilters.dateRange.from) return false;
+    if (activeFilters.dateRange.to) {
+      const toDate = new Date(activeFilters.dateRange.to);
+      toDate.setHours(23, 59, 59, 999);
+      if (bDate > toDate) return false;
+    }
+
+    // Services
+    if (activeFilters.services.length > 0) {
+      const bookingServiceIds = booking.services ? booking.services.map(s => s._id) : (booking.serviceId ? [booking.serviceId._id] : []);
+      if (!bookingServiceIds.some(id => activeFilters.services.includes(id))) return false;
+    }
+
+    // Barbers
+    if (activeFilters.barbers.length > 0) {
+      const barberId = booking.barberId?._id;
+      if (!barberId || !activeFilters.barbers.includes(barberId)) return false;
+    }
+
+    return true;
+  });
 
 
 
@@ -80,17 +156,25 @@ export default function CustomerHistoryPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <select
-              className="bg-surface-container border border-outline-gold px-4 py-3 rounded-xl text-on-surface hover:bg-surface-container-high transition-colors appearance-none pr-10 focus:outline-none focus:border-primary"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              style={{ background: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23c5a059" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>') no-repeat right 12px center / 16px, #201f1f` }}
+            <button
+              onClick={() => {
+                setTempFilters(activeFilters);
+                setIsFilterOpen(true);
+              }}
+              className="flex items-center gap-2 bg-surface-container border border-outline-gold px-6 py-3 rounded-xl text-on-surface hover:bg-primary hover:text-on-primary hover:border-primary transition-all group"
             >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="pending">Đang chờ</option>
-              <option value="completed">Hoàn thành</option>
-              <option value="cancelled">Đã huỷ</option>
-            </select>
+              <span className="material-symbols-outlined text-[20px] group-hover:text-on-primary transition-colors">tune</span>
+              <span className="font-label-md tracking-wider uppercase">Bộ Lọc</span>
+              {(
+                activeFilters.status !== 'all' || 
+                activeFilters.services.length > 0 ||
+                activeFilters.barbers.length > 0 ||
+                activeFilters.dateRange.from || 
+                activeFilters.dateRange.to
+              ) && (
+                <span className="ml-2 w-2 h-2 rounded-full bg-error group-hover:bg-on-primary"></span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -193,6 +277,25 @@ export default function CustomerHistoryPage() {
         </div>
 
       </main>
+
+      {/* Filter Sidebar */}
+      <BookingHistoryFilter 
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={tempFilters}
+        setFilters={setTempFilters}
+        availableServices={availableServices}
+        availableBarbers={availableBarbers}
+        onApply={() => {
+          setActiveFilters(tempFilters);
+          setIsFilterOpen(false);
+        }}
+        onReset={() => {
+          setTempFilters(initialFilters);
+          setActiveFilters(initialFilters);
+          setIsFilterOpen(false);
+        }}
+      />
 
       {/* Footer */}
       <Footer />

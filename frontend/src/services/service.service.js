@@ -16,24 +16,24 @@ export const serviceService = {
         if (params.page) queryParams.append('page', params.page);
         if (params.limit) queryParams.append('limit', params.limit);
         
-        return fetchWithAuth(`/admin/services?${queryParams.toString()}`, {
+        return fetchWithAuth(`/services?${queryParams.toString()}`, {
             method: 'GET',
         });
     },
     createService: async (payload) => {
-        return fetchWithAuth('/admin/services', {
+        return fetchWithAuth('/services', {
             method: 'POST',
             body: JSON.stringify(payload),
         });
     },
     updateService: async (id, payload) => {
-        return fetchWithAuth(`/admin/services/${id}`, {
+        return fetchWithAuth(`/services/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
     },
     deleteService: async (id) => {
-        return fetchWithAuth(`/admin/services/${id}`, {
+        return fetchWithAuth(`/services/${id}`, {
             method: 'DELETE',
         });
     }

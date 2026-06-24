@@ -341,7 +341,7 @@ exports.assignBarberToBooking = async (req, res) => {
 
       // Get service duration for proper slot marking
       const Service = require("../models/service.model");
-      const service = await Service.findById(booking.serviceId);
+      const service = await Service.findById(booking.services && booking.services.length > 0 ? booking.services[0]._id : null);
       const durationMinutes = service ? service.durationMinutes : 30; // Default 30 minutes
 
       // 1. Free up slots for the old barber (if exists)
@@ -533,7 +533,7 @@ exports.updateBookingStatus = async (req, res) => {
       // Create service history record
       const serviceHistory = new CustomerServiceHistory({
         customerId: booking.customerId,
-        serviceId: booking.serviceId,
+        serviceId: booking.services && booking.services.length > 0 ? booking.services[0]._id : null,
         bookingId: booking._id,
         barberId: booking.barberId,
         completedAt: completionTime,
@@ -542,7 +542,7 @@ exports.updateBookingStatus = async (req, res) => {
 
       // Update service popularity
       const Service = require("../models/service.model");
-      await Service.findByIdAndUpdate(booking.serviceId, {
+      await Service.findByIdAndUpdate(booking.services && booking.services.length > 0 ? booking.services[0]._id : null, {
         $inc: { popularity: 1 },
       });
 
@@ -612,7 +612,7 @@ exports.updateBookingStatus = async (req, res) => {
     await booking.save();
 
     const updatedBooking = await Booking.findById(bookingId)
-      .populate("serviceId", "name price")
+      .populate("services", "name price")
       .populate({
         path: "barberId",
         populate: {
@@ -729,7 +729,7 @@ exports.cancelBooking = async (req, res) => {
         customerId: booking.customerId,
         bookingId: booking._id,
         barberId: booking.barberId,
-        serviceId: booking.serviceId,
+        serviceId: booking.services && booking.services.length > 0 ? booking.services[0]._id : null,
         originalBookingDate: booking.bookingDate,
         markedBy: userId,
         reason: isLateCancellation ? "late_cancellation" : "customer_cancelled",
@@ -797,7 +797,7 @@ exports.getAllBookings = async (req, res) => {
     // Apply additional filters
     if (status) filter.status = status;
     if (barberId) filter.barberId = barberId;
-    if (serviceId) filter.serviceId = serviceId;
+    if (serviceId) filter.services = serviceId;
     if (search) {
       const regex = { $regex: search, $options: "i" };
       filter.customerName = regex;
@@ -812,7 +812,7 @@ exports.getAllBookings = async (req, res) => {
         path: "barberId",
         populate: { path: "userId", select: "name email" },
       })
-      .populate("serviceId", "name price durationMinutes")
+      .populate("services", "name price durationMinutes")
       .populate("customerId", "name email phone")
       .populate("confirmedBy", "name email")
       .sort({ bookingDate: -1 })
@@ -858,7 +858,7 @@ exports.getBarberTodayBookings = async (req, res, next) => {
       bookingDate: localISOTime
     })
       .populate('customerId', 'name email phone')
-      .populate('serviceId', 'name price durationMinutes type')
+      .populate("services", 'name price durationMinutes type')
       .sort({ timeSlot: 1 })
       .lean();
 
@@ -871,7 +871,7 @@ exports.getBarberTodayBookings = async (req, res, next) => {
 exports.getBookingDetail = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate("serviceId", "name")
+      .populate("services", "name")
       .populate({
         path: "barberId",
         populate: { path: "userId", select: "name" },
@@ -1178,7 +1178,7 @@ exports.updateBookingDetails = async (req, res) => {
       updateFields,
       { new: true },
     )
-      .populate("serviceId", "name price durationMinutes")
+      .populate("services", "name price durationMinutes")
       .populate({
         path: "barberId",
         populate: { path: "userId", select: "name email" },
@@ -1608,7 +1608,7 @@ exports.createWalkInBooking = async (req, res) => {
 
     // Populate the response
     const populatedBooking = await Booking.findById(booking._id)
-      .populate("serviceId", "name price durationMinutes category")
+      .populate("services", "name price durationMinutes category")
       .populate(
         "barberId",
         "userId specialties averageRating experienceYears profileImageUrl",

@@ -24,35 +24,12 @@ export default function AdminChartsAndRankings() {
             <option>Từ Đầu Năm</option>
           </select>
         </div>
-        {/* Simulated Bar Chart CSS */}
-        <div className="flex-1 flex items-end gap-1 md:gap-3 h-48 md:h-64 border-b border-outline-gold/30 pb-2 relative overflow-x-auto no-scrollbar">
-          {/* Y-Axis labels (simulated) */}
-          <div className="absolute left-0 top-0 bottom-2 w-8 md:w-12 flex flex-col justify-between text-outline font-label-md text-[9px] items-end pr-2 pointer-events-none opacity-50 bg-surface-container-low/80 backdrop-blur z-10 uppercase">
-            <span>$10k</span>
-            <span>$7.5k</span>
-            <span>$5k</span>
-            <span>$2.5k</span>
-          </div>
-          {/* Chart Bars */}
-          <div className="flex-1 flex items-end justify-between gap-1 pl-10 md:pl-14 h-full min-w-[400px]">
-            <div className="w-full bg-surface-variant hover:bg-primary/40 transition-colors rounded-t-sm cursor-pointer" style={{ height: '40%' }} title="$4,000"></div>
-            <div className="w-full bg-surface-variant hover:bg-primary/40 transition-colors rounded-t-sm cursor-pointer" style={{ height: '55%' }} title="$5,500"></div>
-            <div className="w-full bg-surface-variant hover:bg-primary/40 transition-colors rounded-t-sm cursor-pointer" style={{ height: '45%' }} title="$4,500"></div>
-            <div className="w-full bg-surface-variant hover:bg-primary/40 transition-colors rounded-t-sm cursor-pointer" style={{ height: '70%' }} title="$7,000"></div>
-            <div className="w-full bg-primary hover:bg-primary/80 transition-colors rounded-t-sm cursor-pointer" style={{ height: '85%' }} title="$8,500 (Cao điểm)"></div>
-            <div className="w-full bg-surface-variant hover:bg-primary/40 transition-colors rounded-t-sm cursor-pointer" style={{ height: '60%' }} title="$6,000"></div>
-            <div className="w-full bg-surface-variant hover:bg-primary/40 transition-colors rounded-t-sm cursor-pointer" style={{ height: '75%' }} title="$7,500"></div>
-          </div>
-        </div>
-        {/* X-Axis labels */}
-        <div className="flex justify-between pl-10 md:pl-14 pt-4 text-outline font-label-md text-[10px] uppercase tracking-widest min-w-[400px] overflow-hidden">
-          <span>T2</span>
-          <span>T3</span>
-          <span>T4</span>
-          <span>T5</span>
-          <span>T6</span>
-          <span>T7</span>
-          <span>CN</span>
+        
+        {/* Placeholder for future real chart */}
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] border border-dashed border-outline-variant rounded-xl bg-surface-container/30">
+          <span className="material-symbols-outlined text-4xl text-outline mb-2">bar_chart</span>
+          <p className="text-on-surface-variant font-label-md uppercase tracking-widest text-sm">Tính năng biểu đồ đang được phát triển</p>
+          <p className="text-outline text-xs mt-1">Dữ liệu sẽ sớm được cập nhật tự động</p>
         </div>
       </div>
       
