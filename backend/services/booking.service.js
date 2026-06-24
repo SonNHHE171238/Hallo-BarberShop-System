@@ -15,7 +15,6 @@ exports.processCreateBooking = async ({
   services,
   bookingDate,
   timeSlot,
-  durationMinutes,
   note,
   notificationMethods,
   autoAssignedBarber,
@@ -27,15 +26,43 @@ exports.processCreateBooking = async ({
   const requestedDateTime = new Date(bookingDate);
   requestedDateTime.setSeconds(0, 0);
 
+  // Check duplicate services
+  const uniqueServices = new Set(services);
+  if (uniqueServices.size !== services.length) {
+    const error = new Error(
+      "You cannot select the same service more than once",
+    );
+    error.statusCode = 400;
+    error.errorCode = "DUPLICATE_SERVICES";
+    throw error;
+  }
+
+  // Verify all services exist
+  const Service = require("../models/service.model");
+  const foundServices = await Service.find({ _id: { $in: services } });
+  if (
+    !services ||
+    foundServices.length !== services.length ||
+    services.length === 0
+  ) {
+    const error = new Error("One or more services not found or none selected");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Calculate total duration in minutes from selected services
+  let durationMinutes = 0;
+  foundServices.forEach((service) => {
+    durationMinutes += service.duration || 30;
+  });
+
   // Time Buffer Validation (30 mins advance)
   const now = new Date();
   const minutesDifference =
     (requestedDateTime.getTime() - now.getTime()) / (1000 * 60);
 
   if (minutesDifference < 30) {
-    const error = new Error(
-      "Vui lòng đặt lịch trước ít nhất 30 phút",
-    );
+    const error = new Error("Vui lòng đặt lịch trước ít nhất 30 phút");
     error.statusCode = 400;
     error.errorCode = "BOOKING_TOO_SOON";
     throw error;
@@ -145,29 +172,6 @@ exports.processCreateBooking = async ({
     throw error;
   }
 
-  // Check duplicate services
-  const uniqueServices = new Set(services);
-  if (uniqueServices.size !== services.length) {
-    const error = new Error(
-      "Bạn không thể chọn cùng một dịch vụ nhiều lần",
-    );
-    error.statusCode = 400;
-    error.errorCode = "DUPLICATE_SERVICES";
-    throw error;
-  }
-
-  // Verify all services exist
-  const foundServices = await Service.find({ _id: { $in: services } });
-  if (
-    !services ||
-    foundServices.length !== services.length ||
-    services.length === 0
-  ) {
-    const error = new Error("Một hoặc nhiều dịch vụ không tồn tại hoặc chưa được chọn");
-    error.statusCode = 404;
-    throw error;
-  }
-
   // Save Booking
   const bookingData = {
     bookingType,
@@ -224,9 +228,9 @@ exports.processCreateBooking = async ({
 
   // Return populated
   const populatedBooking = await Booking.findById(booking._id)
-    .populate('services', 'name price durationMinutes')
-    .populate('barberId', 'userId specialties averageRating')
-    .populate('customerId', 'name email phone')
+    .populate("services", "name price durationMinutes")
+    .populate("barberId", "userId specialties averageRating")
+    .populate("customerId", "name email phone")
     .populate({
       path: "barberId",
       populate: { path: "userId", select: "name email" },
@@ -382,4 +386,61 @@ exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
   });
 
   return resultSlots;
+};
+
+
+exports.processCreateSinglePageBooking = async (data) => {
+  const Service = require("../models/service.model");
+  const barberService = require("./barber.service");
+  
+  let {
+    services,
+    barberId,
+    bookingDate,
+    timeSlot,
+    date,
+    note,
+    notificationMethods,
+    customerName,
+    customerEmail,
+    customerPhone,
+    bookingType,
+    customerId,
+    autoAssignBarber
+  } = data;
+
+  const foundServices = await Service.find({ _id: { $in: services } });
+  let durationMinutes = 0;
+  foundServices.forEach((service) => {
+    durationMinutes += service.duration || 30;
+  });
+
+  const shouldAutoAssign = !barberId || barberId === "random" || barberId === "auto" || autoAssignBarber;
+
+  if (shouldAutoAssign) {
+    const assignedBarber = await barberService.autoAssignBarberService({
+      date,
+      timeSlot,
+      durationMinutes
+    });
+    barberId = assignedBarber._id;
+  }
+
+  // Delegate to processCreateBooking
+  const populatedBooking = await exports.processCreateBooking({
+    bookingType,
+    customerId,
+    barberId,
+    services,
+    bookingDate,
+    timeSlot,
+    note,
+    notificationMethods,
+    autoAssignedBarber: shouldAutoAssign,
+    customerName,
+    customerEmail,
+    customerPhone,
+  });
+
+  return { populatedBooking, shouldAutoAssign };
 };

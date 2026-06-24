@@ -20,11 +20,14 @@ router.post('/test/booking-flow-auto-assign', bookingController.testBookingFlowA
 router.post('/', authenticate, bookingController.createBooking);
 router.post('/single-page', optionalAuthenticate, bookingController.createBookingSinglePage);
 router.get('/me', authenticate, applyRoleBasedBookingFilter, bookingController.getMyBookings);
+router.get('/barber/today', authenticate, authorizeRoles('barber', 'admin'), bookingController.getBarberTodayBookings);
 router.get('/all', authenticate, applyRoleBasedBookingFilter, bookingController.getAllBookings);
 
 // Stats
 router.get('/stats', authenticate, bookingStatsController.getBookingStats);
 router.get('/chart-stats', bookingStatsController.getBookingChartStats);
+router.get('/admin/metrics', authenticate, authorizeRoles('admin'), bookingStatsController.getAdminDashboardMetrics);
+router.get('/admin/top-barbers', authenticate, authorizeRoles('admin'), bookingStatsController.getAdminTopBarbers);
 
 // Walk-in booking
 router.get('/walk-in/available-slots', authenticate, authorizeRoles('admin'), bookingAvailabilityController.getWalkInAvailableSlots);

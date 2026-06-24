@@ -19,16 +19,31 @@ export default function RegisterPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   
   const router = useRouter();
-  const { checkAuth } = useAuth();
+  const { user, checkAuth } = useAuth();
   const cardRef = useRef(null);
 
+  const handleRedirect = (userObj) => {
+    if (userObj?.role === 'admin') {
+      router.push("/admin/dashboard");
+    } else if (userObj?.role === 'staff') {
+      router.push("/staff/dashboard");
+    } else if (userObj?.role === 'barber') {
+      router.push("/barber/dashboard");
+    } else {
+      router.push("/customer/dashboard");
+    }
+  };
+
   useEffect(() => {
+    if (user) {
+      handleRedirect(user);
+    }
     // Kích hoạt animation khi component mount
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [user, router]);
 
   const handleInputChange = (e) => {
     let { name, value } = e.target;

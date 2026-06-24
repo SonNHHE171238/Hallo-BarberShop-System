@@ -1,26 +1,29 @@
 const mongoose = require("mongoose");
 
-const serviceSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-  steps: [String],
-  suggestedFor: [String], // Existing field for general suggestions
-  hairTypes: [String], // Compatible hair types: ["straight", "wavy", "curly", "coily"]
-  styleCompatibility: [String], // Compatible styles: ["short", "medium", "long", "beard"]
-  expertiseRequired: [String], // Required barber expertise tags
-  price: { type: Number, required: true },
-  durationMinutes: Number,
-  isActive: { type: Boolean, default: true },
-  category: {
-    type: String,
-    enum: ['cut', 'perm', 'color', 'combo', 'styling', 'treatment'],
-    default: 'cut'
+const serviceSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    description: String,
+    steps: [String],
+    suggestedFor: [String], // Existing field for general suggestions
+    hairTypes: [String], // Compatible hair types: ["straight", "wavy", "curly", "coily"]
+    styleCompatibility: [String], // Compatible styles: ["short", "medium", "long", "beard"]
+    expertiseRequired: [String], // Required barber expertise tags
+    price: { type: Number, required: true },
+    duration: Number,
+    isActive: { type: Boolean, default: true },
+    category: {
+      type: String,
+      enum: ["cut", "perm", "color", "combo", "styling", "treatment"],
+      default: "cut",
+    },
+    images: { type: [String], default: [] }, // Service images for display
+    popularity: { type: Number, default: 0 }, // Track service popularity
   },
-  images: { type: [String], default: [] }, // Service images for display
-  popularity: { type: Number, default: 0 }, // Track service popularity
-}, {
-  timestamps: true
-});
+  {
+    timestamps: true,
+  },
+);
 
 // Tạo index cho các trường mảng riêng biệt
 serviceSchema.index({ hairTypes: 1 });

@@ -18,9 +18,9 @@ const {
   getTimeUntilCompletion,
 } = require("../utils/timeWindowValidation");
 
-const bookingService = require('../services/booking.service');
-const emailService = require('../services/email.service');
-const { sendSuccess } = require('../utils/response.helper');
+const bookingService = require("../services/booking.service");
+const emailService = require("../services/email.service");
+const { sendSuccess } = require("../utils/response.helper");
 
 exports.createBooking = async (req, res, next) => {
   try {
@@ -29,7 +29,6 @@ exports.createBooking = async (req, res, next) => {
       services,
       bookingDate,
       timeSlot, // "HH:MM" format
-      durationMinutes,
       note,
       notificationMethods,
       autoAssignedBarber,
@@ -65,7 +64,6 @@ exports.createBooking = async (req, res, next) => {
       services,
       bookingDate,
       timeSlot,
-      durationMinutes,
       note,
       notificationMethods,
       autoAssignedBarber,
@@ -76,16 +74,26 @@ exports.createBooking = async (req, res, next) => {
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
     if (emailToSend) {
-      emailService.sendBookingConfirmationEmail(emailToSend, {
-        customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
-        serviceName: (populatedBooking.services && populatedBooking.services.length > 0) ? populatedBooking.services.map(s => s.name).join(', ') : 'Dịch vụ',
-        barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
-        bookingDate: populatedBooking.bookingDate,
-        timeSlot: timeSlot
-      }).catch(err => console.error('Failed to send confirmation email', err));
+      emailService
+        .sendBookingConfirmationEmail(emailToSend, {
+          customerName:
+            customerName || populatedBooking.customerId?.name || "Quý khách",
+          serviceName:
+            populatedBooking.services && populatedBooking.services.length > 0
+              ? populatedBooking.services.map((s) => s.name).join(", ")
+              : "Dịch vụ",
+          barberName: populatedBooking.barberId?.userId?.name || "Thợ cắt",
+          bookingDate: populatedBooking.bookingDate,
+          timeSlot: timeSlot,
+        })
+        .catch((err) =>
+          console.error("Failed to send confirmation email", err),
+        );
     }
 
-    return sendSuccess(res, 201, "Booking created successfully", { booking: populatedBooking });
+    return sendSuccess(res, 201, "Booking created successfully", {
+      booking: populatedBooking,
+    });
   } catch (err) {
     if (err.code === 11000) {
       err.message =
@@ -102,23 +110,21 @@ exports.createBookingSinglePage = async (req, res, next) => {
     const {
       serviceId, // For backward compatibility
       services: reqServices,
-      barberId, // Can be null, 'random', or actual barber ID
+      barberId,
       bookingDate,
-      timeSlot, // "HH:MM" format
-      date, // "YYYY-MM-DD" format
-      durationMinutes,
+      timeSlot,
+      date,
       note,
       notificationMethods,
       customerName,
       customerEmail,
       customerPhone,
-      autoAssignBarber = false, // Flag to indicate auto-assignment preference
-      isAutoAssign = false, // Alternative parameter name from frontend
+      autoAssignBarber = false,
+      isAutoAssign = false,
       bookingType,
     } = req.body;
 
     const services = reqServices && reqServices.length > 0 ? reqServices : (serviceId ? [serviceId] : []);
-
     let customerId = req.userId || null;
 
     if (!["user", "guest"].includes(bookingType)) {
@@ -129,18 +135,14 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
     if (bookingType === "guest") {
       if (!customerName || !customerPhone) {
-        const error = new Error(
-          "Khách vãng lai cần cung cấp Tên và Số điện thoại",
-        );
+        const error = new Error("Khách vãng lai cần cung cấp Tên và Số điện thoại");
         error.statusCode = 400;
         throw error;
       }
       customerId = null;
     } else if (bookingType === "user") {
       if (!customerId && !["staff", "admin", "manager"].includes(req.role)) {
-        const error = new Error(
-          "Bạn cần đăng nhập để đặt lịch với tư cách thành viên",
-        );
+        const error = new Error("Bạn cần đăng nhập để đặt lịch với tư cách thành viên");
         error.statusCode = 401;
         throw error;
       }
@@ -155,136 +157,50 @@ exports.createBookingSinglePage = async (req, res, next) => {
     }
 
     if (services.length === 0 || !bookingDate || !date || !timeSlot) {
-      const error = new Error(
-        "Services, booking date, date, and time slot are required",
-      );
+      const error = new Error("Services, booking date, date, and time slot are required");
       error.statusCode = 400;
       throw error;
     }
 
-    let finalBarberId = barberId;
-    let isAutoAssigned = false;
+    const shouldAutoAssign = !barberId || barberId === "random" || barberId === "auto" || autoAssignBarber || isAutoAssign;
 
-    const shouldAutoAssign =
-      !barberId ||
-      barberId === "random" ||
-      barberId === "auto" ||
-      autoAssignBarber ||
-      isAutoAssign;
-
-    if (shouldAutoAssign) {
-      try {
-        const barberController = require("./barber.controller");
-        const mockReq = { body: { date, timeSlot, services } };
-
-        let autoAssignResult = null;
-        const mockRes = {
-          json: (data) => {
-            autoAssignResult = data;
-            return data;
-          },
-          status: (code) => ({
-            json: (data) => {
-              autoAssignResult = { ...data, statusCode: code };
-              return autoAssignResult;
-            },
-          }),
-        };
-
-        await barberController.autoAssignBarberForSlot(mockReq, mockRes);
-
-        if (
-          autoAssignResult &&
-          autoAssignResult.success &&
-          autoAssignResult.assignedBarber
-        ) {
-          finalBarberId = autoAssignResult.assignedBarber._id;
-          isAutoAssigned = true;
-        } else {
-          const error = new Error(
-            autoAssignResult?.message ||
-              "No barbers available for auto-assignment",
-          );
-          error.statusCode = 404;
-          throw error;
-        }
-      } catch (autoAssignError) {
-        const error = new Error("Failed to auto-assign barber");
-        error.statusCode = 500;
-        throw error;
-      }
-    }
-
-    let finalDurationMinutes = durationMinutes;
-    if (!finalDurationMinutes) {
-      const Service = require("../models/service.model");
-      const selectedServices = await Service.find({ _id: { $in: services } });
-      if (selectedServices.length > 0) {
-        finalDurationMinutes = selectedServices.reduce((total, s) => {
-          return total + (s.durationMinutes || s.duration || 30);
-        }, 0);
-      } else {
-        finalDurationMinutes = 30;
-      }
-    }
-
-    const populatedBooking = await bookingService.processCreateBooking({
-      bookingType,
-      customerId,
-      barberId: finalBarberId,
+    const { populatedBooking, shouldAutoAssign: wasAutoAssigned } = await bookingService.processCreateSinglePageBooking({
       services,
+      barberId,
       bookingDate,
       timeSlot,
-      durationMinutes: finalDurationMinutes,
+      date,
       note,
       notificationMethods,
-      autoAssignedBarber: isAutoAssigned,
       customerName,
       customerEmail,
       customerPhone,
+      bookingType,
+      customerId,
+      autoAssignBarber: shouldAutoAssign
     });
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
     if (emailToSend) {
+      const emailService = require("../services/email.service");
       emailService.sendBookingConfirmationEmail(emailToSend, {
-        customerName: customerName || populatedBooking.customerId?.name || 'Quý khách',
-        serviceName: (populatedBooking.services && populatedBooking.services.length > 0) ? populatedBooking.services.map(s => s.name).join(', ') : 'Dịch vụ',
-        barberName: populatedBooking.barberId?.userId?.name || 'Thợ cắt',
+        customerName: customerName || populatedBooking.customerId?.name || "Quý khách",
+        serviceName: populatedBooking.services && populatedBooking.services.length > 0
+            ? populatedBooking.services.map((s) => s.name).join(", ")
+            : "Dịch vụ",
+        barberName: populatedBooking.barberId?.userId?.name || "Thợ cắt",
         bookingDate: populatedBooking.bookingDate,
-        timeSlot: timeSlot
-      }).catch(err => console.error('Failed to send confirmation email', err));
+        timeSlot: timeSlot,
+      }).catch((err) => console.error("Failed to send confirmation email", err));
     }
 
-    return res.status(201).json({
-      success: true,
+    return require("../utils/response.helper").sendSuccess(res, 201, "Booking created successfully", {
       booking: populatedBooking,
-      bookingDetails: {
-        bookingId: populatedBooking._id,
-        services: populatedBooking.services,
-        duration: populatedBooking.durationMinutes,
-        barber: {
-          name: populatedBooking.barberId?.userId?.name || "Unknown",
-          isAutoAssigned: isAutoAssigned,
-        },
-        schedule: {
-          date: date,
-          timeSlot: timeSlot,
-          dateTime: bookingDate,
-        },
-        customer: {
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
-        },
-      },
-      message: isAutoAssigned
-        ? `Booking created successfully with auto-assigned barber: ${populatedBooking.barberId?.userId?.name || "Unknown"}`
-        : "Booking created successfully",
+      isAutoAssigned: wasAutoAssigned
     });
   } catch (err) {
     if (err.code === 11000) {
-      err.message =
-        "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
+      err.message = "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
       err.errorCode = "RACE_CONDITION_CONFLICT";
       err.statusCode = 409;
     }
@@ -356,191 +272,13 @@ exports.getMyBookings = async (req, res) => {
 };
 
 // Get pending bookings for admin review
-exports.getPendingBookings = async (req, res) => {
-  try {
-    const {
-      page = 1,
-      limit = 20,
-      barberId,
-      serviceId,
-      startDate,
-      endDate,
-    } = req.query;
 
-    // Only admins can access this endpoint
-    if (req.role !== "admin") {
-      return res
-        .status(403)
-        .json({ message: "Only administrators can view pending bookings" });
-    }
-
-    const filter = {
-      status: {
-        $in: ["pending", "cancelled", "confirmed", "completed", "rejected"],
-      },
-    };
-
-    // Apply additional filters
-    if (barberId) filter.barberId = barberId;
-    if (serviceId) filter.serviceId = serviceId;
-    if (startDate || endDate) {
-      filter.bookingDate = {};
-      if (startDate) filter.bookingDate.$gte = new Date(startDate);
-      if (endDate) filter.bookingDate.$lte = new Date(endDate);
-    }
-
-    const skip = (page - 1) * limit;
-    const bookings = await Booking.find(filter)
-      .populate({
-        path: "barberId",
-        populate: { path: "userId", select: "name email" },
-      })
-      .populate("serviceId", "name price durationMinutes")
-      .populate("customerId", "name email phone")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit));
-
-    const total = await Booking.countDocuments(filter);
-
-    res.json({
-      bookings,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    });
-  } catch (err) {
-    console.error("Error in getPendingBookings:", err);
-    res.status(500).json({ message: err.message });
-  }
-};
 
 // Confirm a pending booking (admin only)
-exports.confirmBooking = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    const adminId = req.userId;
 
-    // Only admins can confirm bookings
-    if (req.role !== "admin") {
-      return res
-        .status(403)
-        .json({ message: "Only administrators can confirm bookings" });
-    }
-
-    const booking = await Booking.findById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    // Validate booking confirmation using utility function
-    const validation = validateBookingConfirmation(booking);
-    if (!validation.valid) {
-      return res.status(400).json({ message: validation.error });
-    }
-
-    // Update booking status and audit fields
-    booking.status = "confirmed";
-    booking.confirmedAt = new Date();
-    booking.confirmedBy = adminId;
-    await booking.save();
-
-    // Populate the response
-    const confirmedBooking = await Booking.findById(bookingId)
-      .populate({
-        path: "barberId",
-        populate: { path: "userId", select: "name email" },
-      })
-      .populate("serviceId", "name price durationMinutes")
-      .populate("customerId", "name email phone")
-      .populate("confirmedBy", "name email");
-
-    res.json({
-      booking: confirmedBooking,
-      message: "Booking confirmed successfully",
-    });
-  } catch (err) {
-    console.error("Error in confirmBooking:", err);
-    res.status(500).json({ message: err.message });
-  }
-};
 
 // Bulk confirm multiple bookings (admin only)
-exports.bulkConfirmBookings = async (req, res) => {
-  try {
-    const { bookingIds } = req.body;
-    const adminId = req.userId;
 
-    // Only admins can confirm bookings
-    if (req.role !== "admin") {
-      return res
-        .status(403)
-        .json({ message: "Only administrators can confirm bookings" });
-    }
-
-    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Please provide an array of booking IDs" });
-    }
-
-    const results = [];
-    const confirmedBookings = [];
-
-    for (const bookingId of bookingIds) {
-      try {
-        const booking = await Booking.findById(bookingId);
-
-        if (!booking) {
-          results.push({
-            bookingId,
-            status: "error",
-            message: "Booking not found",
-          });
-          continue;
-        }
-
-        const validation = validateBookingConfirmation(booking);
-        if (!validation.valid) {
-          results.push({
-            bookingId,
-            status: "error",
-            message: getBulkConfirmationError(booking.status),
-          });
-          continue;
-        }
-
-        // Update booking
-        booking.status = "confirmed";
-        booking.confirmedAt = new Date();
-        booking.confirmedBy = adminId;
-        await booking.save();
-
-        results.push({
-          bookingId,
-          status: "success",
-          message: "Booking confirmed",
-        });
-        confirmedBookings.push(booking);
-      } catch (error) {
-        results.push({ bookingId, status: "error", message: error.message });
-      }
-    }
-
-    res.json({
-      results,
-      confirmedCount: confirmedBookings.length,
-      totalProcessed: bookingIds.length,
-      message: `Successfully confirmed ${confirmedBookings.length} out of ${bookingIds.length} bookings`,
-    });
-  } catch (err) {
-    console.error("Error in bulkConfirmBookings:", err);
-    res.status(500).json({ message: err.message });
-  }
-};
 
 // Assign barber to booking (Admin only)
 exports.assignBarberToBooking = async (req, res) => {
@@ -699,15 +437,15 @@ exports.updateBookingStatus = async (req, res) => {
     // Role-based status transition validation with date-based rules for barbers
     const validTransitions = {
       admin: {
-        pending: ["confirmed", "cancelled"],
-        confirmed: ["completed", "cancelled", "no_show"],
+        pending: ["confirmed", "cancelled", "no_show"],
+        confirmed: ["pending", "completed", "cancelled", "no_show"],
         cancelled: [],
         completed: [],
         no_show: [],
       },
       barber: {
-        confirmed: ["completed", "no_show"],
-        pending: [], // Barbers cannot see or modify pending bookings
+        pending: ["confirmed", "no_show"],
+        confirmed: ["pending", "completed", "no_show"],
         cancelled: [],
         completed: [],
         no_show: [],
@@ -1099,6 +837,37 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
+exports.getBarberTodayBookings = async (req, res, next) => {
+  try {
+    const Barber = require('../models/barber.model');
+    const barber = await Barber.findOne({ userId: req.userId });
+    if (!barber) {
+      return res.status(404).json({ message: 'Barber not found' });
+    }
+
+    // Get today's start and end date string "YYYY-MM-DD"
+    const today = new Date();
+    // Use local time for Vietnam if needed, or just let DB string match if bookingDate is YYYY-MM-DD
+    // Assuming bookingDate is stored as "YYYY-MM-DD"
+    // To be safe, just get the local YYYY-MM-DD
+    const tzOffset = today.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+
+    const bookings = await Booking.find({
+      barberId: barber._id,
+      bookingDate: localISOTime
+    })
+      .populate('customerId', 'name email phone')
+      .populate('serviceId', 'name price durationMinutes type')
+      .sort({ timeSlot: 1 })
+      .lean();
+
+    res.status(200).json({ bookings });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getBookingDetail = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
@@ -1117,445 +886,14 @@ exports.getBookingDetail = async (req, res) => {
 
 // Check if a booking can be completed based on time window
 // Admin reject booking
-exports.rejectBooking = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    const { reason, note } = req.body;
-    const { userId, role: userRole } = req.user;
 
-    // Only admins can reject bookings
-    if (userRole !== "admin") {
-      return res.status(403).json({
-        message: "Only administrators can reject bookings",
-      });
-    }
-
-    // Validate rejection reason
-    const validReasons = [
-      "barber_unavailable",
-      "service_not_available",
-      "customer_request",
-      "other",
-    ];
-    if (!reason || !validReasons.includes(reason)) {
-      return res.status(400).json({
-        message: "Valid rejection reason is required",
-        validReasons,
-      });
-    }
-
-    // Find the booking
-    const booking = await Booking.findById(bookingId)
-      .populate("customerId", "name email phone")
-      .populate("serviceId", "name price durationMinutes")
-      .populate("barberId", "userId");
-
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    // Check if booking can be rejected
-    if (!["pending", "confirmed"].includes(booking.status)) {
-      return res.status(400).json({
-        message: `Cannot reject booking with status: ${booking.status}. Only pending or confirmed bookings can be rejected.`,
-      });
-    }
-
-    // Update booking status to rejected
-    booking.status = "rejected";
-    booking.rejectedAt = new Date();
-    booking.rejectedBy = userId;
-    booking.rejectionReason = reason;
-    booking.rejectionNote = note || null;
-
-    await booking.save();
-
-    // CRITICAL: Decrease barber's totalBookings count when booking is rejected
-    try {
-      await Barber.findByIdAndUpdate(booking.barberId, {
-        $inc: { totalBookings: -1 },
-      });
-      console.log(
-        `✅ Decreased totalBookings for barber ${booking.barberId} due to rejection`,
-      );
-    } catch (updateError) {
-      console.error(
-        "Error updating barber totalBookings on rejection:",
-        updateError,
-      );
-      // Don't fail the rejection if this update fails, but log it
-    }
-
-    // CRITICAL: Unmark time slots in the barber schedule (same as cancel booking)
-    const BarberSchedule = require("../models/barber-schedule.model");
-    const bookingDate = new Date(booking.bookingDate);
-    const dateStr = bookingDate.toISOString().split("T")[0];
-
-    try {
-      const scheduleResult = await BarberSchedule.unmarkSlotsAsBooked(
-        booking.barberId,
-        dateStr,
-        booking._id,
-        null, // No session for standalone MongoDB
-      );
-
-      console.log(
-        `Successfully unmarked ${scheduleResult.totalSlotsUnbooked} slots for rejected booking:`,
-        scheduleResult.unbookedSlots,
-      );
-    } catch (scheduleError) {
-      console.error(
-        "Error unmarking schedule slots for rejected booking:",
-        scheduleError,
-      );
-      // Don't fail the rejection if schedule update fails, but log the error
-      console.error("Schedule update failed for rejected booking:", {
-        bookingId: booking._id,
-        barberId: booking.barberId,
-        date: dateStr,
-        error: scheduleError.message,
-      });
-    }
-
-    // TODO: Send notification to customer
-    // This would integrate with your notification service
-    console.log(
-      `Booking ${bookingId} rejected by admin ${userId}. Customer notification should be sent.`,
-    );
-
-    // Log the rejection for audit purposes
-    console.log("Booking rejection:", {
-      bookingId: booking._id,
-      customerId: booking.customerId._id,
-      customerName: booking.customerId.name,
-      barberId: booking.barberId._id,
-      serviceId: booking.serviceId._id,
-      serviceName: booking.serviceId.name,
-      originalDate: booking.bookingDate,
-      rejectedBy: userId,
-      rejectionReason: reason,
-      rejectionNote: note,
-      rejectedAt: booking.rejectedAt,
-    });
-
-    res.json({
-      message: "Booking rejected successfully",
-      booking: {
-        id: booking._id,
-        status: booking.status,
-        rejectedAt: booking.rejectedAt,
-        rejectionReason: booking.rejectionReason,
-        rejectionNote: booking.rejectionNote,
-        customer: {
-          name: booking.customerId.name,
-          email: booking.customerId.email,
-        },
-        service: {
-          name: booking.serviceId.name,
-        },
-        originalDate: booking.bookingDate,
-      },
-    });
-  } catch (error) {
-    console.error("Error rejecting booking:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
 
 // Barber mark booking as no-show
-exports.markNoShow = async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-    const { note } = req.body;
-    const { userId, role: userRole } = req.user;
 
-    // Find the booking
-    const booking = await Booking.findById(bookingId)
-      .populate("customerId", "name email phone")
-      .populate("serviceId", "name price durationMinutes")
-      .populate("barberId", "userId");
 
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
 
-    // Check if user has permission to mark as no-show
-    const isBarber =
-      userRole === "barber" && booking.barberId.toString() === userId;
-    const isAdmin = userRole === "admin";
 
-    if (!isBarber && !isAdmin) {
-      return res.status(403).json({
-        message: "You can only mark no-show for your own bookings",
-      });
-    }
 
-    // Check if booking can be marked as no-show
-    if (booking.status !== "confirmed") {
-      return res.status(400).json({
-        message: `Cannot mark as no-show. Only confirmed bookings can be marked as no-show. Current status: ${booking.status}`,
-      });
-    }
-
-    // Time-based validation: only allow no-show marking during or after booking time
-    const now = new Date();
-    const bookingStart = new Date(booking.bookingDate);
-
-    if (userRole === "barber" && now < bookingStart) {
-      const minutesUntilStart = Math.ceil((bookingStart - now) / (1000 * 60));
-      return res.status(400).json({
-        message: `Cannot mark as no-show before booking time. Booking starts in ${minutesUntilStart} minutes.`,
-        bookingStartTime: bookingStart.toISOString(),
-        currentTime: now.toISOString(),
-      });
-    }
-
-    // Update booking status to no_show
-    booking.status = "no_show";
-    booking.noShowAt = new Date();
-    booking.noShowBy = userId;
-    booking.noShowNote = note || null;
-
-    await booking.save();
-
-    // Create no-show record
-    try {
-      const noShowRecord = await NoShow.create({
-        customerId: booking.customerId._id,
-        bookingId: booking._id,
-        barberId: booking.barberId._id,
-        serviceId: booking.serviceId._id,
-        originalBookingDate: booking.bookingDate,
-        markedBy: userId,
-        reason: "no_show",
-        description: note || "Customer did not show up for appointment",
-        isWithinPolicy: true, // Assume within policy for now
-      });
-
-      console.log(
-        `Created no-show record ${noShowRecord._id} for booking ${booking._id}`,
-      );
-    } catch (noShowError) {
-      console.error("Error creating no-show record:", noShowError);
-      // Don't fail the status update if no-show record creation fails
-    }
-
-    // Release barber schedule slots immediately
-    const BarberSchedule = require("../models/barber-schedule.model");
-    const bookingDate = new Date(booking.bookingDate);
-    const dateStr = bookingDate.toISOString().split("T")[0];
-
-    try {
-      await BarberSchedule.releaseBookingSlots(
-        booking.barberId,
-        dateStr,
-        booking._id,
-      );
-      console.log(`Released schedule slots for no-show booking ${booking._id}`);
-    } catch (scheduleError) {
-      console.error(
-        "Error releasing schedule slots for no-show booking:",
-        scheduleError,
-      );
-      // Don't fail the no-show marking if schedule update fails
-    }
-
-    // TODO: Send notification to customer about no-show status
-    // This would integrate with your notification service
-    console.log(
-      `Booking ${bookingId} marked as no-show. Customer notification should be sent.`,
-    );
-
-    // Log the no-show for audit purposes
-    console.log("Booking no-show:", {
-      bookingId: booking._id,
-      customerId: booking.customerId._id,
-      customerName: booking.customerId.name,
-      barberId: booking.barberId._id,
-      serviceId: booking.serviceId._id,
-      serviceName: booking.serviceId.name,
-      originalDate: booking.bookingDate,
-      markedBy: userId,
-      markedByRole: userRole,
-      noShowNote: note,
-      noShowAt: booking.noShowAt,
-    });
-
-    res.json({
-      message: "Booking marked as no-show successfully",
-      booking: {
-        id: booking._id,
-        status: booking.status,
-        noShowAt: booking.noShowAt,
-        noShowNote: booking.noShowNote,
-        customer: {
-          name: booking.customerId.name,
-          email: booking.customerId.email,
-          phone: booking.customerId.phone,
-        },
-        service: {
-          name: booking.serviceId.name,
-          duration: booking.serviceId.durationMinutes,
-        },
-        originalDate: booking.bookingDate,
-      },
-    });
-  } catch (error) {
-    console.error("Error marking booking as no-show:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-exports.getBookingStats = async (req, res) => {
-  try {
-    const bookings = await Booking.find().populate("customerId");
-    const now = new Date();
-    const upcoming = bookings.filter(
-      (b) =>
-        (b.status === "pending" || b.status === "confirmed") &&
-        new Date(b.bookingDate) >= now,
-    ).length;
-    const past = bookings.filter(
-      (b) =>
-        b.status === "completed" ||
-        (new Date(b.bookingDate) < now &&
-          b.status !== "cancelled" &&
-          b.status !== "no_show"),
-    ).length;
-    const cancelled = bookings.filter(
-      (b) => b.status === "cancelled" || b.status === "no_show",
-    ).length;
-    const totalCustomer = new Set(
-      bookings.map((b) => b.customerId?._id || b.customerId),
-    ).size;
-    res.json({ upcoming, past, cancelled, totalCustomer });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-exports.getBookingChartStats = async (req, res) => {
-  try {
-    const { from, to, mode = "day" } = req.query;
-
-    const start = from ? new Date(from) : new Date();
-    const end = to ? new Date(to) : new Date();
-
-    const matchStage = {
-      bookingDate: { $gte: start, $lte: end },
-    };
-
-    let groupStage;
-    let projectStage;
-
-    if (mode === "day") {
-      // Group by hour in a single day
-      groupStage = { _id: { $hour: "$bookingDate" } };
-      projectStage = {
-        _id: 0,
-        time: { $concat: [{ $toString: "$_id" }, ":00"] },
-        pending: 1,
-        confirmed: 1,
-        completed: 1,
-        cancelled: 1,
-      };
-    } else if (mode === "week") {
-      // Group by day in the selected week
-      groupStage = {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$bookingDate" } },
-      };
-      projectStage = {
-        _id: 0,
-        date: "$_id",
-        pending: 1,
-        confirmed: 1,
-        completed: 1,
-        cancelled: 1,
-      };
-    } else if (mode === "month") {
-      // Group by day in the selected month
-      groupStage = {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$bookingDate" } },
-      };
-      projectStage = {
-        _id: 0,
-        date: "$_id",
-        pending: 1,
-        confirmed: 1,
-        completed: 1,
-        cancelled: 1,
-      };
-    } else if (mode === "year") {
-      // Group by month in the selected year
-      groupStage = {
-        _id: { $dateToString: { format: "%Y-%m", date: "$bookingDate" } },
-      };
-      projectStage = {
-        _id: 0,
-        month: "$_id",
-        pending: 1,
-        confirmed: 1,
-        completed: 1,
-        cancelled: 1,
-      };
-    } else {
-      return res.json({ data: [] });
-    }
-
-    const result = await Booking.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          ...groupStage,
-          pending: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "pending"] }, 1, 0],
-            },
-          },
-          confirmed: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0],
-            },
-          },
-          completed: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "completed"] }, 1, 0],
-            },
-          },
-          cancelled: {
-            $sum: {
-              $cond: [
-                {
-                  $or: [
-                    { $eq: ["$status", "cancelled"] },
-                    { $eq: ["$status", "no_show"] },
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-        },
-      },
-      { $project: projectStage },
-      {
-        $sort:
-          mode === "year"
-            ? { month: 1 }
-            : mode === "day"
-              ? { time: 1 }
-              : { date: 1 },
-      },
-    ]);
-
-    console.log("Aggregation result:", result);
-    res.json({ data: Array.isArray(result) ? result : [] });
-  } catch (err) {
-    console.error("Error in getBookingChartStats:", err);
-    res.status(500).json({ message: err.message });
-  }
-};
 
 // Use for chatbot ai
 exports.createBookingFromBot = async (payload, userId) => {
@@ -2027,7 +1365,7 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
 exports.createWalkInBooking = async (req, res) => {
   try {
     const {
-      serviceId,
+      services,
       barberId,
       bookingDate,
       timeSlot,
@@ -2037,12 +1375,12 @@ exports.createWalkInBooking = async (req, res) => {
       customerEmail,
       note,
       notificationMethods,
-      durationMinutes,
     } = req.body;
 
     // Validate required fields
     if (
-      !serviceId ||
+      !services ||
+      services.length === 0 ||
       !bookingDate ||
       !date ||
       !timeSlot ||
@@ -2059,17 +1397,20 @@ exports.createWalkInBooking = async (req, res) => {
 
     // Validate service exists
     const Service = require("../models/service.model");
-    const service = await Service.findById(serviceId);
-    if (!service) {
+    const foundServices = await Service.find({ _id: { $in: services } });
+    if (foundServices.length !== services.length || services.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Service not found",
+        message: "One or more services not found",
         errorCode: "SERVICE_NOT_FOUND",
       });
     }
 
-    const finalDurationMinutes =
-      durationMinutes || service.durationMinutes || 30;
+    let finalDurationMinutes = 0;
+    foundServices.forEach((service) => {
+      finalDurationMinutes += service.durationMinutes || service.duration || 30;
+    });
+
     const requestedDateTime = new Date(bookingDate);
     requestedDateTime.setSeconds(0, 0);
 
@@ -2089,7 +1430,7 @@ exports.createWalkInBooking = async (req, res) => {
 
         // Create a mock request/response to call the auto-assign function
         const mockReq = {
-          body: { date, timeSlot, serviceId },
+          body: { date, timeSlot, services },
         };
 
         let autoAssignResult = null;
@@ -2215,9 +1556,8 @@ exports.createWalkInBooking = async (req, res) => {
       bookingType: "guest",
       customerId: null,
       barberId: finalBarberId,
-      serviceId,
+      services,
       bookingDate: requestedDateTime,
-      durationMinutes: finalDurationMinutes,
       note,
       notificationMethods,
       autoAssignedBarber: isAutoAssigned,

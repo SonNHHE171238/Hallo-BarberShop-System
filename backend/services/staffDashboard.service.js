@@ -186,22 +186,23 @@ const staffDashboardService = {
       .sort({ bookingDate: 1 });
 
     const formattedBookings = bookings.map(b => {
-      let uiStatus = 'Đang chờ';
+      let uiStatus = 'Chưa tới';
       let statusClass = 'bg-surface-bright/50 text-gold-dim border-gold-dim/30';
       
       if (b.status === 'completed') {
         uiStatus = 'Hoàn thành';
         statusClass = 'bg-primary/5 text-primary border-primary/20';
-      } else if (b.status === 'cancelled' || b.status === 'rejected' || b.status === 'no-show') {
+      } else if (b.status === 'cancelled' || b.status === 'rejected') {
         uiStatus = 'Đã hủy';
         statusClass = 'bg-error/10 text-error border-error/20';
-      } else if (b.status === 'confirmed' && b.isCheckedIn) {
-        // Giả sử cứ confirmed & isCheckedIn là đang làm?
-        // Thực tế có thể cần status in-progress. Tạm thời để đang làm.
-        uiStatus = 'Đang làm';
-        statusClass = 'bg-secondary-container/30 text-secondary border-secondary/30';
+      } else if (b.status === 'no_show') {
+        uiStatus = 'Không đến';
+        statusClass = 'bg-error/10 text-error border-error/20';
+      } else if (b.status === 'confirmed') {
+        uiStatus = 'Khách đã đến';
+        statusClass = 'bg-green-800/20 text-green-700 border-green-700/50';
       } else {
-        uiStatus = 'Đang chờ';
+        uiStatus = 'Chưa tới';
       }
 
       return {
@@ -221,7 +222,7 @@ const staffDashboardService = {
 
     // Calculate Stats
     const totalBookings = formattedBookings.length;
-    const serving = formattedBookings.filter(b => b.uiStatus === 'Đang làm').length;
+    const serving = formattedBookings.filter(b => b.uiStatus === 'Khách đã đến').length;
     
     // Chairs empty
     const totalBarbers = await Barber.countDocuments({ isActive: true });

@@ -166,17 +166,17 @@ export default function StaffAppointments() {
               let initialsClass = "bg-surface-container-highest text-primary";
               let badgeClass = "bg-primary/10 text-primary";
               
-              if (booking.uiStatus === 'Đang chờ') {
+              if (booking.uiStatus === 'Chưa tới') {
                 rowClass = "bg-surface-container/40 border border-outline-variant/50 px-6 py-5 rounded-lg hover:border-gold-dim transition-all cursor-pointer";
                 initialsClass = "bg-outline-variant/20 text-outline";
                 badgeClass = "bg-outline-variant/20 text-outline";
               } else if (booking.uiStatus === 'Hoàn thành') {
                 rowClass = "bg-surface-container/20 border border-outline-variant/20 px-6 py-5 rounded-lg opacity-80 hover:opacity-100 transition-all cursor-pointer grayscale hover:grayscale-0";
-              } else if (booking.uiStatus === 'Đã hủy') {
+              } else if (booking.uiStatus === 'Đã hủy' || booking.uiStatus === 'Không đến') {
                 rowClass = "bg-error-container/5 border border-error/10 px-6 py-5 rounded-lg opacity-60";
                 initialsClass = "bg-error/10 text-error";
-              } else if (booking.uiStatus === 'Đang làm') {
-                rowClass = "glass-card px-6 py-5 rounded-lg hover:border-secondary transition-all cursor-pointer shadow-lg";
+              } else if (booking.uiStatus === 'Khách đã đến') {
+                rowClass = "glass-card px-6 py-5 rounded-lg hover:border-green-600 border border-green-600/30 transition-all cursor-pointer shadow-lg";
               }
 
               // Extract initials

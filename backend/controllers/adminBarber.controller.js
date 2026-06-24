@@ -194,7 +194,9 @@ exports.getAllAdminBarbers = async (req, res) => {
             };
         });
 
-        return res.json({ barbers: result });
+        const staffUsers = await User.find({ role: 'staff' }).select('-passwordHash -otpHash -resetTokenHash');
+
+        return res.json({ barbers: result, staffs: staffUsers });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: error.message });

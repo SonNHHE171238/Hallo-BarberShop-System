@@ -60,5 +60,19 @@ export const authService = {
     return fetchWithAuth('/auth/me', {
       method: 'GET',
     });
+  },
+
+  changePassword: async (currentPassword, newPassword) => {
+    return fetchWithAuth('/auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  },
+
+  updateProfile: async (data) => {
+    return fetchWithAuth('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   }
 };

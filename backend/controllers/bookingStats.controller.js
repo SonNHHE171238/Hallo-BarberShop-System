@@ -20,3 +20,23 @@ exports.getBookingChartStats = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.getAdminDashboardMetrics = async (req, res) => {
+  try {
+    const metrics = await bookingStatsService.getAdminDashboardMetrics();
+    res.json(metrics);
+  } catch (err) {
+    console.error("Error in getAdminDashboardMetrics:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getAdminTopBarbers = async (req, res) => {
+  try {
+    const topBarbers = await bookingStatsService.getAdminTopBarbers();
+    res.json({ data: topBarbers });
+  } catch (err) {
+    console.error("Error in getAdminTopBarbers:", err);
+    res.status(500).json({ message: err.message });
+  }
+};

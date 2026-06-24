@@ -33,3 +33,21 @@ export const adminBarberService = {
         });
     },
 };
+
+export const adminDashboardService = {
+    getMetrics: async () => {
+        return fetchWithAuth('/bookings/admin/metrics', { method: 'GET' });
+    },
+    getTopBarbers: async () => {
+        return fetchWithAuth('/bookings/admin/top-barbers', { method: 'GET' });
+    },
+    getChartStats: async (from, to, mode = 'day') => {
+        let url = '/bookings/chart-stats?mode=' + mode;
+        if (from) url += '&from=' + from;
+        if (to) url += '&to=' + to;
+        return fetchWithAuth(url, { method: 'GET' });
+    },
+    getRecentAppointments: async () => {
+        return fetchWithAuth('/bookings/all?limit=5', { method: 'GET' });
+    }
+};
