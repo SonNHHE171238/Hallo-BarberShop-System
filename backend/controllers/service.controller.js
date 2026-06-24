@@ -1,5 +1,6 @@
 const Service = require('../models/service.model');
 const { sendSuccess } = require('../utils/response.helper');
+const { uploadAvatar } = require('../services/cloudStorage.service');
 
 // @desc    Get active services
 // @route   GET /api/services/active
@@ -35,6 +36,7 @@ exports.createService = async (req, res) => {
       isActive,
       category,
       images,
+      imageBase64,
     } = req.body;
 
     if (!name || price === undefined) {
@@ -55,6 +57,13 @@ exports.createService = async (req, res) => {
       category: category || "cut",
       images: images || [],
     });
+
+    if (imageBase64) {
+      const uploadedImageUrl = await uploadAvatar({ avatarBase64: imageBase64, filename: `service-${name.replace(/\s+/g, '-').toLowerCase()}` });
+      if (uploadedImageUrl) {
+        service.images = [uploadedImageUrl];
+      }
+    }
 
     await service.save();
 
@@ -166,6 +175,7 @@ exports.updateService = async (req, res) => {
       isActive,
       category,
       images,
+      imageBase64,
     } = req.body;
 
     const service = await Service.findById(req.params.id);
@@ -185,6 +195,12 @@ exports.updateService = async (req, res) => {
     if (isActive !== undefined) service.isActive = isActive;
     if (category !== undefined) service.category = category;
     if (images !== undefined) service.images = images;
+    if (imageBase64) {
+      const uploadedImageUrl = await uploadAvatar({ avatarBase64: imageBase64, filename: `service-${service.name.replace(/\s+/g, '-').toLowerCase()}` });
+      if (uploadedImageUrl) {
+        service.images = [uploadedImageUrl];
+      }
+    }
 
     await service.save();
 
