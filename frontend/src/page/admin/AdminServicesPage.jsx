@@ -13,7 +13,9 @@ const defaultServiceForm = {
   price: '',
   durationMinutes: 30,
   category: 'cut',
-  isActive: true,
+  imageFile: null,
+  imagePreview: '',
+  existingImageUrl: '',
 };
 
 export default function AdminServicesPage() {
@@ -72,6 +74,7 @@ export default function AdminServicesPage() {
   };
 
   const openEditForm = (service) => {
+    const imageUrl = (service.images && service.images[0]) || service.image || '';
     setFormError('');
     setFormSuccess('');
     setFormData({
@@ -82,7 +85,10 @@ export default function AdminServicesPage() {
       price: service.price !== undefined ? service.price : '',
       durationMinutes: service.durationMinutes !== undefined ? service.durationMinutes : (service.duration || 30),
       category: service.category || 'cut',
-      isActive: service.isActive !== undefined ? service.isActive : true,
+      imageFile: null,
+      imagePreview: imageUrl,
+      imageBase64: '',
+      existingImageUrl: imageUrl,
     });
     setFormOpen(true);
   };
@@ -100,7 +106,23 @@ export default function AdminServicesPage() {
   };
 
   const handleChange = (event) => {
-    const { name, value, type, checked } = event.target;
+    const { name, value, type, checked, files } = event.target;
+    if (name === 'imageFile' && files && files[0]) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result.split(',')[1];
+        setFormData((prev) => ({
+          ...prev,
+          imageFile: file,
+          imagePreview: reader.result,
+          imageBase64: base64String,
+        }));
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -119,8 +141,11 @@ export default function AdminServicesPage() {
       price: Number(formData.price),
       durationMinutes: Number(formData.durationMinutes),
       category: formData.category,
-      isActive: formData.isActive,
     };
+
+    if (formData.imageBase64) {
+      payload.imageBase64 = formData.imageBase64;
+    }
 
     if (!payload.name || Number.isNaN(payload.price) || payload.price < 0 || payload.durationMinutes <= 0) {
       setFormError('Tên dịch vụ, giá và thời lượng phải hợp lệ và không được âm.');
@@ -238,17 +263,29 @@ export default function AdminServicesPage() {
                     <option value="treatment">Chăm sóc</option>
                   </select>
                 </div>
-                <div className="flex items-center gap-3 md:col-span-2">
-                  <label className="inline-flex items-center gap-2 text-on-surface-variant">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={formData.isActive}
-                      onChange={handleChange}
-                      className="h-4 w-4 rounded border outline-none text-primary focus:ring-primary"
-                    />
-                    Kích hoạt dịch vụ ngay
-                  </label>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="font-label-sm text-on-surface-variant">Ảnh dịch vụ</label>
+                  <div className="rounded-3xl border border-outline-variant bg-surface p-4">
+                    <label className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-outline-variant bg-surface px-4 py-8 text-center text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer">
+                      <span>Chọn ảnh</span>
+                      <span className="text-[12px]">PNG, JPG hoặc JPEG</span>
+                      <input
+                        type="file"
+                        name="imageFile"
+                        accept="image/*"
+                        onChange={handleChange}
+                        className="hidden"
+                      />
+                    </label>
+                    {formData.imagePreview ? (
+                      <div className="mt-4 flex items-center gap-4">
+                        <img src={formData.imagePreview} alt="Preview" className="h-24 w-24 rounded-2xl object-cover border border-outline-variant" />
+                        <div className="text-body-sm text-on-surface-variant">
+                          {formData.imageFile ? formData.imageFile.name : 'Ảnh hiện tại'}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <button

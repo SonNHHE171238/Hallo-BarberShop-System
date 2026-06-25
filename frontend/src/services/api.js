@@ -1,8 +1,11 @@
-// src/services/api.js
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== 'undefined') return `http://${window.location.hostname}:5000/api`;
+  return 'http://localhost:5000/api';
+};
 
 export const fetchWithAuth = async (endpoint, options = {}) => {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${getBaseUrl()}${endpoint}`;
   
   const defaultOptions = {
     headers: {

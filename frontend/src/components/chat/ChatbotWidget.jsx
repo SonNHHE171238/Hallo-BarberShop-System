@@ -3,6 +3,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import toast from 'react-hot-toast';
 
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') return `http://${window.location.hostname}:5000/api/chatbot`;
+  return 'http://localhost:5000/api/chatbot';
+};
+
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState(null); // 'staff' | 'ai' | null
@@ -80,7 +85,7 @@ export default function ChatbotWidget() {
         payload.mimeType = imageToSend.mimeType;
       }
 
-      const res = await fetch("http://localhost:5000/api/chatbot", { // Default backend port might be 5000 or from env
+      const res = await fetch(getBaseUrl(), { // Default backend port might be 5000 or from env
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -467,7 +472,7 @@ export default function ChatbotWidget() {
                     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
                     setIsLoading(true);
 
-                    fetch("http://localhost:5000/api/chatbot", {
+                    fetch(getBaseUrl(), {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ message: userMsg, history }),
@@ -556,7 +561,7 @@ export default function ChatbotWidget() {
                     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
                     setIsLoading(true);
                     
-                    fetch("http://localhost:5000/api/chatbot", {
+                    fetch(getBaseUrl(), {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ message: userMsg, history }),

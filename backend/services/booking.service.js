@@ -38,7 +38,6 @@ exports.processCreateBooking = async ({
   }
 
   // Verify all services exist
-  const Service = require("../models/service.model");
   const foundServices = await Service.find({ _id: { $in: services } });
   if (
     !services ||
@@ -50,10 +49,12 @@ exports.processCreateBooking = async ({
     throw error;
   }
 
-  // Calculate total duration in minutes from selected services
+  // Calculate total duration in minutes and totalPrice from selected services
   let durationMinutes = 0;
+  let totalPrice = 0;
   foundServices.forEach((service) => {
-    durationMinutes += service.duration || 30;
+    durationMinutes += service.durationMinutes || 30;
+    totalPrice += service.price || 0;
   });
 
   // Time Buffer Validation (30 mins advance)
@@ -180,6 +181,7 @@ exports.processCreateBooking = async ({
     services,
     bookingDate: requestedDateTime,
     durationMinutes,
+    totalPrice,
     note,
     notificationMethods,
     autoAssignedBarber,
@@ -388,11 +390,10 @@ exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
   return resultSlots;
 };
 
-
 exports.processCreateSinglePageBooking = async (data) => {
   const Service = require("../models/service.model");
   const barberService = require("./barber.service");
-  
+
   let {
     services,
     barberId,
@@ -406,7 +407,7 @@ exports.processCreateSinglePageBooking = async (data) => {
     customerPhone,
     bookingType,
     customerId,
-    autoAssignBarber
+    autoAssignBarber,
   } = data;
 
   const foundServices = await Service.find({ _id: { $in: services } });
@@ -415,13 +416,17 @@ exports.processCreateSinglePageBooking = async (data) => {
     durationMinutes += service.duration || 30;
   });
 
-  const shouldAutoAssign = !barberId || barberId === "random" || barberId === "auto" || autoAssignBarber;
+  const shouldAutoAssign =
+    !barberId ||
+    barberId === "random" ||
+    barberId === "auto" ||
+    autoAssignBarber;
 
   if (shouldAutoAssign) {
     const assignedBarber = await barberService.autoAssignBarberService({
       date,
       timeSlot,
-      durationMinutes
+      durationMinutes,
     });
     barberId = assignedBarber._id;
   }

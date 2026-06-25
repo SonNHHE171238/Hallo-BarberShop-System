@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import BarberHeaderControls from "@/components/barber/BarberHeaderControls";
 import BarberStatsGrid from "@/components/barber/BarberStatsGrid";

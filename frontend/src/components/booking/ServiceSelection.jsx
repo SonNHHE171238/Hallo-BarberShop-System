@@ -15,6 +15,7 @@ export default function ServiceSelection({ selectedServices = [], setSelectedSer
         setServices(response.services || []);
       } catch (error) {
         console.error("Lỗi khi tải danh sách dịch vụ", error);
+        import('react-hot-toast').then(toast => toast.default.error("Lỗi kết nối Server: " + error.message));
       } finally {
         setIsLoading(false);
       }
@@ -92,6 +93,7 @@ export default function ServiceSelection({ selectedServices = [], setSelectedSer
             placeholder="Tìm kiếm dịch vụ..." 
             value={searchTerm}
             onFocus={() => setIsFocus(true)}
+            onClick={() => setIsFocus(true)}
             onChange={(e) => {
               setSearchTerm(e.target.value);
             }}
