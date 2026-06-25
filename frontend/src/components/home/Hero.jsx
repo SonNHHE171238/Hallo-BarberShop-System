@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -16,14 +17,18 @@ export default function Hero() {
         <h1 className="font-display-lg text-display-lg md:text-[96px] text-on-surface uppercase mb-2 tracking-tighter leading-none">
           Hallo Barber
         </h1>
-        <p className="font-headline-sm text-headline-sm text-outline mb-10 tracking-widest uppercase">Since Barbershop MMXVI</p>
+        <p className="font-headline-sm text-headline-sm text-outline mb-10 tracking-widest uppercase"> Tạo dấu ấn qua mái tóc của bạn</p>
         <div className="flex flex-col md:flex-row gap-4 justify-center">
-          <button className="bg-primary text-on-primary px-12 py-4 rounded-lg font-headline-sm text-headline-sm hover:bg-primary-container transition-all active:scale-95">
-            ĐẶT LỊCH HẸN
-          </button>
-          <button className="border-2 border-secondary text-secondary px-12 py-4 rounded-lg font-headline-sm text-headline-sm hover:bg-secondary/10 transition-all">
-            XEM DỊCH VỤ
-          </button>
+          <Link href="/booking">
+            <button className="bg-primary text-on-primary px-12 py-4 rounded-lg font-headline-sm text-headline-sm hover:bg-primary-container transition-all active:scale-95">
+              ĐẶT LỊCH HẸN
+            </button>
+          </Link>
+          <Link href="/#services">
+            <button className="border-2 border-secondary text-secondary px-12 py-4 rounded-lg font-headline-sm text-headline-sm hover:bg-secondary/10 transition-all">
+              XEM DỊCH VỤ
+            </button>
+          </Link>
         </div>
       </div>
     </section>

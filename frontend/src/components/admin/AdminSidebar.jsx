@@ -3,18 +3,15 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
 
 export default function AdminSidebar({ isOpen, onClose }) {
   const pathname = usePathname();
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const { logout } = useAuth();
 
   const navItems = [
     { name: 'Tổng quan', href: '/admin/dashboard', icon: 'dashboard' },
+    { name: 'Thu ngân (POS)', href: '/admin/pos', icon: 'point_of_sale' },
     { name: 'Tài khoản', href: '/admin/accounts', icon: 'manage_accounts' },
-    { name: 'Lịch hẹn', href: '/admin/appointments', icon: 'calendar_month' },
+    { name: 'Lịch hẹn', href: '/admin/bookings', icon: 'calendar_month' },
     { name: 'Dịch vụ', href: '/admin/services', icon: 'cut' },
     { name: 'Kho hàng', href: '/admin/inventory', icon: 'inventory_2' },
     { name: 'Nhân viên', href: '/admin/employee', icon: 'group' },
@@ -65,36 +62,6 @@ export default function AdminSidebar({ isOpen, onClose }) {
           );
         })}
       </nav>
-
-      {/* User Profile Area */}
-      <div className="p-3 lg:p-4 border-t border-outline-gold relative">
-        {/* Profile Menu Popup */}
-        <div className={`absolute bottom-full left-3 lg:left-4 right-3 lg:right-4 mb-2 bg-surface-container-high border border-outline-gold rounded shadow-lg overflow-hidden transition-all duration-200 origin-bottom ${isProfileMenuOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
-          <button 
-            onClick={() => {
-              setIsProfileMenuOpen(false);
-              logout();
-            }}
-            className="w-full flex items-center justify-center lg:justify-start gap-3 px-4 py-3 text-error hover:bg-error/10 transition-colors"
-          >
-            <span className="material-symbols-outlined">logout</span>
-            <span className="font-label-md text-sm uppercase tracking-widest hidden lg:inline">Đăng xuất</span>
-          </button>
-        </div>
-
-        <div 
-          onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-          className="flex items-center justify-center lg:justify-start gap-3 p-2 rounded hover:bg-surface-container cursor-pointer transition-colors"
-        >
-          <div className="w-10 h-10 rounded border border-primary flex items-center justify-center font-headline-sm text-primary flex-shrink-0">
-            A
-          </div>
-          <div className="flex flex-col hidden lg:flex truncate">
-            <span className="font-body-md text-body-md font-semibold text-on-surface leading-tight truncate uppercase tracking-tighter">Quản trị viên</span>
-            <span className="font-label-md text-[10px] text-primary truncate uppercase tracking-widest">Quản lý hệ thống</span>
-          </div>
-        </div>
-      </div>
     </aside>
     </>
   );

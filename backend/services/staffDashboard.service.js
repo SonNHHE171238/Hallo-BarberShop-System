@@ -28,12 +28,15 @@ const staffDashboardService = {
     const bookingsToday = await Booking.find({
       bookingDate: { $gte: todayStart, $lte: todayEnd },
       status: { $in: ['pending', 'confirmed', 'completed'] }
-    }).populate('serviceId', 'price');
+    }).populate('services', 'price');
 
     let expectedRevenue = 0;
     bookingsToday.forEach(b => {
-      if (b.serviceId && b.serviceId.price) {
-        expectedRevenue += b.serviceId.price;
+      if (b.services && b.services.length > 0) {
+        // Cộng tổng giá của tất cả services trong booking
+        b.services.forEach(s => {
+          if (s.price) expectedRevenue += s.price;
+        });
       }
     });
 
@@ -68,7 +71,7 @@ const staffDashboardService = {
         bookingDate: { $gte: start, $lte: end }
       })
         .populate('customerId', 'name phone')
-        .populate('serviceId', 'name price durationMinutes')
+        .populate('services', 'name price durationMinutes')
         .populate({
           path: 'barberId',
           populate: { path: 'userId', select: 'name' }
@@ -80,9 +83,12 @@ const staffDashboardService = {
         time: new Date(b.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         customerName: b.bookingType === 'user' && b.customerId ? b.customerId.name : (b.customerName || 'Khách Vãng Lai'),
         customerPhone: b.bookingType === 'user' && b.customerId ? b.customerId.phone : (b.customerPhone || 'N/A'),
-        serviceName: b.serviceId ? b.serviceId.name : 'Unknown',
+        serviceName: (b.services && b.services.length > 0) ? b.services.map(s => s.name).join(', ') : 'Unknown',
         barberName: b.barberId && b.barberId.userId ? b.barberId.userId.name : 'Auto',
-        status: b.status
+        status: b.status,
+        totalPrice: b.totalPrice || 0,
+        amountPaid: b.amountPaid || 0,
+        paymentStatus: b.paymentStatus || 'pending'
       }));
     };
 
@@ -101,7 +107,7 @@ const staffDashboardService = {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const barbers = await Barber.find({ isActive: true }).populate('userId', 'name');
+    const barbers = await Barber.find().populate('userId', 'name');
     const statuses = [];
 
     for (const barber of barbers) {
@@ -178,7 +184,7 @@ const staffDashboardService = {
 
     const bookings = await Booking.find(query)
       .populate('customerId', 'name phone')
-      .populate('serviceId', 'name price durationMinutes')
+      .populate('services', 'name price durationMinutes')
       .populate({
         path: 'barberId',
         populate: { path: 'userId', select: 'name' }
@@ -186,22 +192,23 @@ const staffDashboardService = {
       .sort({ bookingDate: 1 });
 
     const formattedBookings = bookings.map(b => {
-      let uiStatus = 'Đang chờ';
+      let uiStatus = 'Chưa tới';
       let statusClass = 'bg-surface-bright/50 text-gold-dim border-gold-dim/30';
       
       if (b.status === 'completed') {
         uiStatus = 'Hoàn thành';
         statusClass = 'bg-primary/5 text-primary border-primary/20';
-      } else if (b.status === 'cancelled' || b.status === 'rejected' || b.status === 'no-show') {
+      } else if (b.status === 'cancelled' || b.status === 'rejected') {
         uiStatus = 'Đã hủy';
         statusClass = 'bg-error/10 text-error border-error/20';
-      } else if (b.status === 'confirmed' && b.isCheckedIn) {
-        // Giả sử cứ confirmed & isCheckedIn là đang làm?
-        // Thực tế có thể cần status in-progress. Tạm thời để đang làm.
-        uiStatus = 'Đang làm';
-        statusClass = 'bg-secondary-container/30 text-secondary border-secondary/30';
+      } else if (b.status === 'no_show') {
+        uiStatus = 'Không đến';
+        statusClass = 'bg-error/10 text-error border-error/20';
+      } else if (b.status === 'confirmed') {
+        uiStatus = 'Khách đã đến';
+        statusClass = 'bg-green-800/20 text-green-700 border-green-700/50';
       } else {
-        uiStatus = 'Đang chờ';
+        uiStatus = 'Chưa tới';
       }
 
       return {
@@ -210,21 +217,24 @@ const staffDashboardService = {
         customerName: b.bookingType === 'user' && b.customerId ? b.customerId.name : (b.customerName || 'Khách Vãng Lai'),
         customerPhone: b.bookingType === 'user' && b.customerId ? b.customerId.phone : (b.customerPhone || 'N/A'),
         customerType: b.bookingType === 'user' ? 'Customer' : 'Guest',
-        serviceName: b.serviceId ? b.serviceId.name : 'Unknown',
+        serviceName: (b.services && b.services.length > 0) ? b.services.map(s => s.name).join(', ') : 'Unknown',
         barberName: b.barberId && b.barberId.userId ? b.barberId.userId.name : 'Auto',
         rawStatus: b.status,
         uiStatus,
         statusClass,
-        isCheckedIn: b.isCheckedIn || false
+        isCheckedIn: b.isCheckedIn || false,
+        totalPrice: b.totalPrice || 0,
+        amountPaid: b.amountPaid || 0,
+        paymentStatus: b.paymentStatus || 'pending'
       };
     });
 
     // Calculate Stats
     const totalBookings = formattedBookings.length;
-    const serving = formattedBookings.filter(b => b.uiStatus === 'Đang làm').length;
+    const serving = formattedBookings.filter(b => b.uiStatus === 'Khách đã đến').length;
     
     // Chairs empty
-    const totalBarbers = await Barber.countDocuments({ isActive: true });
+    const totalBarbers = await Barber.countDocuments();
     // Assuming 1 chair per barber
     const emptyChairs = Math.max(0, totalBarbers - serving);
 

@@ -8,8 +8,18 @@ import { useAuth } from "@/context/AuthContext";
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeHash, setActiveHash] = useState("");
   const pathname = usePathname();
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    setActiveHash(window.location.hash);
+    const handleHashChange = () => {
+      setActiveHash(window.location.hash);
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -42,8 +52,9 @@ export default function Navbar() {
         <div className="hidden md:flex items-center space-x-4 lg:space-x-6 xl:space-x-8">
           <Link 
             href="/" 
+            onClick={() => setActiveHash("")}
             className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/" 
+              pathname === "/" && !activeHash
                 ? "text-primary font-bold border-b-2 border-primary pb-1" 
                 : "text-on-surface-variant hover:text-primary transition-colors duration-200"
             }`}
@@ -52,30 +63,51 @@ export default function Navbar() {
           </Link>
           <Link 
             href="/#about" 
-            className="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md font-body-md whitespace-nowrap"
+            onClick={() => setActiveHash("#about")}
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/" && activeHash === "#about"
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
           >
             Về chúng tôi
           </Link>
           <Link 
             href="/#services" 
-            className="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md font-body-md whitespace-nowrap"
+            onClick={() => setActiveHash("#services")}
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/" && activeHash === "#services"
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
           >
             Dịch vụ
           </Link>
           <Link 
             href="/#deals" 
-            className="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md font-body-md whitespace-nowrap"
+            onClick={() => setActiveHash("#deals")}
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/" && activeHash === "#deals"
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
           >
             Khuyến mãi
           </Link>
           <Link 
             href="/#team" 
-            className="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md font-body-md whitespace-nowrap"
+            onClick={() => setActiveHash("#team")}
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/" && activeHash === "#team"
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
           >
             Đội ngũ
           </Link>
           <Link 
             href="/shop" 
+            onClick={() => setActiveHash("")}
             className={`text-body-md font-body-md whitespace-nowrap transition-all ${
               pathname === "/shop" 
                 ? "text-primary font-bold border-b-2 border-primary pb-1" 
@@ -161,12 +193,12 @@ export default function Navbar() {
         }`}
       >
         <div className="flex flex-col px-4 space-y-4">
-          <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Trang chủ</Link>
-          <Link href="/#about" onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-body-md font-body-md">Về chúng tôi</Link>
-          <Link href="/#services" onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-body-md font-body-md">Dịch vụ</Link>
-          <Link href="/#deals" onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-body-md font-body-md">Khuyến mãi</Link>
-          <Link href="/#team" onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-body-md font-body-md">Đội ngũ</Link>
-          <Link href="/shop" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
+          <Link href="/" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/" && !activeHash ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Trang chủ</Link>
+          <Link href="/#about" onClick={() => { setIsMobileMenuOpen(false); setActiveHash("#about"); }} className={`text-body-md font-body-md ${pathname === "/" && activeHash === "#about" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Về chúng tôi</Link>
+          <Link href="/#services" onClick={() => { setIsMobileMenuOpen(false); setActiveHash("#services"); }} className={`text-body-md font-body-md ${pathname === "/" && activeHash === "#services" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Dịch vụ</Link>
+          <Link href="/#deals" onClick={() => { setIsMobileMenuOpen(false); setActiveHash("#deals"); }} className={`text-body-md font-body-md ${pathname === "/" && activeHash === "#deals" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Khuyến mãi</Link>
+          <Link href="/#team" onClick={() => { setIsMobileMenuOpen(false); setActiveHash("#team"); }} className={`text-body-md font-body-md ${pathname === "/" && activeHash === "#team" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Đội ngũ</Link>
+          <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
           <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
             {user ? (
               <>

@@ -13,7 +13,7 @@ export default function StaffHeader() {
 
   const navItems = [
     { name: "Tổng quan", href: "/staff/dashboard" },
-    { name: "Lịch hẹn", href: "/staff/appointments" },
+    { name: "Lịch hẹn", href: "/staff/bookings" },
     { name: "POS", href: "/staff/pos" },
     { name: "Nhân sự", href: "/staff/employees" },
     { name: "Kho hàng", href: "/staff/inventory" },
@@ -24,9 +24,9 @@ export default function StaffHeader() {
     <header className="fixed top-0 w-full bg-surface/90 backdrop-blur-xl border-b border-outline-variant shadow-sm h-20 z-50">
       <div className="flex justify-between items-center px-4 md:px-margin-desktop h-full max-w-[1600px] mx-auto">
         <div className="flex items-center gap-8">
-          <span className="font-headline-md text-headline-md font-bold tracking-tighter text-primary whitespace-nowrap">
+          <Link href="/staff/dashboard" className="font-headline-md text-headline-md font-bold tracking-tighter text-primary whitespace-nowrap hover:opacity-80 transition-opacity">
             HALLO BARBER
-          </span>
+          </Link>
           <nav className="hidden lg:flex gap-6 items-center h-full">
             {navItems.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');

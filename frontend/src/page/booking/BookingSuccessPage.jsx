@@ -13,12 +13,23 @@ function BookingSuccessContent() {
   
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState("pending");
 
   useEffect(() => {
     // If no bookingId, just redirect back
     if (!bookingId) {
       router.push("/");
       return;
+    }
+
+    const payosStatus = searchParams.get("status");
+    const isCancelled = searchParams.get("cancel") === "true" || searchParams.get("payment") === "cancelled";
+    
+    if (isCancelled) {
+      setPaymentStatus("cancelled");
+    } else if (payosStatus === "PAID") {
+      // Nếu là khách vãng lai (!user) thì thanh toán PayOS tức là đã cọc 50%
+      setPaymentStatus(!user ? "partial_paid" : "paid");
     }
 
     setBooking({
@@ -42,6 +53,8 @@ function BookingSuccessContent() {
     );
   }
 
+  const isPaymentFailed = paymentStatus === "cancelled";
+
   return (
     <div className="bg-background min-h-screen text-on-surface font-body-md flex flex-col">
       <main className="flex-grow pt-32 pb-32 flex items-center justify-center relative overflow-hidden">
@@ -51,11 +64,19 @@ function BookingSuccessContent() {
         <div className="w-full max-w-2xl px-4 md:px-0 relative z-10">
           {/* Success Animation & Title */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full border-2 border-primary mb-6 shadow-[0_0_15px_rgba(255,222,165,0.3)]">
-              <span className="material-symbols-outlined text-primary text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full border-2 mb-6 ${isPaymentFailed ? 'border-error shadow-[0_0_15px_rgba(255,0,0,0.3)]' : 'border-primary shadow-[0_0_15px_rgba(255,222,165,0.3)]'}`}>
+              <span className={`material-symbols-outlined text-5xl ${isPaymentFailed ? 'text-error' : 'text-primary'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                {isPaymentFailed ? 'cancel' : 'check_circle'}
+              </span>
             </div>
-            <h1 className="font-headline-lg md:text-[40px] text-[32px] text-primary tracking-tight">Đặt Lịch Thành Công!</h1>
-            <p className="font-body-md text-on-surface-variant mt-2">Cảm ơn bạn đã tin tưởng dịch vụ tại Heritage Barbers.</p>
+            <h1 className={`font-headline-lg md:text-[40px] text-[32px] tracking-tight ${isPaymentFailed ? 'text-error' : 'text-primary'}`}>
+              {isPaymentFailed ? 'Thanh toán chưa hoàn tất' : 'Đặt Lịch Thành Công!'}
+            </h1>
+            <p className="font-body-md text-on-surface-variant mt-2">
+              {isPaymentFailed 
+                ? 'Lịch hẹn của bạn đã được ghi nhận nhưng quá trình thanh toán đã bị huỷ. Bạn có thể thanh toán trực tiếp tại quán.' 
+                : 'Cảm ơn bạn đã tin tưởng dịch vụ tại Heritage Barbers.'}
+            </p>
             
             <div className="mt-8 flex items-center justify-center max-w-md mx-auto px-4">
               <div className="flex items-center w-full">
@@ -81,10 +102,10 @@ function BookingSuccessContent() {
                 </div>
                 <div className="flex-grow h-[2px] bg-primary mx-2"></div>
                 <div className="relative flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary">
-                    <span className="material-symbols-outlined text-sm">check</span>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-on-primary ${isPaymentFailed ? 'bg-surface-variant' : 'bg-primary'}`}>
+                    <span className="material-symbols-outlined text-sm">{isPaymentFailed ? 'schedule' : 'check'}</span>
                   </div>
-                  <span className="absolute -bottom-6 text-[10px] font-label-md text-primary whitespace-nowrap">Hoàn Tất</span>
+                  <span className={`absolute -bottom-6 text-[10px] font-label-md whitespace-nowrap ${isPaymentFailed ? 'text-on-surface-variant' : 'text-primary'}`}>Hoàn Tất</span>
                 </div>
               </div>
             </div>
@@ -99,11 +120,28 @@ function BookingSuccessContent() {
                 <div className="font-headline-md text-on-surface tracking-widest font-bold">HB-{booking.id}</div>
               </div>
               <div className="text-left md:text-right">
-                <span className="text-primary/70 font-label-md block mb-1">TRẠNG THÁI</span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-md">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                  Đã Xác Nhận
-                </span>
+                <span className="text-primary/70 font-label-md block mb-1">TRẠNG THÁI THANH TOÁN</span>
+                {paymentStatus === "paid" ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 font-label-md">
+                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                    Đã thanh toán 100%
+                  </span>
+                ) : paymentStatus === "partial_paid" ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 font-label-md">
+                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                    Đã cọc 50% (PayOS)
+                  </span>
+                ) : isPaymentFailed ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error/10 border border-error/20 text-error font-label-md">
+                    <span className="material-symbols-outlined text-[14px]">cancel</span>
+                    Đã hủy thanh toán
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    Thanh toán tại quán
+                  </span>
+                )}
               </div>
             </div>
 

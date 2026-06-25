@@ -7,7 +7,7 @@ exports.getActiveBarbers = async (req, res, next) => {
     const barbers = await Barber.find({ 
       $or: [{ isAvailable: true }, { isAvailable: { $exists: false } }] 
     })
-      .populate('userId', 'name email phone profileImageUrl')
+      .populate('userId', 'name email phone avatarUrl')
       .sort({ averageRating: -1, totalBookings: -1 })
       .lean();
 
@@ -44,6 +44,46 @@ exports.getBarberAbsences = async (req, res, next) => {
     return sendSuccess(res, 200, 'Barber absences retrieved', { 
       absentDates: Array.from(absentDates)
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getMeBarber = async (req, res, next) => {
+  try {
+    const barber = await Barber.findOne({ userId: req.userId })
+      .populate('userId', 'name email phone avatarUrl')
+      .lean();
+    
+    if (!barber) {
+      const error = new Error('Barber profile not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return sendSuccess(res, 200, 'Barber profile retrieved', { barber });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.updateMyAvailability = async (req, res, next) => {
+  try {
+    const { isAvailable } = req.body;
+    
+    const barber = await Barber.findOneAndUpdate(
+      { userId: req.userId },
+      { $set: { isAvailable: Boolean(isAvailable) } },
+      { new: true }
+    );
+
+    if (!barber) {
+      const error = new Error('Barber profile not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return sendSuccess(res, 200, 'Availability updated', { isAvailable: barber.isAvailable });
   } catch (error) {
     next(error);
   }

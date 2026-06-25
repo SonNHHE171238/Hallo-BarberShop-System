@@ -17,10 +17,13 @@ const errorHandler = require('../middlewares/error.middleware');
 const app = express();
 
 app.use(cors({
-    origin: (process.env.CORS_ORIGIN || process.env.CLIENT_URL || 'http://localhost:3000,http://localhost:3001,http://localhost:5173').split(','),
+    origin: function (origin, callback) {
+        callback(null, true); // Bỏ qua lỗi CORS khi truy cập từ thiết bị khác trong mạng LAN
+    },
     credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 app.use(cookieParser());
 
 app.use('/api/auth', authRoute);
@@ -32,6 +35,7 @@ app.use('/api/customer', customerRoute);
 app.use('/api/services', serviceRoute);
 app.use('/api/barbers', barberRoute);
 app.use('/api/staff', staffRoute);
+app.use('/api/payment', require('../routes/payment.route'));
 
 app.get('/', (req, res) => {
     res.send('Hallo BarberShop API is running');

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function ServicePageHeader() {
+export default function ServicePageHeader({ onCreate }) {
   return (
     <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
       <div>
@@ -9,7 +9,11 @@ export default function ServicePageHeader() {
           Tổ chức và tinh chỉnh danh mục dịch vụ cao cấp của bạn. Mỗi dịch vụ phản ánh di sản và sự tỉ mỉ của Hallo Barber.
         </p>
       </div>
-      <button className="bg-primary text-on-primary font-headline-sm px-8 py-4 flex items-center gap-2 hover:bg-primary-fixed-dim transition-all active:scale-95 shadow-lg">
+      <button
+        type="button"
+        onClick={onCreate}
+        className="bg-primary text-on-primary font-headline-sm px-8 py-4 flex items-center gap-2 hover:bg-primary-fixed-dim transition-all active:scale-95 shadow-lg"
+      >
         <span className="material-symbols-outlined">add</span>
         Thêm dịch vụ mới
       </button>

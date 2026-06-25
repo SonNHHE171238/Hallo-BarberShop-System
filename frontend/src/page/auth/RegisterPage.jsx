@@ -19,24 +19,51 @@ export default function RegisterPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   
   const router = useRouter();
-  const { checkAuth } = useAuth();
+  const { user, checkAuth } = useAuth();
   const cardRef = useRef(null);
 
+  const handleRedirect = (userObj) => {
+    if (userObj?.role === 'admin') {
+      router.push("/admin/dashboard");
+    } else if (userObj?.role === 'staff') {
+      router.push("/staff/dashboard");
+    } else if (userObj?.role === 'barber') {
+      router.push("/barber/dashboard");
+    } else {
+      router.push("/customer/dashboard");
+    }
+  };
+
   useEffect(() => {
+    if (user) {
+      handleRedirect(user);
+    }
     // Kích hoạt animation khi component mount
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [user, router]);
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    let { name, value } = e.target;
+    
+    if (name === 'phone') {
+      value = value.replace(/\D/g, ''); // Chỉ giữ lại số
+      if (value.length > 10) {
+        value = value.slice(0, 10); // Tối đa 10 số
+      }
+    }
+
+    setFormData({ ...formData, [name]: value });
     setError('');
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    if (formData.phone.length !== 10) {
+      return setError('Số điện thoại phải bao gồm đúng 10 chữ số');
+    }
     if (formData.password !== formData.confirmPassword) {
       return setError('Mật khẩu xác nhận không khớp');
     }
@@ -155,11 +182,14 @@ export default function RegisterPage() {
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] group-focus-within:text-primary transition-colors">call</span>
                 <input 
                   className="w-full bg-surface-container-low border border-outline-variant py-3 pl-12 pr-4 text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all rounded placeholder:text-outline/50 outline-none" 
-                  placeholder="090 123 4567" 
+                  placeholder="0901234567" 
                   type="tel" 
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
+                  maxLength="10"
+                  pattern="[0-9]{10}"
+                  title="Vui lòng nhập đúng 10 chữ số"
                   required
                 />
               </div>

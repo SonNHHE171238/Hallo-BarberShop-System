@@ -8,8 +8,8 @@ const { sendPasswordResetEmail } = require('../services/email.service');
 const { OAuth2Client } = require('google-auth-library');
 
 const getResetTokenTtlMs = () => {
-  const minutes = parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '60', 10);
-  return (Number.isFinite(minutes) && minutes > 0 ? minutes : 60) * 60 * 1000;
+  const minutes = parseInt(process.env.RESET_TOKEN_EXPIRES_MINUTES || '10', 10);
+  return (Number.isFinite(minutes) && minutes > 0 ? minutes : 10) * 60 * 1000;
 };
 
 const accessExpires = () => {
@@ -222,7 +222,7 @@ exports.processForgotPassword = async (email) => {
   const resetLink = `${clientUrl}/reset-password?id=${user._id}&token=${plainToken}`;
 
   try {
-    await sendPasswordResetEmail(user.email, resetLink);
+    await sendPasswordResetEmail(user.email, resetLink, user.name);
   } catch (err) {
     const error = new Error('Could not send password reset email. Please try again later.');
     error.statusCode = 502;
@@ -352,5 +352,51 @@ exports.loginWithGoogle = async (accessToken) => {
     }
   }
 
+  return user;
+};
+
+exports.changeUserPassword = async (userId, currentPassword, newPassword) => {
+  const user = await User.findById(userId).select('+passwordHash');
+  if (!user || user.status !== 'active') {
+    const error = new Error('Không tìm thấy người dùng hoặc tài khoản đã bị khóa');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // If the user registered via Google, they might not have a passwordHash yet.
+  if (!user.passwordHash) {
+    const error = new Error('Tài khoản này được đăng nhập qua Google và chưa có mật khẩu. Sử dụng Quên mật khẩu để tạo mới.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const match = await bcrypt.compare(String(currentPassword), user.passwordHash);
+  if (!match) {
+    const error = new Error('Mật khẩu hiện tại không chính xác');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  user.passwordHash = String(newPassword);
+  await user.save();
+};
+
+exports.updateUserProfile = async (userId, updateData) => {
+  const user = await User.findById(userId);
+  if (!user || user.status !== 'active') {
+    const error = new Error('Không tìm thấy người dùng hoặc tài khoản đã bị khóa');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (updateData.phone !== undefined) {
+    user.phone = String(updateData.phone).trim();
+  }
+  
+  if (updateData.avatarUrl !== undefined) {
+    user.avatarUrl = String(updateData.avatarUrl).trim();
+  }
+
+  await user.save();
   return user;
 };

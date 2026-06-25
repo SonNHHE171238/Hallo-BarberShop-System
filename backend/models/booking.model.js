@@ -23,11 +23,13 @@ const bookingSchema = new Schema(
       ref: "Barber",
       required: true,
     },
-    serviceId: {
-      type: Schema.Types.ObjectId,
-      ref: "Service",
-      required: true,
-    },
+    services: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Service",
+        required: true,
+      },
+    ],
     bookingDate: {
       type: Date,
       required: true,
@@ -35,6 +37,30 @@ const bookingSchema = new Schema(
     durationMinutes: {
       type: Number,
       required: true,
+    },
+    totalPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    orderCode: {
+      type: Number, // Dùng cho PayOS
+      unique: true,
+      sparse: true, // Cho phép null và đảm bảo unique với những cái khác null
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'credit_card', 'bank_transfer', 'e_wallet'],
+      default: 'cash'
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'partial_paid', 'paid', 'refunded'],
+      default: 'pending'
+    },
+    amountPaid: {
+      type: Number,
+      default: 0
     },
     note: {
       type: String,
@@ -86,12 +112,10 @@ const bookingSchema = new Schema(
       },
     },
 
-    // --- CÁC TRƯỜNG AUDIT GIỮ NGUYÊN ---
+    // --- CÁC TRƯỜNG AUDIT ---
     confirmedAt: { type: Date, default: null },
-    confirmedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     completedAt: { type: Date, default: null },
     rejectedAt: { type: Date, default: null },
-    rejectedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     rejectionReason: {
       type: String,
       enum: [
@@ -104,15 +128,13 @@ const bookingSchema = new Schema(
     },
     rejectionNote: { type: String, trim: true, default: null },
     noShowAt: { type: Date, default: null },
-    noShowBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    noShowNote: { type: String, trim: true, default: null },
     reassignedFrom: {
       type: Schema.Types.ObjectId,
       ref: "Barber",
       default: null,
     },
     reassignedAt: { type: Date, default: null },
-    reassignedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
-    noShowNote: { type: String, trim: true, default: null },
   },
   {
     timestamps: true,
@@ -124,9 +146,17 @@ bookingSchema.index({ customerId: 1, bookingDate: -1 });
 bookingSchema.index({ status: 1, bookingDate: 1 });
 
 // LƯU Ý QUAN TRỌNG VỀ UNIQUE INDEX CHỐNG TRÙNG LỊCH:
-// Ở schema cũ bạn để: bookingSchema.index({ barberId: 1, bookingDate: 1 });
-// Nếu 'bookingDate' của bạn là một Date object lưu CẢ NGÀY VÀ GIỜ (VD: 2026-06-15T09:00:00.000Z)
-// Thì bạn PHẢI thêm { unique: true } vào để chống 2 người book cùng lúc như bài toán ta vừa bàn.
-bookingSchema.index({ barberId: 1, bookingDate: 1 }, { unique: true });
+// Dùng partial index để chỉ chặn trùng lịch đối với các booking chưa bị huỷ/từ chối.
+// Lưu ý: index này chỉ chặn được 2 booking bắt đầu CÙNG MỘT THỜI ĐIỂM (chính xác đến mili-giây).
+// Việc chống overlap (chồng lấn thời gian) cần được xử lý trong logic code (Controller).
+bookingSchema.index(
+  { barberId: 1, bookingDate: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ["pending", "confirmed", "completed"] },
+    },
+  }
+);
 
 module.exports = mongoose.model("Booking", bookingSchema);
