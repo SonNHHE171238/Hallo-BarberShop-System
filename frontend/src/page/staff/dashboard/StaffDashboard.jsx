@@ -90,6 +90,7 @@ export default function StaffDashboard() {
     }
 
     try {
+      const previousStatus = checkInModal.booking.status;
       let payload = { status };
       
       // Nếu đang ở màn Thanh toán và xác nhận
@@ -119,6 +120,15 @@ export default function StaffDashboard() {
       const res = await staffDashboardService.updateStatus(checkInModal.booking._id, payload);
       // api.js tự động unwrap, nên nếu code chạy xuống đây tức là thành công
       if (res) {
+        if (status === 'confirmed' && previousStatus === 'pending') {
+          setMetrics(prev => ({ ...prev, waitingCustomers: prev.waitingCustomers + 1 }));
+        }
+        if (status === 'completed' && previousStatus === 'confirmed') {
+          setMetrics(prev => ({ ...prev, waitingCustomers: Math.max(0, prev.waitingCustomers - 1) }));
+        }
+        if (status === 'no_show' && previousStatus === 'confirmed') {
+          setMetrics(prev => ({ ...prev, waitingCustomers: Math.max(0, prev.waitingCustomers - 1) }));
+        }
         toast.success(status === 'completed' ? 'Đã thu tiền & hoàn thành' : 'Đã cập nhật trạng thái');
         fetchData(false);
       }
@@ -244,20 +254,28 @@ export default function StaffDashboard() {
                             <td className="px-6 py-5 text-sm font-medium">{booking.barberName}</td>
                             <td className="px-6 py-5">
                                 <button
-                                  onClick={() => setCheckInModal({ isOpen: true, booking: booking, isPayment: false })}
+                                  onClick={() => {
+                                    if (booking.status === 'completed' || booking.status === 'no_show') {
+                                      toast('Lịch đã hoàn thành hoặc khách không đến, không thể thay đổi');
+                                      return;
+                                    }
+                                    setCheckInModal({ isOpen: true, booking: booking, isPayment: false });
+                                  }}
                                   className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
-                                    booking.status === 'completed' 
-                                    ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant' 
-                                    : booking.status === 'confirmed'
-                                    ? 'bg-green-800/20 text-green-700 border border-green-700/50 hover:bg-green-800/30'
-                                    : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
+                                    booking.status === 'completed'
+                                      ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant'
+                                      : booking.status === 'confirmed'
+                                      ? 'bg-green-800/20 text-green-700 border border-green-700/50 hover:bg-green-800/30'
+                                      : booking.status === 'no_show'
+                                      ? 'bg-error/20 text-error border border-error/50 hover:bg-error/30'
+                                      : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
                                   }`}
                                   title="Đổi trạng thái"
                                 >
                                   <span className="material-symbols-outlined text-[14px]">
-                                    {booking.status === 'completed' ? 'check_circle' : booking.status === 'confirmed' ? 'how_to_reg' : 'pending_actions'}
+                                    {booking.status === 'completed' ? 'check_circle' : booking.status === 'confirmed' ? 'how_to_reg' : booking.status === 'no_show' ? 'block' : 'pending_actions'}
                                   </span>
-                                  {booking.status === 'completed' ? 'Đã xong' : booking.status === 'confirmed' ? 'Khách đã đến' : 'Chưa tới'}
+                                  {booking.status === 'completed' ? 'Đã xong' : booking.status === 'confirmed' ? 'Khách đã đến' : booking.status === 'no_show' ? 'Không đến' : 'Chưa tới'}
                                 </button>
                             </td>
                           </tr>
@@ -306,20 +324,28 @@ export default function StaffDashboard() {
                             <td className="px-6 py-5 text-sm font-medium">{booking.barberName}</td>
                             <td className="px-6 py-5">
                               <button
-                                onClick={() => setCheckInModal({ isOpen: true, booking: booking, isPayment: false })}
+                                onClick={() => {
+                                  if (booking.status === 'completed' || booking.status === 'no_show') {
+                                    toast('Lịch đã hoàn thành hoặc khách không đến, không thể thay đổi');
+                                    return;
+                                  }
+                                  setCheckInModal({ isOpen: true, booking: booking, isPayment: false });
+                                }}
                                 className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
-                                  booking.status === 'completed' 
-                                  ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant' 
-                                  : booking.status === 'confirmed'
-                                  ? 'bg-green-800/20 text-green-700 border border-green-700/50 hover:bg-green-800/30'
-                                  : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
+                                  booking.status === 'completed'
+                                    ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant'
+                                    : booking.status === 'confirmed'
+                                    ? 'bg-green-800/20 text-green-700 border border-green-700/50 hover:bg-green-800/30'
+                                    : booking.status === 'no_show'
+                                    ? 'bg-error/20 text-error border border-error/50 hover:bg-error/30'
+                                    : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
                                 }`}
                                 title="Đổi trạng thái"
                               >
                                 <span className="material-symbols-outlined text-[14px]">
-                                  {booking.status === 'completed' ? 'check_circle' : booking.status === 'confirmed' ? 'how_to_reg' : 'pending_actions'}
+                                  {booking.status === 'completed' ? 'check_circle' : booking.status === 'confirmed' ? 'how_to_reg' : booking.status === 'no_show' ? 'block' : 'pending_actions'}
                                 </span>
-                                {booking.status === 'completed' ? 'Đã xong' : booking.status === 'confirmed' ? 'Khách đã đến' : 'Chưa tới'}
+                                {booking.status === 'completed' ? 'Đã xong' : booking.status === 'confirmed' ? 'Khách đã đến' : booking.status === 'no_show' ? 'Không đến' : 'Chưa tới'}
                               </button>
                             </td>
                           </tr>
@@ -466,30 +492,51 @@ export default function StaffDashboard() {
                 <p className="text-sm text-on-surface-variant">Khách đã tới cửa hàng chưa?</p>
                 
                 <div className="flex flex-col gap-3 pt-4">
-                  <button 
-                    onClick={() => handleStatusUpdate('confirmed')}
-                    className="w-full py-3 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 active:scale-95 transition-all shadow-md shadow-green-700/20"
-                  >
-                    Khách Đã Đến
-                  </button>
-                  <button 
-                    onClick={() => handleStatusUpdate('completed')}
-                    className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20"
-                  >
-                    Đánh dấu Đã Hoàn Thành
-                  </button>
-                  <button 
-                    onClick={() => handleStatusUpdate('no_show')}
-                    className="w-full py-3 bg-error text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
-                  >
-                    Khách Không Đến (No Show)
-                  </button>
-                  <button 
-                    onClick={() => handleStatusUpdate('pending')}
-                    className="w-full py-3 bg-surface-variant text-on-surface font-bold rounded-xl hover:bg-outline-variant active:scale-95 transition-all"
-                  >
-                    Đưa về Chưa Tới (Pending)
-                  </button>
+                  {checkInModal.booking?.status === 'completed' || checkInModal.booking?.status === 'no_show' ? (
+                    <div className="p-4 bg-surface-container-low rounded-xl">
+                      <p className="font-bold text-on-surface">Lịch hẹn đã hoàn thành hoặc khách không đến, không thể thay đổi.</p>
+                      <button
+                        onClick={() => { setCheckInModal({ isOpen: false, booking: null, isPayment: false }); setQrCodeData(null); }}
+                        className="w-full mt-3 py-2 bg-surface-variant text-on-surface font-bold rounded-xl"
+                      >Đóng</button>
+                    </div>
+                  ) : checkInModal.booking?.status === 'pending' ? (
+                    <>
+                      <button 
+                        onClick={() => handleStatusUpdate('confirmed')}
+                        className="w-full py-3 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 active:scale-95 transition-all shadow-md shadow-green-700/20"
+                      >
+                        Khách Đã Đến
+                      </button>
+                      <button 
+                        onClick={() => handleStatusUpdate('no_show')}
+                        className="w-full py-3 bg-error text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
+                      >
+                        Khách Không Đến (No Show)
+                      </button>
+                      <button 
+                        onClick={() => { setCheckInModal({ isOpen: false, booking: null, isPayment: false }); setQrCodeData(null); }}
+                        className="w-full py-3 bg-surface-variant text-on-surface font-bold rounded-xl hover:bg-outline-variant active:scale-95 transition-all"
+                      >
+                        Hủy
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => handleStatusUpdate('completed')}
+                        className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20"
+                      >
+                        Xác nhận Thu tiền & Hoàn thành
+                      </button>
+                      <button 
+                        onClick={() => { setCheckInModal({ isOpen: false, booking: null, isPayment: false }); setQrCodeData(null); }}
+                        className="w-full py-3 bg-surface-variant text-on-surface font-bold rounded-xl hover:bg-outline-variant active:scale-95 transition-all"
+                      >
+                        Hủy
+                      </button>
+                    </>
+                  )}
                 </div>
                 <button 
                   onClick={() => {
