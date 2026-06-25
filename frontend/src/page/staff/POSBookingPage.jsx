@@ -393,7 +393,9 @@ export default function POSBookingPage() {
                 >
                   <div className="relative z-10">
                     <div className="w-full h-36 mb-3 overflow-hidden rounded-lg bg-surface-container">
-                      <img src={(service.images && service.images[0]) || service.image || ''} alt={service.name} className="w-full h-full object-cover" onError={(e)=>{e.target.style.display='none'}} />
+                      {((service.images && service.images[0]) || service.image) && (
+                        <img src={(service.images && service.images[0]) || service.image} alt={service.name} className="w-full h-full object-cover" />
+                      )}
                     </div>
                     <h3 className={`font-headline-sm text-xl transition-colors ${isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'}`}>
                       {service.name}
