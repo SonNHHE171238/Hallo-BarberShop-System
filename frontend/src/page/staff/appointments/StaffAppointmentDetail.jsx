@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function StaffAppointmentDetail() {
+  const router = useRouter();
   const [isCompleted, setIsCompleted] = useState(false);
 
   const handleCompleteService = () => {
-    setIsCompleted(true);
+    router.push('/staff/payment');
   };
 
   return (
