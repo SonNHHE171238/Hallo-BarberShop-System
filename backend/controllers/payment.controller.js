@@ -11,7 +11,7 @@ const payos = new PayOS({
 // Tạo link thanh toán
 exports.createPaymentLink = async (req, res, next) => {
   try {
-    const { bookingId, returnUrl, cancelUrl } = req.body;
+    const { bookingId, returnUrl, cancelUrl, amount } = req.body;
 
     const booking = await Booking.findById(bookingId).populate("services");
     if (!booking) {
@@ -28,7 +28,6 @@ exports.createPaymentLink = async (req, res, next) => {
     }
 
     // Tạo mã orderCode ngẫu nhiên (chỉ được là số, tối đa 53 bit nguyên)
-    // Tốt nhất dùng Date.now() kết hợp random để không trùng
     const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
     
     // Lưu orderCode vào booking để map
@@ -38,7 +37,9 @@ exports.createPaymentLink = async (req, res, next) => {
 
     // Chuẩn bị dữ liệu tạo link thanh toán PayOS
     const isGuest = booking.bookingType === "guest";
-    const amountToPay = isGuest ? Math.round(booking.totalPrice / 2) : booking.totalPrice;
+    // Nếu client truyền lên amount, ưu tiên dùng amount đó (ví dụ tính tiền thu thêm). Ngược lại dùng mặc định
+    const defaultAmountToPay = isGuest ? Math.round(booking.totalPrice / 2) : booking.totalPrice;
+    const amountToPay = amount ? Number(amount) : defaultAmountToPay;
 
     const body = {
       orderCode: orderCode,
@@ -53,6 +54,7 @@ exports.createPaymentLink = async (req, res, next) => {
     return sendSuccess(res, 200, "Tạo link thanh toán thành công", {
       checkoutUrl: paymentLinkRes.checkoutUrl,
       paymentLinkId: paymentLinkRes.paymentLinkId,
+      qrCode: paymentLinkRes.qrCode // Chuỗi text QR để gen ảnh tại client
     });
   } catch (error) {
     console.error("Error creating payment link:", error);
@@ -62,28 +64,52 @@ exports.createPaymentLink = async (req, res, next) => {
 
 // Đón webhook từ PayOS
 exports.payosWebhook = async (req, res, next) => {
-  console.log("PayOS Webhook received:", req.body);
+  console.log("PayOS Webhook received:", JSON.stringify(req.body));
   try {
-    const webhookData = payos.webhooks.verify(req.body);
+    // SDK @payos/node v2.0.5 dùng payos.webhooks.verify và trả về Promise
+    const webhookData = await payos.webhooks.verify(req.body);
+    console.log("Verified Webhook Data:", webhookData);
 
     if (
+      webhookData.desc === "success" ||
       webhookData.description === "Thành công" ||
-      webhookData.code === "00"
+      webhookData.description === "success" ||
+      webhookData.code === "00" ||
+      req.body.desc === "success" ||
+      req.body.code === "00"
     ) {
       // Tìm booking bằng orderCode
       const booking = await Booking.findOne({ orderCode: webhookData.orderCode });
       if (booking) {
-        booking.amountPaid = webhookData.amount;
+        booking.amountPaid = (booking.amountPaid || 0) + webhookData.amount;
         
-        if (webhookData.amount >= booking.totalPrice) {
+        if (booking.amountPaid >= booking.totalPrice) {
           booking.paymentStatus = "paid";
-        } else if (webhookData.amount > 0) {
+        } else if (booking.amountPaid > 0) {
           booking.paymentStatus = "partial_paid";
         }
         
-        booking.status = "confirmed"; // Cập nhật luôn trạng thái lịch hẹn
+        booking.status = "completed"; 
+        booking.completedAt = new Date();
         await booking.save();
+        console.log("Booking updated successfully:", booking._id);
+
+        // Tạo Record Sổ cái
+        const Payment = require("../models/payment.model");
+        const paymentRecord = await Payment.create({
+          target_type: 'booking',
+          target_id: booking._id,
+          amount: webhookData.amount,
+          method: 'bank_transfer',
+          status: 'success',
+          transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
+        });
+        console.log("Payment record created:", paymentRecord._id);
+      } else {
+        console.warn("Webhook valid but Booking not found for orderCode:", webhookData.orderCode);
       }
+    } else {
+      console.log("Webhook data not success:", webhookData.description, webhookData.code);
     }
 
     return res.json({
@@ -93,11 +119,11 @@ exports.payosWebhook = async (req, res, next) => {
     });
   } catch (error) {
     console.error("Webhook Verification Error:", error.message);
-    // Luôn trả về 200 để PayOS chấp nhận URL này, dù xác thực thất bại (có thể là test webhook)
+    // Luôn trả về 200 để PayOS chấp nhận URL này, dù xác thực thất bại
     return res.status(200).json({
       success: true,
       error: 0,
-      message: "Webhook setup check passed",
+      message: "Webhook setup check passed or ignored error",
     });
   }
 };

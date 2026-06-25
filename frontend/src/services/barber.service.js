@@ -10,5 +10,16 @@ export const barberService = {
     const url = `/bookings/barber/history${queryString ? `?${queryString}` : ''}`;
     
     return await fetchWithAuth(url);
+  },
+  
+  getMeBarber: async () => {
+    return await fetchWithAuth('/barbers/me');
+  },
+
+  updateAvailability: async (isAvailable) => {
+    return await fetchWithAuth('/barbers/me/availability', {
+      method: 'PUT',
+      body: JSON.stringify({ isAvailable })
+    });
   }
 };

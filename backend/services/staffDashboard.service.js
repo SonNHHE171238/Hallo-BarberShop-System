@@ -85,7 +85,10 @@ const staffDashboardService = {
         customerPhone: b.bookingType === 'user' && b.customerId ? b.customerId.phone : (b.customerPhone || 'N/A'),
         serviceName: (b.services && b.services.length > 0) ? b.services.map(s => s.name).join(', ') : 'Unknown',
         barberName: b.barberId && b.barberId.userId ? b.barberId.userId.name : 'Auto',
-        status: b.status
+        status: b.status,
+        totalPrice: b.totalPrice || 0,
+        amountPaid: b.amountPaid || 0,
+        paymentStatus: b.paymentStatus || 'pending'
       }));
     };
 
@@ -104,7 +107,7 @@ const staffDashboardService = {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const barbers = await Barber.find({ isActive: true }).populate('userId', 'name');
+    const barbers = await Barber.find().populate('userId', 'name');
     const statuses = [];
 
     for (const barber of barbers) {
@@ -219,7 +222,10 @@ const staffDashboardService = {
         rawStatus: b.status,
         uiStatus,
         statusClass,
-        isCheckedIn: b.isCheckedIn || false
+        isCheckedIn: b.isCheckedIn || false,
+        totalPrice: b.totalPrice || 0,
+        amountPaid: b.amountPaid || 0,
+        paymentStatus: b.paymentStatus || 'pending'
       };
     });
 
@@ -228,7 +234,7 @@ const staffDashboardService = {
     const serving = formattedBookings.filter(b => b.uiStatus === 'Khách đã đến').length;
     
     // Chairs empty
-    const totalBarbers = await Barber.countDocuments({ isActive: true });
+    const totalBarbers = await Barber.countDocuments();
     // Assuming 1 chair per barber
     const emptyChairs = Math.max(0, totalBarbers - serving);
 

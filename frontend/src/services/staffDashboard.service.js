@@ -13,10 +13,19 @@ export const staffDashboardService = {
     return await fetchWithAuth('/staff/dashboard/barbers-status');
   },
   
-  updateStatus: async (bookingId, status) => {
+  updateStatus: async (bookingId, payload) => {
+    // Nếu payload là string, đóng gói lại thành object { status: payload } cho tương thích ngược
+    const data = typeof payload === 'string' ? { status: payload } : payload;
     return await fetchWithAuth(`/staff/dashboard/bookings/${bookingId}/status`, {
       method: 'PUT',
-      body: JSON.stringify({ status })
+      body: JSON.stringify(data)
+    });
+  },
+
+  createPaymentLink: async (payload) => {
+    return await fetchWithAuth('/payment/create-link', {
+      method: 'POST',
+      body: JSON.stringify(payload)
     });
   },
 
@@ -31,6 +40,10 @@ export const staffDashboardService = {
     const url = `/staff/appointments${queryString ? `?${queryString}` : ''}`;
     
     return await fetchWithAuth(url);
+  },
+
+  getBookingById: async (id) => {
+    return await fetchWithAuth(`/staff/bookings/${id}`);
   },
 
   searchCustomerByPhone: async (phone) => {

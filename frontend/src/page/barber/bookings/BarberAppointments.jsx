@@ -10,7 +10,10 @@ export default function BarberAppointments() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters State
-  const [dateFilter, setDateFilter] = useState(''); // Default to all history, or today
+  const [dateFilter, setDateFilter] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
 
   const fetchData = async (showLoading = false) => {
     if (showLoading) setIsLoading(true);

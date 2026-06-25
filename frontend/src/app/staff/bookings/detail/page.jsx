@@ -1,4 +1,4 @@
-import StaffAppointmentDetail from '@/page/staff/appointments/StaffAppointmentDetail';
+import StaffAppointmentDetail from '@/page/staff/bookings/StaffAppointmentDetail';
 
 export const metadata = {
   title: 'Chi tiết lịch hẹn | STAFF',

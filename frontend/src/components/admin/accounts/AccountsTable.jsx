@@ -123,7 +123,7 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
                                             <div>
                                                 <div className="font-semibold text-on-surface group-hover:text-primary transition-colors flex items-center gap-2">
                                                     {account.name}
-                                                    <span className="text-[11px] text-on-surface-variant/50 font-mono tracking-tighter">#{account._id.substring(account._id.length - 6).toUpperCase()}</span>
+                                                    <span className="text-[11px] text-on-surface-variant/50 font-mono tracking-tighter">#{account._id ? String(account._id).substring(String(account._id).length - 6).toUpperCase() : 'N/A'}</span>
                                                 </div>
                                             </div>
                                         </div>

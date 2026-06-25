@@ -2,14 +2,19 @@
 
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
+import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/services/api';
 
 const fetcher = (url) => fetchWithAuth(url);
 
-export default function AdminAppointmentsPage() {
+export default function AdminBookingsPage() {
+    const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [dateFilter, setDateFilter] = useState('');
+    const [dateFilter, setDateFilter] = useState(() => {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    });
     const [page, setPage] = useState(1);
     const limit = 10;
 
@@ -251,7 +256,11 @@ export default function AdminAppointmentsPage() {
                                         </td>
                                         <td className="px-3 py-2.5">
                                             <div className="flex items-center justify-center gap-1">
-                                                <button className="p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-surface-variant" title="Chi tiết">
+                                                <button 
+                                                    className="p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-surface-variant" 
+                                                    title="Chi tiết"
+                                                    onClick={() => router.push(`/admin/bookings/detail?id=${booking._id}`)}
+                                                >
                                                     <span className="material-symbols-outlined text-[16px]">visibility</span>
                                                 </button>
                                                 <button 

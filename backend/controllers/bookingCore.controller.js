@@ -352,8 +352,7 @@ exports.assignBarberToBooking = async (req, res) => {
             booking._id,
             null, // No session for standalone operation
           );
-          console.log(`Freed up slots for old barber ${oldBarberId}`);
-        } catch (unmaskError) {
+                  } catch (unmaskError) {
           console.error("Error freeing slots for old barber:", unmaskError);
           // Continue even if this fails
         }
@@ -369,27 +368,17 @@ exports.assignBarberToBooking = async (req, res) => {
         null, // No session for standalone operation
       );
 
-      console.log(
-        `Successfully marked ${scheduleResult.totalSlotsBooked} slots as booked for new barber ${newBarberId}:`,
-        scheduleResult.bookedSlots,
-      );
-
+      
       // Recalculate available slots for both barbers after successful assignment
       try {
         // Recalculate for old barber (if exists)
         if (oldBarberId) {
           await BarberSchedule.recalculateAvailableSlots(oldBarberId, dateStr);
-          console.log(
-            `Recalculated available slots for old barber ${oldBarberId} on ${dateStr}`,
-          );
-        }
+                  }
 
         // Recalculate for new barber
         await BarberSchedule.recalculateAvailableSlots(newBarberId, dateStr);
-        console.log(
-          `Recalculated available slots for new barber ${newBarberId} on ${dateStr}`,
-        );
-      } catch (recalcError) {
+              } catch (recalcError) {
         console.error(
           "Error recalculating available slots after assignment:",
           recalcError,
@@ -479,12 +468,7 @@ exports.updateBookingStatus = async (req, res) => {
         }
 
         // Log successful time window validation
-        console.log("Booking completion within time window:", {
-          bookingId: booking._id,
-          barberId: booking.barberId,
-          timeInfo: completionCheck.timeInfo,
-        });
-      }
+              }
 
       // Date-based validation for no-show status
       if (status === "no_show") {
@@ -560,14 +544,7 @@ exports.updateBookingStatus = async (req, res) => {
             null, // No session for this operation
           );
 
-        console.log(`Dynamic availability update: ${scheduleResult.message}`, {
-          bookingId: booking._id,
-          barberId: booking.barberId,
-          completionTime: completionTime.toISOString(),
-          releasedSlots: scheduleResult.releasedSlots,
-          keptBookedSlots: scheduleResult.keptBookedSlots,
-        });
-
+        
         // Store completion time in booking for future reference
         booking.completedAt = completionTime;
       } catch (scheduleError) {
@@ -594,11 +571,7 @@ exports.updateBookingStatus = async (req, res) => {
           null, // No session for this operation
         );
 
-        console.log(
-          `Successfully unmarked ${scheduleResult.totalSlotsUnbooked} slots for cancelled booking:`,
-          scheduleResult.unbookedSlots,
-        );
-      } catch (scheduleError) {
+              } catch (scheduleError) {
         console.error(
           "Error unmarking schedule slots for cancelled booking:",
           scheduleError,
@@ -682,11 +655,7 @@ exports.cancelBooking = async (req, res) => {
         null, // No session for standalone MongoDB
       );
 
-      console.log(
-        `Successfully unmarked ${scheduleResult.totalSlotsUnbooked} slots:`,
-        scheduleResult.unbookedSlots,
-      );
-    } catch (scheduleError) {
+          } catch (scheduleError) {
       console.error("Error unmarking schedule slots:", scheduleError);
       return res.status(500).json({
         message:
@@ -706,10 +675,7 @@ exports.cancelBooking = async (req, res) => {
       await Barber.findByIdAndUpdate(booking.barberId, {
         $inc: { totalBookings: -1 },
       });
-      console.log(
-        `✅ Decreased totalBookings for barber ${booking.barberId} due to cancellation`,
-      );
-    } catch (updateError) {
+          } catch (updateError) {
       console.error(
         "Error updating barber totalBookings on cancellation:",
         updateError,
@@ -736,10 +702,7 @@ exports.cancelBooking = async (req, res) => {
         isWithinPolicy: !isLateCancellation,
       });
 
-      console.log(
-        `No-show record created for booking ${booking._id}, customer ${booking.customerId}`,
-      );
-    } catch (noShowError) {
+          } catch (noShowError) {
       console.error("Error creating no-show record:", noShowError);
       // Don't fail the cancellation if no-show tracking fails
     }
@@ -1270,10 +1233,7 @@ exports.updateBookingDetails = async (req, res) => {
           bookingId,
         );
 
-        console.log(
-          `Updated schedule: unmarked old slot on ${oldDateStr}, marked ${newStartTime} on ${newDateStr}`,
-        );
-      } catch (scheduleError) {
+              } catch (scheduleError) {
         console.error("Error updating barber schedule:", scheduleError);
         // Don't fail the booking update if schedule update fails
       }
@@ -1301,11 +1261,7 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
       });
     }
 
-    console.log(
-      `\n🧪 [TEST BOOKING FLOW] Testing auto-assign for ${date} at ${timeSlot}`,
-    );
-    console.log("=".repeat(80));
-
+        
     // Step 1: Check current barber data
     const Booking = require("../models/booking.model");
     const Barber = require("../models/barber.model");
@@ -1318,31 +1274,23 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
       .select("userId totalBookings")
       .lean();
 
-    console.log("📊 [TEST] Current barber data:");
-    for (const barber of barbers) {
+        for (const barber of barbers) {
       const realTimeCount = await Booking.countDocuments({
         barberId: barber._id,
         status: { $in: ["pending", "confirmed", "completed"] },
       });
 
-      console.log(
-        `  - ${barber.userId?.name}: stored=${barber.totalBookings || 0}, realTime=${realTimeCount}`,
-      );
-    }
+          }
 
     // Step 2: Simulate auto-assign logic
-    console.log("\n🎯 [TEST] Simulating auto-assign...");
-
+    
     let finalBarberId = null;
     let autoAssignBarber = true; // Force auto-assign
 
     // Handle auto-assignment logic (same as createBookingSinglePage)
     if (autoAssignBarber) {
       try {
-        console.log(
-          `🎯 [TEST] Auto-assignment requested for ${date} at ${timeSlot}`,
-        );
-
+        
         // Use the NEW auto-assignment logic (same as autoAssignBarberForSlot)
         const barberController = require("./barber.controller");
 
@@ -1366,13 +1314,8 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
         };
 
         // Call the auto-assign function
-        console.log(
-          `🔍 [TEST] Calling autoAssignBarberForSlot with:`,
-          mockReq.body,
-        );
-        await barberController.autoAssignBarberForSlot(mockReq, mockRes);
-        console.log(`🔍 [TEST] Auto-assign result:`, autoAssignResult);
-
+                await barberController.autoAssignBarberForSlot(mockReq, mockRes);
+        
         if (
           autoAssignResult &&
           autoAssignResult.success &&
@@ -1380,14 +1323,7 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
         ) {
           finalBarberId = autoAssignResult.assignedBarber._id;
 
-          console.log(
-            `✅ [TEST] Auto-assigned barber: ${autoAssignResult.assignedBarber.name} (${autoAssignResult.assignedBarber.totalBookings} total bookings)`,
-          );
-          console.log(
-            `📊 [TEST] Assignment reason: ${autoAssignResult.assignmentDetails.reason}`,
-          );
-          console.log(`🎯 [TEST] Final barber ID: ${finalBarberId}`);
-        } else {
+                                      } else {
           console.error("❌ [TEST] Auto-assignment failed:", autoAssignResult);
         }
       } catch (autoAssignError) {
@@ -1395,9 +1331,7 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
       }
     }
 
-    console.log("\n✅ [TEST] Booking flow test completed");
-    console.log("=".repeat(80));
-
+        
     res.json({
       success: true,
       message: "Test completed - check console logs for detailed analysis",
@@ -1481,10 +1415,7 @@ exports.createWalkInBooking = async (req, res) => {
 
     if (shouldAutoAssign) {
       try {
-        console.log(
-          `🎯 [WALK-IN BOOKING] Auto-assignment triggered for ${date} at ${timeSlot}`,
-        );
-        const barberController = require("./barber.controller");
+                const barberController = require("./barber.controller");
 
         // Create a mock request/response to call the auto-assign function
         const mockReq = {
@@ -1633,8 +1564,7 @@ exports.createWalkInBooking = async (req, res) => {
       await Barber.findByIdAndUpdate(finalBarberId, {
         $inc: { totalBookings: 1 },
       });
-      console.log(`✅ Updated totalBookings for barber ${finalBarberId}`);
-    } catch (updateError) {
+          } catch (updateError) {
       console.error("Error updating barber totalBookings:", updateError);
     }
 
@@ -1650,8 +1580,7 @@ exports.createWalkInBooking = async (req, res) => {
         booking._id,
         null,
       );
-      console.log("Successfully marked slots booked:", scheduleResult);
-    } catch (scheduleError) {
+          } catch (scheduleError) {
       console.error("Error marking schedule slots as booked:", scheduleError);
       // Clean up booking if schedule update fails
       await Booking.findByIdAndDelete(booking._id);

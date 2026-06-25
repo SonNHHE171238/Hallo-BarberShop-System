@@ -11,7 +11,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { name: 'Tổng quan', href: '/admin/dashboard', icon: 'dashboard' },
     { name: 'Thu ngân (POS)', href: '/admin/pos', icon: 'point_of_sale' },
     { name: 'Tài khoản', href: '/admin/accounts', icon: 'manage_accounts' },
-    { name: 'Lịch hẹn', href: '/admin/appointments', icon: 'calendar_month' },
+    { name: 'Lịch hẹn', href: '/admin/bookings', icon: 'calendar_month' },
     { name: 'Dịch vụ', href: '/admin/services', icon: 'cut' },
     { name: 'Kho hàng', href: '/admin/inventory', icon: 'inventory_2' },
     { name: 'Nhân viên', href: '/admin/employee', icon: 'group' },

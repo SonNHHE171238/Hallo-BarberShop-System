@@ -17,7 +17,7 @@ export default function AdminRecentAppointments() {
     <section className="bg-surface-container-low border border-outline-gold rounded flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-5 md:px-8 py-6 bg-surface-container-lowest border-b border-outline-gold/30">
         <h2 className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wider">Lịch Hẹn Gần Đây</h2>
-        <Link href="/admin/appointments" className="font-label-md text-[11px] text-primary hover:text-on-surface transition-colors uppercase tracking-[0.2em] flex items-center gap-2">
+        <Link href="/admin/bookings" className="font-label-md text-[11px] text-primary hover:text-on-surface transition-colors uppercase tracking-[0.2em] flex items-center gap-2">
           Xem tất cả lịch sử
           <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
         </Link>

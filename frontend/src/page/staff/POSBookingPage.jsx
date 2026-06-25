@@ -16,7 +16,7 @@ export default function POSBookingPage() {
   // State: Services & Staff (Dynamic)
   const [servicesList, setServicesList] = useState([]);
   const [staffList, setStaffList] = useState([]);
-  const [selectedService, setSelectedService] = useState(null); // SINGLE selection
+  const [selectedServices, setSelectedServices] = useState([]); // MULTIPLE selection
   const [selectedStaff, setSelectedStaff] = useState(null);
   
   // State: Time & Modal
@@ -87,12 +87,19 @@ export default function POSBookingPage() {
   };
 
   const selectService = (service) => {
-    setSelectedService(service);
+    setSelectedServices(prev => {
+      const isSelected = prev.some(s => s._id === service._id);
+      if (isSelected) {
+        return prev.filter(s => s._id !== service._id);
+      } else {
+        return [...prev, service];
+      }
+    });
   };
 
   const openTimeModal = () => {
-    if (!selectedService || !selectedStaff) {
-      toast.error("Vui lòng chọn 1 dịch vụ và 1 Barber trước khi tiếp tục.");
+    if (selectedServices.length === 0 || !selectedStaff) {
+      toast.error("Vui lòng chọn ít nhất 1 dịch vụ và 1 Barber trước khi tiếp tục.");
       return;
     }
     setShowTimeModal(true);
@@ -107,14 +114,14 @@ export default function POSBookingPage() {
     setIsSubmitting(true);
     try {
       const payload = {
-        serviceId: selectedService._id || selectedService.id,
+        services: selectedServices.map(s => s._id || s.id),
         barberId: selectedStaff._id || selectedStaff.id,
         bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
         date: selectedDate,
         timeSlot: selectedTime,
         bookingType: customer && customer.role === 'customer' ? "user" : "guest",
         customerId: customer && customer.role === 'customer' ? customer._id : undefined,
-        durationMinutes: selectedService.durationMinutes || selectedService.duration || 30,
+        durationMinutes: selectedServices.reduce((acc, curr) => acc + (curr.durationMinutes || curr.duration || 30), 0),
         customerName: customer ? customer.name : "",
         customerPhone: customer ? customer.phone : "",
       };
@@ -127,7 +134,7 @@ export default function POSBookingPage() {
       // Reset form
       setPhoneInput("");
       setCustomer(null);
-      setSelectedService(null);
+      setSelectedServices([]);
       setSelectedStaff(null);
       setSelectedDate("");
       setSelectedTime("");
@@ -144,7 +151,7 @@ export default function POSBookingPage() {
   };
 
   // Calculations
-  const subTotal = selectedService ? (selectedService.price || 0) : 0;
+  const subTotal = selectedServices.reduce((acc, curr) => acc + (curr.price || 0), 0);
   const vat = Math.round(subTotal * 0.08);
   const total = subTotal + vat;
 
@@ -294,7 +301,7 @@ export default function POSBookingPage() {
           {/* Flexible Service Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
             {servicesList.map(service => {
-              const isSelected = selectedService && (selectedService._id === service._id);
+              const isSelected = selectedServices.some(s => s._id === service._id);
               return (
                 <div
                   key={service._id || service.id}
@@ -397,26 +404,37 @@ export default function POSBookingPage() {
           </h2>
 
           {/* Summary List */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-8 mb-8 pr-2">
-            {!selectedService ? (
+          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-8 pr-2">
+            {selectedServices.length === 0 ? (
               <p className="text-on-surface-variant text-sm text-center mt-10">Chưa chọn dịch vụ nào</p>
             ) : (
-              <div className="flex justify-between items-start animate-fade-in">
-                <div>
-                  <h4 className="font-body-md font-semibold text-on-surface text-lg">{selectedService.name}</h4>
-                  <p className="font-label-md text-on-surface-variant text-xs mt-1">
-                    Barber: <span className="text-primary/80">{selectedStaff ? (selectedStaff.userId?.name || "Unknown Barber") : 'Chưa chỉ định'}</span>
-                  </p>
+              selectedServices.map(service => (
+                <div key={service._id} className="flex justify-between items-start animate-fade-in bg-surface-container-low p-4 rounded-xl border border-outline-variant/30">
+                  <div>
+                    <h4 className="font-body-md font-semibold text-on-surface text-base">{service.name}</h4>
+                    <p className="font-label-md text-on-surface-variant text-xs mt-1">
+                      Thời gian: {service.durationMinutes || service.duration || 30} phút
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-body-md font-bold text-on-surface block">{service.price ? service.price.toLocaleString('vi-VN') : 0}đ</span>
+                    <button 
+                      onClick={() => selectService(service)}
+                      className="text-[10px] text-error hover:underline uppercase tracking-tighter mt-1"
+                    >
+                      Xóa
+                    </button>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-body-md font-bold text-on-surface block">{selectedService.price ? selectedService.price.toLocaleString('vi-VN') : 0}đ</span>
-                  <button 
-                    onClick={() => selectService(null)}
-                    className="text-[10px] text-error hover:underline uppercase tracking-tighter mt-1"
-                  >
-                    Xóa
-                  </button>
-                </div>
+              ))
+            )}
+            
+            {/* Display Barber in Summary */}
+            {selectedServices.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-outline-variant/20">
+                <p className="font-label-md text-on-surface-variant text-sm">
+                  Barber phụ trách: <span className="text-primary/80 font-bold ml-1">{selectedStaff ? (selectedStaff.userId?.name || "Unknown Barber") : 'Chưa chỉ định'}</span>
+                </p>
               </div>
             )}
           </div>
@@ -473,7 +491,7 @@ export default function POSBookingPage() {
             <div className="mb-8">
               <DateTimeSelection 
                 selectedBarber={selectedStaff}
-                selectedService={selectedService}
+                selectedServices={selectedServices}
                 selectedDate={selectedDate}
                 setSelectedDate={setSelectedDate}
                 selectedTime={selectedTime}

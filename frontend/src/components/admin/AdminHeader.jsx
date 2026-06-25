@@ -9,7 +9,7 @@ export default function AdminHeader({ onMenuClick }) {
 
   const getPageTitle = () => {
     if (pathname.includes('/admin/employee')) return 'Quản Lý Nhân Viên';
-    if (pathname.includes('/admin/appointments')) return 'Lịch Hẹn';
+    if (pathname.includes('/admin/bookings')) return 'Lịch Hẹn';
     if (pathname.includes('/admin/services')) return 'Dịch Vụ';
     if (pathname.includes('/admin/inventory')) return 'Kho Hàng';
     if (pathname.includes('/admin/analytics')) return 'Phân Tích';

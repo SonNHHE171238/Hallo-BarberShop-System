@@ -33,7 +33,7 @@ export default function BarberHeader() {
         {/* Navigation Links (Desktop) */}
         <nav className="hidden md:flex gap-8 items-center">
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/dashboard">Bảng Điều Khiển</Link>
-          <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/appointments">Lịch Hẹn</Link>
+          <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/bookings">Lịch Hẹn</Link>
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/customers">Khách Hàng</Link>
         </nav>
 
@@ -99,7 +99,7 @@ export default function BarberHeader() {
       >
         <div className="flex flex-col px-4 space-y-4">
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/dashboard">Bảng Điều Khiển</Link>
-          <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/appointments">Lịch Hẹn</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/bookings">Lịch Hẹn</Link>
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/customers">Khách Hàng</Link>
         </div>
       </div>

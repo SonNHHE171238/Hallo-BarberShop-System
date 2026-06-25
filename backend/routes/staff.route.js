@@ -12,6 +12,7 @@ router.get('/dashboard/metrics', staffController.getDashboardMetrics);
 router.get('/dashboard/upcoming-bookings', staffController.getUpcomingBookings);
 router.get('/dashboard/barbers-status', staffController.getBarbersStatus);
 router.put('/dashboard/bookings/:id/status', staffController.updateStatus);
+router.get('/bookings/:id', staffController.getBookingById);
 router.get('/appointments', staffController.getAppointments);
 router.get('/customers/search', staffController.searchCustomerByPhone);
 

@@ -91,28 +91,17 @@ barberAbsenceSchema.pre('save', function(next) {
 
 // Static method to check if barber is absent on a specific date
 barberAbsenceSchema.statics.isBarberAbsent = async function(barberId, date) {
-    console.log('🔍 isBarberAbsent called:', {
-        barberId,
-        date: date.toISOString(),
-        dateLocal: date.toLocaleDateString()
-    });
-
+    
     // Convert input date to YYYY-MM-DD string for consistent comparison
     const checkDateStr = date.toISOString().split('T')[0];
-    console.log('📅 Checking date string:', checkDateStr);
-
+    
     // Find absences that cover this date (dates are now stored as strings)
     const absences = await this.find({
         barberId,
         isApproved: true
     });
 
-    console.log('📋 All approved absences for barber:', absences.map(a => ({
-        _id: a._id,
-        startDate: a.startDate, // Now always string
-        endDate: a.endDate       // Now always string
-    })));
-
+    
     // Check if any absence covers the check date (simple string comparison)
     const matchingAbsence = absences.find(absence => {
         const startDateStr = absence.startDate; // Already string
@@ -120,51 +109,29 @@ barberAbsenceSchema.statics.isBarberAbsent = async function(barberId, date) {
 
         const isInRange = checkDateStr >= startDateStr && checkDateStr <= endDateStr;
 
-        console.log(`📅 Checking absence ${absence._id}:`, {
-            startDateStr,
-            endDateStr,
-            checkDateStr,
-            isInRange
-        });
-
+        
         return isInRange;
     });
 
-    console.log('📋 Matching absence:', matchingAbsence ? {
-        _id: matchingAbsence._id,
-        startDate: matchingAbsence.startDate,
-        endDate: matchingAbsence.endDate
-    } : 'None');
-
+    
     return !!matchingAbsence;
 };
 
 // Static method to get all absences for a barber in a date range
 barberAbsenceSchema.statics.getBarberAbsences = async function(barberId, startDate, endDate) {
-    console.log('📅 getBarberAbsences called:', {
-        barberId,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-    });
-
+    
     // Convert Date objects to YYYY-MM-DD strings for comparison
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
 
-    console.log('📅 Converted to strings:', { startDateStr, endDateStr });
-
+    
     // Since absence dates are now stored as strings, use string comparison
     const absences = await this.find({
         barberId,
         isApproved: true
     }).sort({ startDate: 1 });
 
-    console.log('📋 All approved absences:', absences.map(a => ({
-        _id: a._id,
-        startDate: a.startDate,
-        endDate: a.endDate
-    })));
-
+    
     // Filter absences that overlap with the date range
     const filteredAbsences = absences.filter(absence => {
         // Check if absence overlaps with the requested date range
@@ -180,19 +147,11 @@ barberAbsenceSchema.statics.getBarberAbsences = async function(barberId, startDa
             (absenceStart <= startDateStr && absenceEnd >= endDateStr)
         );
 
-        console.log(`📅 Checking absence ${absence._id}:`, {
-            absenceStart,
-            absenceEnd,
-            rangeStart: startDateStr,
-            rangeEnd: endDateStr,
-            overlaps
-        });
-
+        
         return overlaps;
     });
 
-    console.log('📋 Filtered absences:', filteredAbsences.length);
-    return filteredAbsences;
+        return filteredAbsences;
 };
 
 // Method to find affected bookings when creating absence
@@ -203,13 +162,7 @@ barberAbsenceSchema.methods.findAffectedBookings = async function() {
     const startDate = new Date(this.startDate + 'T00:00:00');
     const endDate = new Date(this.endDate + 'T23:59:59');
 
-    console.log('📅 Finding affected bookings:', {
-        startDateStr: this.startDate,
-        endDateStr: this.endDate,
-        startDateObj: startDate.toISOString(),
-        endDateObj: endDate.toISOString()
-    });
-
+    
     return await Booking.find({
         barberId: this.barberId,
         bookingDate: {
@@ -224,14 +177,7 @@ barberAbsenceSchema.methods.findAffectedBookings = async function() {
 barberAbsenceSchema.methods.updateBarberSchedules = async function() {
     const BarberSchedule = require('./barber-schedule.model');
 
-    console.log('🔧 updateBarberSchedules called for absence:', {
-        absenceId: this._id,
-        startDate: this.startDate,
-        endDate: this.endDate,
-        startDateType: typeof this.startDate,
-        endDateType: typeof this.endDate
-    });
-
+    
     // Get all dates between startDate and endDate
     const dates = [];
 
@@ -239,39 +185,25 @@ barberAbsenceSchema.methods.updateBarberSchedules = async function() {
     const startDateStr = this.startDate;
     const endDateStr = this.endDate;
 
-    console.log('📅 Working with string dates:', {
-        startDateStr,
-        endDateStr,
-        startDateType: typeof this.startDate,
-        endDateType: typeof this.endDate
-    });
-
+    
     // Parse as local dates to avoid timezone issues
     const currentDate = new Date(startDateStr + 'T00:00:00');
     const endDate = new Date(endDateStr + 'T00:00:00');
 
-    console.log('📅 Date objects for iteration:', {
-        currentDate: currentDate.toISOString(),
-        endDate: endDate.toISOString()
-    });
-
+    
     while (currentDate <= endDate) {
         const dateString = currentDate.toISOString().split('T')[0];
         dates.push(dateString);
-        console.log(`📅 Adding date to absence: ${dateString}`);
-        currentDate.setDate(currentDate.getDate() + 1);
+                currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    console.log('📅 Final dates array:', dates);
-
+    
     // Update or create schedule records for each date
     const updatePromises = dates.map(async (date) => {
-        console.log(`📅 Processing schedule for date: ${date}`);
-
+        
         // Validate that date is within absence range
         if (date < this.startDate || date > this.endDate) {
-            console.log(`⚠️ Skipping date ${date} - outside absence range ${this.startDate} to ${this.endDate}`);
-            return;
+                        return;
         }
 
         let schedule = await BarberSchedule.findOne({
@@ -281,8 +213,7 @@ barberAbsenceSchema.methods.updateBarberSchedules = async function() {
 
         if (!schedule) {
             // Create new schedule if it doesn't exist
-            console.log(`📅 Creating new schedule for ${date}`);
-            schedule = new BarberSchedule({
+                        schedule = new BarberSchedule({
                 barberId: this.barberId,
                 date,
                 workingHours: { start: "09:00", end: "18:00" },
@@ -293,8 +224,7 @@ barberAbsenceSchema.methods.updateBarberSchedules = async function() {
             schedule.generateDefaultSlots();
         } else {
             // Update existing schedule
-            console.log(`📅 Updating existing schedule for ${date}`);
-            schedule.isOffDay = true;
+                        schedule.isOffDay = true;
             schedule.offReason = 'absence';
             schedule.absenceId = this._id;
         }
