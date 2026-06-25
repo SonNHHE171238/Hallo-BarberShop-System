@@ -157,21 +157,21 @@ export default function AdminAppointmentsPage() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-outline-gold bg-surface-container-high/80">
-                                <th className="p-4 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Mã đơn</th>
-                                <th className="p-4 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Khách hàng</th>
-                                <th className="p-4 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Dịch vụ</th>
-                                <th className="p-4 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Barber</th>
-                                <th className="p-4 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Thời gian</th>
-                                <th className="p-4 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Trạng thái</th>
-                                <th className="p-4 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider text-right">Thành tiền</th>
-                                <th className="p-4 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider text-center">Thao tác</th>
+                            <tr className="border-b border-outline-gold bg-surface-container-high/80 text-xs">
+                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Mã đơn</th>
+                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Khách hàng</th>
+                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Dịch vụ</th>
+                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Barber</th>
+                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Thời gian</th>
+                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Trạng thái</th>
+                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider text-right">Thành tiền</th>
+                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider text-center">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="text-body-md font-body-md text-on-surface divide-y divide-outline-gold/30">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="8" className="p-8 text-center text-on-surface-variant">
+                                    <td colSpan="8" className="px-3 py-6 text-center text-on-surface-variant">
                                         <div className="flex justify-center items-center gap-3">
                                             <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
                                             Đang tải dữ liệu...
@@ -180,71 +180,79 @@ export default function AdminAppointmentsPage() {
                                 </tr>
                             ) : error ? (
                                 <tr>
-                                    <td colSpan="8" className="p-8 text-center text-error">
+                                    <td colSpan="8" className="px-3 py-6 text-center text-error">
                                         Lỗi tải dữ liệu. Vui lòng thử lại sau.
                                     </td>
                                 </tr>
                             ) : currentBookings.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="p-8 text-center text-on-surface-variant">
+                                    <td colSpan="8" className="px-3 py-6 text-center text-on-surface-variant">
                                         Không tìm thấy lịch hẹn nào phù hợp.
                                     </td>
                                 </tr>
                             ) : (
                                 currentBookings.map((booking) => (
                                     <tr key={booking._id} className="hover:bg-surface-variant/30 transition-colors">
-                                        <td className="p-4 text-primary font-label-md">
+                                        <td className="px-3 py-2.5 text-primary font-label-md text-[13px]">
                                             #{booking._id ? booking._id.slice(-6).toUpperCase() : 'UNKNOWN'}
                                         </td>
-                                        <td className="p-4">
-                                            <div className="font-medium text-on-surface">{booking.customerName || booking.customerId?.name || 'Khách Vãng Lai'}</div>
-                                            <div className="text-on-surface-variant text-sm">{booking.customerPhone || booking.customerId?.phone || 'N/A'}</div>
+                                        <td className="px-3 py-2.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-on-surface text-[14px]">{booking.customerName || booking.customerId?.name || 'Khách Vãng Lai'}</span>
+                                                <span className="text-on-surface-variant text-[12px] whitespace-nowrap">{(booking.customerPhone || booking.customerId?.phone) ? `- ${booking.customerPhone || booking.customerId?.phone}` : ''}</span>
+                                            </div>
                                         </td>
-                                        <td className="p-4">
-                                            <div className="font-medium text-on-surface">
+                                        <td className="px-3 py-2.5">
+                                            <div className="font-medium text-on-surface text-[14px]">
                                                 {booking.services && booking.services.length > 0 
                                                     ? booking.services[0].name || 'Dịch vụ đã xóa'
                                                     : (booking.serviceId?.name || 'Chưa chọn dịch vụ')}
                                             </div>
-                                            <div className="text-on-surface-variant text-sm">
-                                                {booking.services && booking.services.length > 1 ? `+ ${booking.services.length - 1} dịch vụ khác` : ''}
-                                            </div>
+                                            {booking.services && booking.services.length > 1 && (
+                                                <div className="text-on-surface-variant text-[11px]">
+                                                    + {booking.services.length - 1} dịch vụ khác
+                                                </div>
+                                            )}
                                         </td>
-                                        <td className="p-4">
+                                        <td className="px-3 py-2.5">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center overflow-hidden border border-outline-variant/30">
+                                                <div className="w-5 h-5 rounded-full bg-surface-container flex items-center justify-center overflow-hidden border border-outline-variant/30">
                                                     {booking.barberId?.profileImageUrl ? (
                                                         <img src={booking.barberId.profileImageUrl} alt="Barber" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <span className="text-[10px] font-bold text-primary">
+                                                        <span className="text-[9px] font-bold text-primary">
                                                             {(booking.barberId?.userId?.name || booking.barberId?.name || 'V').charAt(0).toUpperCase()}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <span className="text-on-surface">{booking.barberId?.userId?.name || booking.barberId?.name || 'Thợ bất kỳ'}</span>
+                                                <span className="text-on-surface text-[14px]">{booking.barberId?.userId?.name || booking.barberId?.name || 'Thợ bất kỳ'}</span>
                                             </div>
                                         </td>
-                                        <td className="p-4">
-                                            <div className="font-medium text-on-surface">
-                                                {booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                        <td className="px-3 py-2.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-on-surface text-[14px]">
+                                                    {booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                                </span>
+                                                <span className="text-on-surface-variant text-[12px] whitespace-nowrap">
+                                                    {formatDate(booking.bookingDate)}
+                                                </span>
                                             </div>
-                                            <div className="text-on-surface-variant text-sm">{formatDate(booking.bookingDate)}</div>
                                         </td>
-                                        <td className="p-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${getStatusStyles(booking.status)}`}>
+                                        <td className="px-3 py-2.5">
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyles(booking.status)}`}>
                                                 {booking.status === 'pending' ? 'Đang chờ' :
                                                  booking.status === 'confirmed' ? 'Đã xác nhận' :
                                                  booking.status === 'completed' ? 'Hoàn thành' :
                                                  booking.status === 'cancelled' ? 'Đã hủy' : booking.status}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-right font-medium text-primary">
+                                        <td className="px-3 py-2.5 text-right font-medium text-primary text-[14px]">
                                             {formatCurrency(booking.services && booking.services.length > 0 ? booking.services.reduce((sum, s) => sum + (s.price || 0), 0) : (booking.serviceId?.price || booking.totalPrice || 0))}
                                         </td>
-                                        <td className="p-4">
-                                            <div className="flex items-center justify-center gap-2">
+                                        <td className="px-3 py-2.5">
+                                            <div className="flex items-center justify-center gap-1">
                                                 <button className="p-1.5 text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-surface-variant" title="Chi tiết">
-                                                    <span className="material-symbols-outlined text-[18px]">visibility</span>
+                                                    <span className="material-symbols-outlined text-[16px]">visibility</span>
                                                 </button>
                                                 <button 
                                                     className={`p-1.5 transition-colors rounded ${booking.status === 'completed' || booking.status === 'cancelled' ? 'text-outline-variant cursor-not-allowed' : 'text-on-surface-variant hover:text-primary hover:bg-surface-variant'}`}

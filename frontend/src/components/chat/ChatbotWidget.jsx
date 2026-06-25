@@ -10,6 +10,8 @@ export default function ChatbotWidget() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isTestStabilityLoading, setIsTestStabilityLoading] = useState(false);
+  const [testStabilityResult, setTestStabilityResult] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuData, setMenuData] = useState([]);
   const [selectedServices, setSelectedServices] = useState([]);
@@ -121,6 +123,41 @@ export default function ChatbotWidget() {
         });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTestStability = async () => {
+    if (!selectedImage) return;
+    setIsTestStabilityLoading(true);
+    setTestStabilityResult(null);
+    try {
+      // Create FormData from Base64
+      const byteCharacters = atob(selectedImage.base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: selectedImage.mimeType });
+      
+      const formData = new FormData();
+      formData.append('image', blob, 'test.jpg');
+      
+      const res = await fetch("http://localhost:5000/api/chatbot/test-stability-preview", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.data.previewImageBase64) {
+        setTestStabilityResult(data.data.previewImageBase64);
+        toast.success("Test Stability thành công!");
+      } else {
+        toast.error(data.message || "Lỗi khi gọi Stability API");
+      }
+    } catch (error) {
+      toast.error("Lỗi kết nối API Test Stability");
+    } finally {
+      setIsTestStabilityLoading(false);
     }
   };
 
@@ -314,13 +351,26 @@ export default function ChatbotWidget() {
               <div className="mb-2 relative inline-block">
                 <img src={selectedImage.preview} alt="Preview" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" />
                 <button
-                  onClick={() => setSelectedImage(null)}
+                  onClick={() => { setSelectedImage(null); setTestStabilityResult(null); }}
                   className="absolute -top-2 -right-2 bg-error text-white rounded-full p-0.5 hover:bg-error/90"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </button>
+                <div className="mt-2 flex flex-col gap-2">
+                  <button 
+                    type="button" 
+                    onClick={handleTestStability} 
+                    disabled={isTestStabilityLoading}
+                    className="text-[10px] bg-secondary text-white px-2 py-1 rounded shadow hover:bg-secondary/90 disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {isTestStabilityLoading ? "Đang xử lý..." : "🧪 Test Stability"}
+                  </button>
+                  {testStabilityResult && (
+                    <img src={testStabilityResult} alt="Stability Result" className="h-32 w-auto object-contain rounded-lg border-2 border-primary shadow-lg" />
+                  )}
+                </div>
               </div>
             )}
             <form onSubmit={sendMessage} className="flex gap-2 relative items-center">

@@ -26,15 +26,15 @@ export default function AdminRecentAppointments() {
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr className="bg-surface-container-high/30">
-              <th className="py-4 px-8 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30">Khách Hàng</th>
-              <th className="py-4 px-8 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30">Dịch Vụ</th>
-              <th className="py-4 px-8 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30">Thợ Cắt</th>
-              <th className="py-4 px-8 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30">Thời Gian</th>
-              <th className="py-4 px-8 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30 text-right">Thành Tiền</th>
-              <th className="py-4 px-8 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30 text-center">Trạng Thái</th>
+              <th className="py-3 px-4 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30">Khách Hàng</th>
+              <th className="py-3 px-4 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30">Dịch Vụ</th>
+              <th className="py-3 px-4 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30">Thợ Cắt</th>
+              <th className="py-3 px-4 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30">Thời Gian</th>
+              <th className="py-3 px-4 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30 text-right">Thành Tiền</th>
+              <th className="py-3 px-4 font-label-md text-[11px] text-outline uppercase tracking-[0.15em] border-b border-outline-gold/30 text-center">Trạng Thái</th>
             </tr>
           </thead>
-          <tbody className="text-on-surface font-body-md text-[14px]">
+          <tbody className="text-on-surface font-body-md text-[13px]">
             {isLoading ? (
               <tr>
                 <td colSpan="6" className="py-8 text-center text-on-surface-variant animate-pulse">Đang tải dữ liệu...</td>
@@ -52,16 +52,18 @@ export default function AdminRecentAppointments() {
 
                 return (
                   <tr key={booking._id} className="border-b border-outline-gold/10 hover:bg-surface-container-high/50 transition-colors">
-                    <td className="py-5 px-8 font-medium tracking-wide">{customerName}</td>
-                    <td className="py-5 px-8 text-on-surface-variant italic">{serviceName}</td>
-                    <td className="py-5 px-8 text-on-surface-variant">{barberName}</td>
-                    <td className="py-5 px-8 text-primary font-label-md">
-                      {booking.timeSlot || (booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--')} <br />
-                      <span className="text-[10px] text-outline">{booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString('vi-VN') : 'N/A'}</span>
+                    <td className="py-3 px-4 font-medium tracking-wide">{customerName}</td>
+                    <td className="py-3 px-4 text-on-surface-variant italic">{serviceName}</td>
+                    <td className="py-3 px-4 text-on-surface-variant">{barberName}</td>
+                    <td className="py-3 px-4 text-primary font-label-md flex items-center gap-2">
+                      <span>{booking.timeSlot || (booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--')}</span>
+                      <span className="text-[11px] text-on-surface-variant font-normal">{booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString('vi-VN') : 'N/A'}</span>
                     </td>
-                    <td className="py-5 px-8 text-right font-semibold text-primary">{formatCurrency(price)}</td>
-                    <td className="py-5 px-8 text-center">
-                      <StatusBadge status={booking.status} />
+                    <td className="py-3 px-4 text-right font-semibold text-primary">{formatCurrency(price)}</td>
+                    <td className="py-3 px-4 text-center">
+                      <div className="scale-90 origin-center">
+                        <StatusBadge status={booking.status} />
+                      </div>
                     </td>
                   </tr>
                 );
