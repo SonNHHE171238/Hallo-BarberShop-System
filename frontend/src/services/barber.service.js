@@ -1,16 +1,14 @@
 import { fetchWithAuth } from './api';
 
 export const barberService = {
-  getMeBarber: async () => {
-    return fetchWithAuth('/barbers/me', {
-      method: 'GET',
-    });
-  },
-
-  updateAvailability: async (isAvailable) => {
-    return fetchWithAuth('/barbers/me/availability', {
-      method: 'PUT',
-      body: JSON.stringify({ isAvailable }),
-    });
+  getHistoryBookings: async (params) => {
+    const searchParams = new URLSearchParams();
+    if (params?.date) searchParams.append('date', params.date);
+    if (params?.page) searchParams.append('page', params.page);
+    
+    const queryString = searchParams.toString();
+    const url = `/bookings/barber/history${queryString ? `?${queryString}` : ''}`;
+    
+    return await fetchWithAuth(url);
   }
 };

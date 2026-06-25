@@ -1,7 +1,10 @@
 import React from "react";
 
-export default function BookingSummarySidebar({ selectedServices = [], selectedBarber, selectedDate, selectedTime, onConfirm, isLoading }) {
+export default function BookingSummarySidebar({ selectedServices = [], selectedBarber, selectedDate, selectedTime, paymentMethod, setPaymentMethod, onConfirm, isLoading, isGuest }) {
   const isReady = selectedServices.length > 0 && selectedBarber && selectedDate && selectedTime;
+  
+  const totalPrice = selectedServices.reduce((total, s) => total + (s.price || 0), 0);
+  const depositAmount = isGuest ? Math.round(totalPrice / 2) : totalPrice;
 
   return (
     <aside className="lg:col-span-4">
@@ -55,13 +58,82 @@ export default function BookingSummarySidebar({ selectedServices = [], selectedB
               </div>
             </div>
 
-            <div className="pt-6 border-t border-outline-variant">
-              <div className="flex justify-between items-end mb-8">
-                <span className="text-headline-sm font-bold text-on-surface">Tổng cộng</span>
-                <span className="text-display-lg text-[32px] font-bold text-primary leading-none">
-                  {selectedServices.length > 0 ? `${(selectedServices.reduce((total, s) => total + (s.price || 0), 0) / 1000)}k` : '0đ'}
-                </span>
+            {/* Payment Method Selector */}
+            <div className={`flex items-start space-x-4 pt-4 border-t border-outline-variant/30 ${!isReady && 'opacity-50'}`}>
+              <span className="material-symbols-outlined text-primary mt-1">payments</span>
+              <div className="w-full">
+                <p className="text-label-md text-on-surface-variant font-bold mb-3">PHƯƠNG THỨC THANH TOÁN</p>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center w-5 h-5">
+                      <input 
+                        type="radio" 
+                        name="paymentMethod" 
+                        value="cash"
+                        checked={paymentMethod === 'cash'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        disabled={!isReady}
+                        className="peer appearance-none w-5 h-5 rounded-full border border-outline-variant checked:border-primary transition-colors cursor-pointer"
+                      />
+                      <div className="absolute w-2.5 h-2.5 rounded-full bg-primary opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
+                    </div>
+                    <span className="text-body-md text-on-surface group-hover:text-primary transition-colors">Thanh toán tại quán (Tiền mặt)</span>
+                  </label>
+                  
+                  {isGuest && paymentMethod === 'cash' && (
+                    <div className="mt-2 p-3 bg-surface-variant/50 border border-outline-variant rounded-lg">
+                      <p className="text-body-sm text-on-surface-variant flex items-start">
+                        <span className="material-symbols-outlined text-[16px] text-error mr-2 mt-0.5">warning</span>
+                        <span>Nếu không cọc trước, hệ thống sẽ không giữ cứng chỗ. Nếu bạn đến muộn, chỗ có thể nhường cho khách khác và bạn sẽ bị đánh dấu Không tới (No-show).</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  <label className="flex items-center space-x-3 cursor-pointer group mt-2">
+                    <div className="relative flex items-center justify-center w-5 h-5">
+                      <input 
+                        type="radio" 
+                        name="paymentMethod" 
+                        value="payos"
+                        checked={paymentMethod === 'payos'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        disabled={!isReady}
+                        className="peer appearance-none w-5 h-5 rounded-full border border-outline-variant checked:border-primary transition-colors cursor-pointer"
+                      />
+                      <div className="absolute w-2.5 h-2.5 rounded-full bg-primary opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
+                    </div>
+                    <span className="text-body-md text-on-surface group-hover:text-primary transition-colors">
+                      Chuyển khoản QR ({isGuest ? 'Cọc 50% giữ chỗ' : 'Thanh toán 100%'})
+                    </span>
+                  </label>
+                </div>
               </div>
+            </div>
+
+            <div className="pt-6 border-t border-outline-variant">
+              {isGuest && paymentMethod === 'payos' ? (
+                <>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-body-md font-bold text-on-surface-variant">Tạm tính</span>
+                    <span className="text-body-md font-bold text-on-surface-variant">
+                      {selectedServices.length > 0 ? `${(totalPrice / 1000)}k` : '0đ'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-end mb-8">
+                    <span className="text-headline-sm font-bold text-on-surface">Cọc 50%</span>
+                    <span className="text-display-lg text-[32px] font-bold text-primary leading-none">
+                      {selectedServices.length > 0 ? `${(depositAmount / 1000)}k` : '0đ'}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between items-end mb-8">
+                  <span className="text-headline-sm font-bold text-on-surface">Tổng cộng</span>
+                  <span className="text-display-lg text-[32px] font-bold text-primary leading-none">
+                    {selectedServices.length > 0 ? `${(totalPrice / 1000)}k` : '0đ'}
+                  </span>
+                </div>
+              )}
               <button 
                 onClick={onConfirm}
                 disabled={!isReady || isLoading}

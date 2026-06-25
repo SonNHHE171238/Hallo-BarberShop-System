@@ -19,6 +19,7 @@ export default function BookingPage() {
   const [selectedBarber, setSelectedBarber] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const { user } = useAuth();
@@ -59,12 +60,13 @@ export default function BookingPage() {
       };
 
       const response = await bookingService.createBookingSinglePage(payload);
+      const bookingId = (response.booking && response.booking._id) || response._id || "NEW";
       
       const dateObj = new Date(selectedDate);
       const dateStr = dateObj.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
       
       const queryParams = new URLSearchParams({
-        id: (response.booking && response.booking._id) || response._id || "NEW",
+        id: bookingId,
         service: selectedServices.map(s => s.name).join(', '),
         price: selectedServices.reduce((total, s) => total + (s.price || 0), 0),
         barber: selectedBarber ? selectedBarber.name : "Barber Auto",
@@ -72,6 +74,31 @@ export default function BookingPage() {
         time: selectedTime,
         dateStr: dateStr
       });
+
+      if (paymentMethod === 'payos' && bookingId !== "NEW") {
+        toast.success("Đang tạo link thanh toán...");
+        try {
+          const successUrl = `${window.location.origin}/booking/success?${queryParams.toString()}`;
+          const cancelUrl = `${window.location.origin}/booking/success?${queryParams.toString()}&payment=cancelled`;
+
+          const { fetchWithAuth } = await import('@/services/api');
+          const paymentRes = await fetchWithAuth('/payment/create-link', {
+            method: 'POST',
+            body: JSON.stringify({ 
+              bookingId,
+              returnUrl: successUrl,
+              cancelUrl: cancelUrl
+            })
+          });
+          
+          if (paymentRes && paymentRes.checkoutUrl) {
+            window.location.href = paymentRes.checkoutUrl;
+            return;
+          }
+        } catch (err) {
+          toast.error("Lỗi khi tạo link thanh toán: " + err.message);
+        }
+      }
       
       toast.success("Đặt lịch thành công!");
       setIsGuestModalOpen(false);
@@ -121,8 +148,11 @@ export default function BookingPage() {
                 selectedBarber={selectedBarber} 
                 selectedDate={selectedDate} 
                 selectedTime={selectedTime}
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
                 onConfirm={handleConfirm}
                 isLoading={isLoading}
+                isGuest={!user}
               />
             )}
           </div>

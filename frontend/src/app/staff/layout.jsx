@@ -3,7 +3,7 @@ import StaffHeader from "@/components/layout/StaffHeader";
 
 export default function StaffLayout({ children }) {
   return (
-    <ProtectedRoute allowedRoles={['admin', 'staff']}>
+    <ProtectedRoute allowedRoles={['staff']}>
       <div className="min-h-screen flex flex-col bg-background text-on-surface">
         <StaffHeader />
         <div className="pt-20 flex-1 flex flex-col">

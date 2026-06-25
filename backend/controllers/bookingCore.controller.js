@@ -835,6 +835,66 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
+exports.getBarberHistoryBookings = async (req, res, next) => {
+  try {
+    const { date, page = 1, limit = 20 } = req.query;
+
+    const Barber = require('../models/barber.model');
+    const barber = await Barber.findOne({ userId: req.userId });
+    if (!barber) {
+      return res.status(404).json({ message: 'Barber not found' });
+    }
+
+    const filter = {
+      barberId: barber._id,
+      status: 'completed'
+    };
+
+    if (date) {
+      filter.bookingDate = new Date(date);
+    }
+
+    const skip = (page - 1) * limit;
+    const bookings = await Booking.find(filter)
+      .populate("services", "name price durationMinutes category")
+      .populate("customerId", "name phone")
+      .sort({ completedAt: -1, bookingDate: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await Booking.countDocuments(filter);
+
+    // Calculate simple stats
+    const totalCompleted = total;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        appointments: bookings.map(b => ({
+          _id: b._id,
+          customerName: b.customerId?.name || b.customerName || "Khách vãng lai",
+          customerType: b.customerId ? "Thành viên" : "Vãng lai",
+          time: b.timeSlot,
+          date: b.bookingDate,
+          serviceName: b.services?.map(s => s.name).join(", ") || "Dịch vụ",
+          uiStatus: "Hoàn thành",
+          statusClass: "bg-green-100 text-green-700", // Will be styled by frontend anyway
+          rawStatus: b.status
+        })),
+        stats: { total: totalCompleted, serving: 0, emptyChairs: 0 },
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / limit),
+        }
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getBarberTodayBookings = async (req, res, next) => {
   try {
     const Barber = require('../models/barber.model');

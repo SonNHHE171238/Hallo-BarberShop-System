@@ -9,7 +9,7 @@ router.get('/', barberController.getActiveBarbers);
 router.get('/:id/absences', barberController.getBarberAbsences);
 
 // Barber self-management routes
-router.get('/me', authenticate, authorizeRoles('barber', 'admin'), barberController.getMeBarber);
-router.put('/me/availability', authenticate, authorizeRoles('barber', 'admin'), barberController.updateMyAvailability);
+router.get('/me', authenticate, authorizeRoles('barber'), barberController.getMeBarber);
+router.put('/me/availability', authenticate, authorizeRoles('barber'), barberController.updateMyAvailability);
 
 module.exports = router;

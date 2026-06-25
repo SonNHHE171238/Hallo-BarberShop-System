@@ -35,6 +35,7 @@ app.use('/api/customer', customerRoute);
 app.use('/api/services', serviceRoute);
 app.use('/api/barbers', barberRoute);
 app.use('/api/staff', staffRoute);
+app.use('/api/payment', require('../routes/payment.route'));
 
 app.get('/', (req, res) => {
     res.send('Hallo BarberShop API is running');

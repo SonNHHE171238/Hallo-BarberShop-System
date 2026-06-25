@@ -57,7 +57,8 @@ export default function StaffDashboard() {
     if (!checkInModal.bookingId) return;
     try {
       const res = await staffDashboardService.updateStatus(checkInModal.bookingId, status);
-      if (res && res.success) {
+      // api.js tự động unwrap, nên nếu code chạy xuống đây tức là thành công
+      if (res) {
         toast.success(status === 'completed' ? 'Đã đánh dấu hoàn thành' : 'Đã cập nhật trạng thái');
         fetchData(false);
       }

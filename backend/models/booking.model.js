@@ -43,6 +43,11 @@ const bookingSchema = new Schema(
       required: true,
       default: 0,
     },
+    orderCode: {
+      type: Number, // Dùng cho PayOS
+      unique: true,
+      sparse: true, // Cho phép null và đảm bảo unique với những cái khác null
+    },
     paymentMethod: {
       type: String,
       enum: ['cash', 'credit_card', 'bank_transfer', 'e_wallet'],
@@ -50,8 +55,12 @@ const bookingSchema = new Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid', 'refunded'],
+      enum: ['pending', 'partial_paid', 'paid', 'refunded'],
       default: 'pending'
+    },
+    amountPaid: {
+      type: Number,
+      default: 0
     },
     note: {
       type: String,

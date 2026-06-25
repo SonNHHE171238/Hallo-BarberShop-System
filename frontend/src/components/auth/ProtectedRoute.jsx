@@ -14,7 +14,21 @@ export default function ProtectedRoute({ children, allowedRoles }) {
       if (!user) {
         router.push("/login");
       } else if (allowedRoles && !allowedRoles.includes(user.role)) {
-        router.push("/");
+        switch (user.role) {
+          case "admin":
+            router.push("/admin/dashboard");
+            break;
+          case "staff":
+            router.push("/staff/pos");
+            break;
+          case "barber":
+            router.push("/barber/dashboard");
+            break;
+          case "customer":
+          default:
+            router.push("/");
+            break;
+        }
       } else {
         setIsAuthorized(true);
       }

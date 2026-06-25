@@ -35,16 +35,22 @@ const staffController = {
       
       const Booking = require('../models/booking.model');
       
-      let updateData = { status };
-      if (status === 'completed') {
-        updateData.completedAt = new Date();
-      } else if (status === 'no_show') {
-        updateData.noShowAt = new Date();
-      } else if (status === 'confirmed') {
-        updateData.confirmedAt = new Date();
+      const booking = await Booking.findById(id);
+      if (!booking) {
+        return res.status(404).json({ success: false, message: 'Booking not found' });
       }
 
-      const updatedBooking = await Booking.findByIdAndUpdate(id, updateData, { new: true });
+      booking.status = status;
+      if (status === 'completed') {
+        booking.completedAt = new Date();
+      } else if (status === 'no_show') {
+        booking.noShowAt = new Date();
+      } else if (status === 'confirmed') {
+        booking.confirmedAt = new Date();
+      }
+
+      await booking.save();
+      const updatedBooking = booking;
       
       return res.status(200).json({
         success: true,
