@@ -119,35 +119,20 @@ export default function StaffAppointments() {
 
             <div className="space-y-2">
               <label className="font-label-md text-xs text-outline uppercase tracking-wider">Trạng thái</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setStatusFilter('all')}
-                  className={`px-4 h-11 flex items-center rounded-lg text-sm transition-all ${statusFilter === 'all'
-                      ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/10'
-                      : 'bg-surface-container border border-outline-variant hover:border-primary text-on-surface'
-                    }`}
-                >
-                  Tất cả
-                </button>
-                <button
-                  onClick={() => setStatusFilter('waiting')}
-                  className={`px-4 h-11 flex items-center rounded-lg text-sm transition-all ${statusFilter === 'waiting'
-                      ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/10'
-                      : 'bg-surface-container border border-outline-variant hover:border-primary text-on-surface'
-                    }`}
-                >
-                  Đang chờ
-                </button>
-                <button
-                  onClick={() => setStatusFilter('serving')}
-                  className={`px-4 h-11 flex items-center rounded-lg text-sm transition-all ${statusFilter === 'serving'
-                      ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/10'
-                      : 'bg-surface-container border border-outline-variant hover:border-primary text-on-surface'
-                    }`}
-                >
-                  Đang làm
-                </button>
-              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-surface-container border border-outline-variant px-4 h-11 rounded-lg text-sm focus:ring-primary outline-none min-w-[180px] text-on-surface"
+              >
+                <option value="all">Tất cả</option>
+                <option value="waiting">Đang chờ</option>
+                <option value="serving">Đang làm</option>
+                <option value="confirmed">Khách đã đến</option>
+                <option value="completed">Hoàn thành</option>
+                <option value="cancelled">Đã hủy</option>
+                <option value="no_show">Không đến</option>
+                <option value="rejected">Bị từ chối</option>
+              </select>
             </div>
           </div>
         </section>
