@@ -2,7 +2,7 @@ import React from 'react';
 
 import Link from 'next/link';
 
-export default function NextAppointment({ appointment }) {
+export default function NextBooking({ appointment }) {
   if (!appointment) {
     return (
       <div className="col-span-12 lg:col-span-8 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-center items-center text-center glow-accent relative overflow-hidden group">
@@ -66,7 +66,7 @@ export default function NextAppointment({ appointment }) {
         </div>
         <div className="flex gap-4 w-full sm:w-auto">
           <Link href="/booking" className="flex-1 sm:flex-none px-8 py-3 border border-outline text-on-surface font-label-md text-xs uppercase tracking-widest hover:bg-surface-variant transition-colors rounded text-center">Đổi lịch</Link>
-          <button className="flex-1 sm:flex-none px-8 py-3 bg-primary-container text-on-primary-container font-label-md text-xs uppercase tracking-widest hover:opacity-90 transition-opacity rounded font-bold" onClick={() => console.log('Chi tiết clicked')}>Chi tiết</button>
+          <button className="flex-1 sm:flex-none px-8 py-3 bg-primary-container text-on-primary-container font-label-md text-xs uppercase tracking-widest hover:opacity-90 transition-opacity rounded font-bold" onClick={() => {}}>Chi tiết</button>
         </div>
       </div>
     </div>

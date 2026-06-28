@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { staffDashboardService } from '@/services/staffDashboard.service';
 import toast from 'react-hot-toast';
 
-export default function StaffAppointmentDetail() {
+export default function StaffBookingDetail() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');

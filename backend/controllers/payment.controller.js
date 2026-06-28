@@ -64,11 +64,11 @@ exports.createPaymentLink = async (req, res, next) => {
 
 // Đón webhook từ PayOS
 exports.payosWebhook = async (req, res, next) => {
-  console.log("PayOS Webhook received:", JSON.stringify(req.body));
+
   try {
     // SDK @payos/node v2.0.5 dùng payos.webhooks.verify và trả về Promise
     const webhookData = await payos.webhooks.verify(req.body);
-    console.log("Verified Webhook Data:", webhookData);
+
 
     if (
       webhookData.desc === "success" ||
@@ -92,7 +92,7 @@ exports.payosWebhook = async (req, res, next) => {
         booking.status = "completed"; 
         booking.completedAt = new Date();
         await booking.save();
-        console.log("Booking updated successfully:", booking._id);
+
 
         // Tạo Record Sổ cái
         const Payment = require("../models/payment.model");
@@ -104,12 +104,12 @@ exports.payosWebhook = async (req, res, next) => {
           status: 'success',
           transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
         });
-        console.log("Payment record created:", paymentRecord._id);
+
       } else {
         console.warn("Webhook valid but Booking not found for orderCode:", webhookData.orderCode);
       }
     } else {
-      console.log("Webhook data not success:", webhookData.description, webhookData.code);
+
     }
 
     return res.json({

@@ -4,7 +4,7 @@ import { adminDashboardService } from '@/services/admin.service';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Link from 'next/link';
 
-export default function AdminRecentAppointments() {
+export default function AdminRecentBookings() {
   const { data: response, isLoading } = useSWR('/api/bookings/admin/recent', async () => {
     return adminDashboardService.getRecentAppointments();
   }, { revalidateOnFocus: true });

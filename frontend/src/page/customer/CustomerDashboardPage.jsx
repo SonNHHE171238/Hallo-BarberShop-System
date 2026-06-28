@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import DashboardHero from "@/components/customer/DashboardHero";
-import NextAppointment from "@/components/customer/NextAppointment";
+import NextBooking from "@/components/customer/NextBooking";
 import LoyaltyStats from "@/components/customer/LoyaltyStats";
 import RewardsSection from "@/components/customer/RewardsSection";
 import CuratedProducts from "@/components/customer/CuratedProducts";
@@ -48,7 +48,7 @@ export default function CustomerDashboardPage() {
             </div>
           ) : (
             <>
-              <NextAppointment appointment={dashboardData?.nextAppointment} />
+              <NextBooking appointment={dashboardData?.nextAppointment} />
               <LoyaltyStats stats={dashboardData?.loyaltyStats} />
             </>
           )}

@@ -19,12 +19,12 @@ const getShopServices = async () => {
 const getAvailableBarbers = async () => {
   try {
     const barbers = await Barber.find({ isAvailable: true })
-      .populate('userId', 'fullName')
+      .populate('userId', 'name')
       .select('bio specialties experienceYears averageRating -_id');
 
     // Format cho dễ đọc
     const formatted = barbers.map(b => ({
-      name: b.userId?.fullName || "Thợ cắt tóc",
+      name: b.userId?.name || "Thợ cắt tóc",
       bio: b.bio,
       specialties: b.specialties,
       experienceYears: b.experienceYears,
@@ -71,11 +71,11 @@ const bookAppointment = async (args) => {
     
     if (barberName && barberName !== "Any" && barberName.toLowerCase() !== "bất kỳ") {
       const barbers = await Barber.find({ isAvailable: true }).populate('userId');
-      const foundBarber = barbers.find(b => b.userId && b.userId.fullName && b.userId.fullName.toLowerCase().includes(barberName.toLowerCase()));
+      const foundBarber = barbers.find(b => b.userId && b.userId.name && b.userId.name.toLowerCase().includes(barberName.toLowerCase()));
       
       if (foundBarber) {
         barberId = foundBarber._id;
-        assignedBarberName = foundBarber.userId.fullName;
+        assignedBarberName = foundBarber.userId.name;
       } else {
         return JSON.stringify({ success: false, reason: `Không tìm thấy thợ tên ${barberName}. Vui lòng chọn thợ khác hoặc để tiệm tự sắp xếp.` });
       }
@@ -95,7 +95,7 @@ const bookAppointment = async (args) => {
         const availability = await bookingAvailabilityService.checkAvailability(b._id, requestedDateTime.toISOString(), totalDuration);
         if (availability.available) {
           barberId = b._id;
-          assignedBarberName = b.userId.fullName || "Thợ cắt tóc";
+          assignedBarberName = b.userId.name || "Thợ cắt tóc";
           foundAvailable = true;
           break;
         }
@@ -172,11 +172,11 @@ const updateAppointment = async (args) => {
     
     if (barberName && barberName !== "Any" && barberName.toLowerCase() !== "bất kỳ") {
       const barbers = await Barber.find({ isAvailable: true }).populate('userId');
-      const foundBarber = barbers.find(b => b.userId && b.userId.fullName && b.userId.fullName.toLowerCase().includes(barberName.toLowerCase()));
+      const foundBarber = barbers.find(b => b.userId && b.userId.name && b.userId.name.toLowerCase().includes(barberName.toLowerCase()));
       
       if (foundBarber) {
         barberId = foundBarber._id;
-        assignedBarberName = foundBarber.userId.fullName;
+        assignedBarberName = foundBarber.userId.name;
       } else {
         return JSON.stringify({ success: false, reason: `Không tìm thấy thợ tên ${barberName}.` });
       }
@@ -282,7 +282,7 @@ Quy trình hoạt động:
 4. CHỈ KHI thu thập đủ thông tin: Gọi tool 'bookAppointment' để lưu vào hệ thống. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ BỊA SỐ ĐIỆN THOẠI HAY BẤT CỨ THÔNG TIN NÀO. Nếu khách chưa cung cấp số điện thoại, BẮT BUỘC PHẢI HỎI LẠI khách hàng.
 5. Nếu khách hàng muốn ĐẶT LỊCH CHO NHIỀU NGƯỜI CÙNG LÚC (ví dụ: cho bản thân và bạn bè), bạn PHẢI gọi công cụ 'bookAppointment' NHIỀU LẦN (mỗi người 1 lần gọi riêng biệt).
 6. Nếu khách hàng muốn THAY ĐỔI thông tin lịch hẹn ĐÃ ĐẶT (đổi giờ, đổi ngày, đổi sđt...), hãy dùng công cụ 'updateAppointment' thay vì tạo mới.
-7. Sau khi gọi tool 'bookAppointment' hoặc 'updateAppointment', báo kết quả thành công hoặc gợi ý đổi giờ nếu trùng lịch.
+7. Sau khi gọi tool 'bookAppointment' hoặc 'updateAppointment', HÃY báo kết quả thành công và NHẮC LẠI ĐẦY ĐỦ họ tên thợ sẽ phục vụ (hoặc thông báo tiệm tự sắp xếp thợ nếu khách chọn Bất kỳ), hoặc gợi ý đổi giờ nếu trùng lịch.
 Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
 
 exports.handleChat = async (message, history, imageBase64, mimeType) => {
@@ -383,7 +383,7 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
 };
 
 const handleHairstyleAdvice = async (message, imageBase64, mimeType) => {
-  // TODO: Chuyển lại thành "gemini-2.5-flash" khi server hết lỗi 503 (quá tải)
+
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
     systemInstruction: aiAdvicePrompt,

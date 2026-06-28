@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { staffDashboardService } from '@/services/staffDashboard.service';
 import toast from 'react-hot-toast';
 
-export default function StaffAppointments() {
+export default function StaffBookings() {
   const [appointments, setAppointments] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [stats, setStats] = useState({ total: 0, serving: 0, emptyChairs: 0 });

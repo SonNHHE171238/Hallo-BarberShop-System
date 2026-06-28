@@ -56,9 +56,7 @@ exports.getMeBarber = async (req, res, next) => {
       .lean();
     
     if (!barber) {
-      const error = new Error('Barber profile not found');
-      error.statusCode = 404;
-      throw error;
+      return res.status(404).json({ success: false, message: 'Barber profile not found' });
     }
 
     return sendSuccess(res, 200, 'Barber profile retrieved', { barber });
@@ -78,9 +76,7 @@ exports.updateMyAvailability = async (req, res, next) => {
     );
 
     if (!barber) {
-      const error = new Error('Barber profile not found');
-      error.statusCode = 404;
-      throw error;
+      return res.status(404).json({ success: false, message: 'Barber profile not found' });
     }
 
     return sendSuccess(res, 200, 'Availability updated', { isAvailable: barber.isAvailable });
