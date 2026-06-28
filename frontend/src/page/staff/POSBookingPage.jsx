@@ -18,6 +18,8 @@ export default function POSBookingPage() {
   const [staffList, setStaffList] = useState([]);
   const [selectedServices, setSelectedServices] = useState([]); // MULTIPLE selection
   const [selectedStaff, setSelectedStaff] = useState(null);
+  const [serviceSearchTerm, setServiceSearchTerm] = useState("");
+  const [serviceSort, setServiceSort] = useState("priceAsc");
   
   // State: Time & Modal
   const [showTimeModal, setShowTimeModal] = useState(false);
@@ -47,8 +49,28 @@ export default function POSBookingPage() {
   }, []);
 
   // Actions
+  const normalizePhone = (value) => value.replace(/\D/g, "").slice(0, 10);
+  const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  const isLikelyEmail = (value) => value.includes('@');
+
+  // Prevent non-numeric paste into phone inputs
+  const handlePhonePaste = (e, setter) => {
+    const paste = (e.clipboardData || window.clipboardData).getData('text');
+    const cleaned = normalizePhone(paste);
+    if (cleaned.length === 0) {
+      e.preventDefault();
+    } else {
+      // allow paste but trim to 10
+      e.preventDefault();
+      setter(cleaned.slice(0, 10));
+    }
+  };
+
   const handleSearchCustomer = async () => {
-    if (!phoneInput) return;
+    if (!phoneInput || phoneInput.length !== 10) {
+      toast.error("Nhập đúng 10 chữ số điện thoại.");
+      return;
+    }
     try {
       const customerData = await staffDashboardService.searchCustomerByPhone(phoneInput);
       if (customerData) {
@@ -77,11 +99,34 @@ export default function POSBookingPage() {
       toast.error("Vui lòng nhập tên và số điện thoại.");
       return;
     }
+    if (newCustomerInfo.phone.length !== 10) {
+      toast.error("Số điện thoại phải có 10 chữ số.");
+      return;
+    }
+
+    const emailText = newCustomerInfo.emailOrNote.trim();
+    let email;
+    let note;
+
+    if (emailText) {
+      if (isLikelyEmail(emailText)) {
+        if (!isValidEmail(emailText)) {
+          toast.error("Email không hợp lệ.");
+          return;
+        }
+        email = emailText;
+      } else {
+        note = emailText;
+      }
+    }
+
     setCustomer({ 
       name: newCustomerInfo.name, 
       phone: newCustomerInfo.phone, 
       role: "guest", 
-      points: null 
+      points: null,
+      email,
+      note,
     });
     setShowNewCustomerForm(false);
   };
@@ -124,6 +169,8 @@ export default function POSBookingPage() {
         durationMinutes: selectedServices.reduce((acc, curr) => acc + (curr.durationMinutes || curr.duration || 30), 0),
         customerName: customer ? customer.name : "",
         customerPhone: customer ? customer.phone : "",
+        note: customer?.note || "",
+        customerEmail: customer?.email || undefined,
       };
 
       await bookingService.createBookingSinglePage(payload);
@@ -155,6 +202,21 @@ export default function POSBookingPage() {
   const vat = Math.round(subTotal * 0.08);
   const total = subTotal + vat;
 
+  // Filtered + Sorted services for display
+  const displayedServices = servicesList
+    .filter(s => {
+      if (!serviceSearchTerm) return true;
+      const term = serviceSearchTerm.trim().toLowerCase();
+      return (s.name || '').toLowerCase().includes(term) || (s.description || '').toLowerCase().includes(term);
+    })
+    .slice() // clone before sort
+    .sort((a, b) => {
+      const pa = a.price || 0;
+      const pb = b.price || 0;
+      if (serviceSort === 'priceAsc') return pa - pb;
+      return pb - pa;
+    });
+
   return (
     <div className="w-full flex flex-col lg:flex-row max-w-[1600px] mx-auto min-h-screen">
       {/* Left Side: Selection */}
@@ -183,8 +245,9 @@ export default function POSBookingPage() {
                     placeholder="Nhập số điện thoại..."
                     type="tel"
                     value={phoneInput}
-                    onChange={(e) => setPhoneInput(e.target.value)}
+                    onChange={(e) => setPhoneInput(normalizePhone(e.target.value))}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearchCustomer()}
+                    onPaste={(e) => handlePhonePaste(e, setPhoneInput)}
                   />
                 </div>
                 <button 
@@ -249,7 +312,8 @@ export default function POSBookingPage() {
                       type="tel" 
                       className="bg-surface border border-outline-variant rounded p-2 text-sm text-on-surface focus:border-primary focus:outline-none"
                       value={newCustomerInfo.phone}
-                      onChange={(e) => setNewCustomerInfo({...newCustomerInfo, phone: e.target.value})}
+                        onChange={(e) => setNewCustomerInfo({...newCustomerInfo, phone: normalizePhone(e.target.value)})}
+                        onPaste={(e) => handlePhonePaste(e, (val) => setNewCustomerInfo(prev => ({ ...prev, phone: val })))}
                     />
                   </div>
                   <div className="flex flex-col gap-1 md:col-span-2">
@@ -258,7 +322,13 @@ export default function POSBookingPage() {
                       type="text" 
                       className="bg-surface border border-outline-variant rounded p-2 text-sm text-on-surface focus:border-primary focus:outline-none"
                       value={newCustomerInfo.emailOrNote}
-                      onChange={(e) => setNewCustomerInfo({...newCustomerInfo, emailOrNote: e.target.value})}
+                        onChange={(e) => setNewCustomerInfo({...newCustomerInfo, emailOrNote: e.target.value})}
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (v && v.includes('@') && !isValidEmail(v)) {
+                            toast.error('Email không hợp lệ.');
+                          }
+                        }}
                     />
                   </div>
                 </div>
@@ -288,19 +358,30 @@ export default function POSBookingPage() {
               <h2 className="font-headline-sm text-2xl text-on-surface mb-1">Chọn Dịch Vụ</h2>
               <span className="font-label-md text-xs text-gold-dim">{servicesList.length} Dịch vụ hiện có tại chi nhánh</span>
             </div>
-            <div className="relative w-full md:max-w-md">
+            <div className="relative w-full md:max-w-md flex items-center gap-3">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant text-lg">search</span>
               <input
                 className="w-full bg-surface-container border border-outline-variant rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:border-primary text-on-surface placeholder:text-outline-variant/40 transition-all text-sm font-body-md"
                 placeholder="Tìm kiếm dịch vụ..."
                 type="text"
+                value={serviceSearchTerm}
+                onChange={(e) => setServiceSearchTerm(e.target.value)}
               />
+              <select
+                value={serviceSort}
+                onChange={(e) => setServiceSort(e.target.value)}
+                className="bg-surface-container border border-outline-variant rounded-lg h-11 px-3 text-sm"
+                aria-label="Sắp xếp dịch vụ theo giá"
+              >
+                <option value="priceAsc">Giá: Tăng dần</option>
+                <option value="priceDesc">Giá: Giảm dần</option>
+              </select>
             </div>
           </div>
 
           {/* Flexible Service Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {servicesList.map(service => {
+            {displayedServices.map(service => {
               const isSelected = selectedServices.some(s => s._id === service._id);
               return (
                 <div
@@ -311,6 +392,11 @@ export default function POSBookingPage() {
                   }`}
                 >
                   <div className="relative z-10">
+                    <div className="w-full h-36 mb-3 overflow-hidden rounded-lg bg-surface-container">
+                      {((service.images && service.images[0]) || service.image) && (
+                        <img src={(service.images && service.images[0]) || service.image} alt={service.name} className="w-full h-full object-cover" />
+                      )}
+                    </div>
                     <h3 className={`font-headline-sm text-xl transition-colors ${isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'}`}>
                       {service.name}
                     </h3>
