@@ -1,7 +1,24 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import axios from "axios";
 
-export default function SidebarFilters() {
+export default function SidebarFilters({ selectedCategory, onSelectCategory }) {
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/categories");
+        if (res.data.success) {
+          setCategories(res.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   return (
     <aside className="w-full lg:w-64 flex-shrink-0 space-y-12">
       {/* Category Filter */}
@@ -9,30 +26,25 @@ export default function SidebarFilters() {
         <h3 className="font-headline-md text-headline-md mb-6 text-primary-fixed border-b border-outline-variant/50 pb-2">Danh Mục</h3>
         <ul className="space-y-4 font-label-md text-label-md tracking-widest uppercase">
           <li>
-            <Link className="text-primary flex justify-between items-center group" href="#">
-              <span>Tất Cả</span> <span className="material-symbols-outlined text-[16px] transform group-hover:translate-x-1 transition-transform">chevron_right</span>
-            </Link>
+            <button 
+              onClick={() => onSelectCategory(null)}
+              className={`flex justify-between items-center w-full text-left transition-colors ${!selectedCategory ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
+            >
+              <span>Tất Cả</span> 
+              {!selectedCategory && <span className="material-symbols-outlined text-[16px] transform translate-x-1">chevron_right</span>}
+            </button>
           </li>
-          <li>
-            <Link className="text-on-surface-variant hover:text-primary transition-colors flex justify-between items-center" href="#">
-              <span>Tóc</span>
-            </Link>
-          </li>
-          <li>
-            <Link className="text-on-surface-variant hover:text-primary transition-colors flex justify-between items-center" href="#">
-              <span>Râu</span>
-            </Link>
-          </li>
-          <li>
-            <Link className="text-on-surface-variant hover:text-primary transition-colors flex justify-between items-center" href="#">
-              <span>Da</span>
-            </Link>
-          </li>
-          <li>
-            <Link className="text-on-surface-variant hover:text-primary transition-colors flex justify-between items-center" href="#">
-              <span>Dụng Cụ</span>
-            </Link>
-          </li>
+          {categories.map((cat) => (
+            <li key={cat._id}>
+              <button 
+                onClick={() => onSelectCategory(cat._id)}
+                className={`flex justify-between items-center w-full text-left transition-colors ${selectedCategory === cat._id ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
+              >
+                <span>{cat.name}</span>
+                {selectedCategory === cat._id && <span className="material-symbols-outlined text-[16px] transform translate-x-1">chevron_right</span>}
+              </button>
+            </li>
+          ))}
         </ul>
       </div>
       {/* Brand Filter */}

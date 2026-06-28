@@ -131,7 +131,11 @@ export default function Navbar() {
         </div>
 
         {/* Trailing Action */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 md:space-x-4">
+          <Link href="/shop/cart" className="relative text-on-surface hover:text-primary transition-colors p-2 hidden md:flex items-center">
+            <span className="material-symbols-outlined">shopping_bag</span>
+          </Link>
+          
           {user ? (
             <div className="relative group hidden md:flex items-center space-x-2 mr-4 cursor-pointer py-2">
               <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center border border-outline-variant">
@@ -174,6 +178,11 @@ export default function Navbar() {
             className="bg-primary text-on-primary px-6 py-2 rounded-lg font-headline-sm text-headline-sm transition-all active:scale-95 duration-150 hover:bg-primary-container whitespace-nowrap"
           >
             Đặt Lịch Hẹn
+          </Link>
+          
+          {/* Mobile Cart Icon */}
+          <Link href="/shop/cart" className="md:hidden text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors mr-1">
+            <span className="material-symbols-outlined">shopping_bag</span>
           </Link>
           
           {/* Mobile Menu Toggle */}

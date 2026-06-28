@@ -106,7 +106,25 @@ exports.payosWebhook = async (req, res, next) => {
         });
 
       } else {
-        console.warn("Webhook valid but Booking not found for orderCode:", webhookData.orderCode);
+        const Order = require("../models/order.model");
+        const order = await Order.findOne({ orderCode: webhookData.orderCode });
+        
+        if (order) {
+          order.status = 'processing';
+          await order.save();
+
+          const Payment = require("../models/payment.model");
+          await Payment.create({
+            target_type: 'order',
+            target_id: order._id,
+            amount: webhookData.amount,
+            method: 'bank_transfer',
+            status: 'success',
+            transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
+          });
+        } else {
+          console.warn("Webhook valid but no Booking or Order found for orderCode:", webhookData.orderCode);
+        }
       }
     } else {
 
