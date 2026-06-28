@@ -7,6 +7,7 @@ router.get('/', adminBarberController.getAllAdminBarbers);
 router.get('/:barberId/full', adminBarberController.getAdminBarberFull);
 router.get('/:barberId', adminBarberController.getAdminBarberById);
 router.put('/:barberId', adminBarberController.updateAdminBarber);
+router.get('/:barberId/upcoming-bookings', adminBarberController.getUpcomingBookings);
 router.patch('/:barberId/deactivate', adminBarberController.deactivateAdminBarber);
 router.patch('/:barberId/activate', adminBarberController.activateAdminBarber);
 

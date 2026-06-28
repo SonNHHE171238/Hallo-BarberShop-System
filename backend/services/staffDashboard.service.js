@@ -18,10 +18,10 @@ const staffDashboardService = {
       status: { $in: ['pending', 'confirmed', 'completed'] }
     });
 
-    // 3. Khách đã xong: Booking status là completed
+    // 3. Khách đang chờ (đã đến): Booking status là confirmed
     const waitingCustomers = await Booking.countDocuments({
       bookingDate: { $gte: todayStart, $lte: todayEnd },
-      status: 'completed'
+      status: 'confirmed'
     });
 
     // 4. Doanh thu dự kiến: Tổng price của tất cả bookings hôm nay
@@ -41,10 +41,15 @@ const staffDashboardService = {
     });
 
     // 5. Thợ đang hoạt động / Tổng thợ
-    const totalBarbers = await Barber.countDocuments({ isActive: true });
-    // Thợ đang hoạt động = không có lịch nghỉ (BarberAbsence) nguyên ngày hôm nay
-    // Simple version: just return active barbers for now, we will refine in barbers-status
-    const activeBarbers = totalBarbers; // Update logic if needed
+    const totalBarbers = await Barber.countDocuments({ isAvailable: true });
+    
+    // Đếm số lượng thợ nghỉ phép hôm nay
+    const absencesToday = await BarberAbsence.countDocuments({
+      date: { $gte: todayStart, $lte: todayEnd },
+      status: 'approved'
+    });
+
+    const activeBarbers = Math.max(0, totalBarbers - absencesToday);
 
     return {
       totalBookingsToday,

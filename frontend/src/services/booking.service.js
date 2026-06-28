@@ -101,9 +101,10 @@ export const bookingService = {
   /**
    * API for Barber Dashboard
    */
-  getBarberTodayBookings: async () => {
+  getBarberTodayBookings: async (dateStr) => {
     try {
-      return await fetchWithAuth('/bookings/barber/today', { method: 'GET' });
+      const url = dateStr ? `/bookings/barber/today?date=${dateStr}` : '/bookings/barber/today';
+      return await fetchWithAuth(url, { method: 'GET' });
     } catch (error) {
       throw error;
     }

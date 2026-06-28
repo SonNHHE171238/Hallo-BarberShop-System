@@ -5,7 +5,7 @@ const bookingController = require('../controllers/bookingCore.controller');
 const bookingAdminController = require('../controllers/bookingAdmin.controller');
 const bookingStatsController = require('../controllers/bookingStats.controller');
 const bookingAvailabilityController = require('../controllers/bookingAvailability.controller');
-const customerBookingController = require('../controllers/customerReschedule.controller');
+const customerBookingController = require('../controllers/customerChangeTime.controller');
 
 const { authenticate, authorizeRoles, optionalAuthenticate } = require('../middlewares/auth.middleware');
 const {

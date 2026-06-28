@@ -5,6 +5,7 @@ import { adminBarberService } from '@/services/admin.service';
 import AdminBarberForm from '@/components/admin/AdminBarberForm';
 import AdminBarberList from '@/components/admin/AdminBarberList';
 import AdminBarberSchedule from '@/components/admin/AdminBarberSchedule';
+import DeactivateConfirmModal from '@/components/admin/DeactivateConfirmModal';
 
 
 function Badge({ children, variant = 'default' }) {
@@ -35,6 +36,16 @@ export default function AdminBarberManagement() {
     const [statusMessage, setStatusMessage] = useState('');
     const [statusError, setStatusError] = useState('');
     const [statusProcessing, setStatusProcessing] = useState(false);
+    const [deactivateModalOpen, setDeactivateModalOpen] = useState(false);
+    const [upcomingCount, setUpcomingCount] = useState(0);
+
+    const formRef = React.useRef(null);
+
+    useEffect(() => {
+        if (formOpen && formRef.current) {
+            formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [formOpen]);
 
     const loadBarbers = async (selectedId) => {
         try {
@@ -91,7 +102,7 @@ export default function AdminBarberManagement() {
     };
 
     const handleOpenEdit = () => {
-        if (selectedBarber.id === 'empty') return;
+        if (!selectedBarber || selectedBarber.id === 'empty') return;
         setEditMode(true);
         setFormError('');
         setFormMessage('');
@@ -112,7 +123,7 @@ export default function AdminBarberManagement() {
         setStatusError('');
 
         try {
-            if (editMode) {
+            if (editMode && selectedBarber) {
                 await adminBarberService.updateAdminBarber(selectedBarber.id, payload);
                 setFormMessage('Cập nhật barber thành công.');
                 await loadBarbers(selectedBarber.id);
@@ -130,38 +141,62 @@ export default function AdminBarberManagement() {
     };
 
     const handleToggleStatus = async () => {
-        if (selectedBarber.id === 'empty') return;
+        if (!selectedBarber || selectedBarber.id === 'empty') return;
 
-        setStatusProcessing(true);
         setStatusError('');
         setStatusMessage('');
         setFormError('');
         setFormMessage('');
 
-        try {
-            if (selectedBarber.status === 'active') {
-                await adminBarberService.deactivateAdminBarber(selectedBarber.id);
-                setStatusMessage('Barber đã được vô hiệu hóa.');
-            } else {
+        if (selectedBarber.status === 'active') {
+            setStatusProcessing(true);
+            try {
+                const res = await adminBarberService.getUpcomingBookings(selectedBarber.id);
+                setUpcomingCount(res.count || 0);
+                setDeactivateModalOpen(true);
+            } catch (error) {
+                setStatusError('Lỗi khi kiểm tra lịch hẹn: ' + error.message);
+            } finally {
+                setStatusProcessing(false);
+            }
+        } else {
+            setStatusProcessing(true);
+            try {
                 await adminBarberService.activateAdminBarber(selectedBarber.id);
                 setStatusMessage('Barber đã được kích hoạt lại.');
+                await loadBarbers(selectedBarber.id);
+            } catch (error) {
+                setStatusError(error.message || 'Có lỗi xảy ra khi cập nhật trạng thái.');
+            } finally {
+                setStatusProcessing(false);
             }
+        }
+    };
+
+    const handleConfirmDeactivate = async (action) => {
+        setDeactivateModalOpen(false);
+        setStatusProcessing(true);
+        setStatusError('');
+        setStatusMessage('');
+        try {
+            await adminBarberService.deactivateAdminBarber(selectedBarber.id, action);
+            setStatusMessage('Barber đã được vô hiệu hóa.');
             await loadBarbers(selectedBarber.id);
-        } catch (toggleError) {
-            setStatusError(toggleError.message || 'Có lỗi xảy ra khi cập nhật trạng thái.');
+        } catch (error) {
+            setStatusError(error.message || 'Có lỗi xảy ra khi vô hiệu hoá.');
         } finally {
             setStatusProcessing(false);
         }
     };
 
     const filteredBarbers = barbers.filter((barber) => barber.name.toLowerCase().includes(searchTerm.toLowerCase().trim()));
-    const displayBarbers = searchTerm.trim() ? filteredBarbers : barbers.length ? barbers : [initialBarber];
+    const displayBarbers = searchTerm.trim() ? filteredBarbers : barbers;
 
     useEffect(() => {
-        if (searchTerm.trim() && filteredBarbers.length > 0 && !filteredBarbers.some((barber) => barber.id === selectedBarber.id)) {
+        if (searchTerm.trim() && filteredBarbers.length > 0 && !filteredBarbers.some((barber) => barber.id === selectedBarber?.id)) {
             setSelectedBarber(filteredBarbers[0]);
         }
-    }, [searchTerm, filteredBarbers, selectedBarber.id]);
+    }, [searchTerm, filteredBarbers, selectedBarber?.id]);
 
     return (
         <div className="space-y-8">
@@ -201,7 +236,7 @@ export default function AdminBarberManagement() {
             )}
 
             {formOpen && (
-                <section className="rounded-3xl border border-outline-gold bg-surface-container-low p-6 shadow-2xl shadow-black/5">
+                <section ref={formRef} className="rounded-3xl border border-outline-gold bg-surface-container-low p-6 shadow-2xl shadow-black/5 scroll-mt-6">
                     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h3 className="font-headline-sm text-headline-sm">{editMode ? 'Sửa barber' : 'Tạo barber mới'}</h3>
@@ -219,6 +254,14 @@ export default function AdminBarberManagement() {
                     />
                 </section>
             )}
+
+            <DeactivateConfirmModal
+                isOpen={deactivateModalOpen}
+                onClose={() => setDeactivateModalOpen(false)}
+                onConfirm={handleConfirmDeactivate}
+                barberName={selectedBarber?.name}
+                upcomingBookingsCount={upcomingCount}
+            />
         </div>
     );
 }

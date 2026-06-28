@@ -21,9 +21,16 @@ export const adminBarberService = {
         });
     },
 
-    deactivateAdminBarber: async (barberId) => {
+    deactivateAdminBarber: async (barberId, action) => {
         return fetchWithAuth(`/admin/barbers/${barberId}/deactivate`, {
             method: 'PATCH',
+            body: JSON.stringify({ action }),
+        });
+    },
+
+    getUpcomingBookings: async (barberId) => {
+        return fetchWithAuth(`/admin/barbers/${barberId}/upcoming-bookings`, {
+            method: 'GET',
         });
     },
 

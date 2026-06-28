@@ -4,12 +4,14 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import LogoutConfirmModal from '../ui/LogoutConfirmModal';
 
 export default function StaffHeader() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const navItems = [
     { name: "Tổng quan", href: "/staff/dashboard" },
@@ -80,10 +82,7 @@ export default function StaffHeader() {
                     Thông tin
                   </Link>
                   <button 
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      logout();
-                    }}
+                    onClick={() => { setIsProfileMenuOpen(false); setIsLogoutModalOpen(true); }}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error/10 transition-colors text-left"
                   >
                     <span className="material-symbols-outlined text-[18px]">logout</span>
@@ -144,10 +143,7 @@ export default function StaffHeader() {
                   Thông tin
                 </Link>
                 <button 
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    logout();
-                  }}
+                  onClick={() => { setIsMobileMenuOpen(false); setIsLogoutModalOpen(true); }}
                   className="text-xs text-error hover:underline"
                 >
                   Đăng xuất
@@ -157,6 +153,19 @@ export default function StaffHeader() {
           </div>
         </div>
       </div>
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={async () => {
+          try {
+            await logout();
+          } catch (err) {
+            console.error('Lỗi đăng xuất:', err);
+          }
+        }}
+      />
     </header>
   );
 }
+

@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import LogoutConfirmModal from '../ui/LogoutConfirmModal';
 
 export default function AdminHeader({ onMenuClick }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const getPageTitle = () => {
     if (pathname.includes('/admin/employee')) return 'Quản Lý Nhân Viên';
@@ -49,10 +51,7 @@ export default function AdminHeader({ onMenuClick }) {
           {/* Profile Menu Popup */}
           <div className={`absolute top-full right-0 mt-2 w-48 bg-surface-container-high border border-outline-gold rounded-lg shadow-xl overflow-hidden transition-all duration-200 origin-top-right ${isProfileMenuOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
             <button 
-              onClick={() => {
-                setIsProfileMenuOpen(false);
-                logout();
-              }}
+              onClick={() => { setIsProfileMenuOpen(false); setIsLogoutModalOpen(true); }}
               className="w-full flex items-center gap-3 px-4 py-3 text-error hover:bg-error/10 transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">logout</span>
@@ -61,6 +60,19 @@ export default function AdminHeader({ onMenuClick }) {
           </div>
         </div>
       </div>
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={async () => {
+          try {
+            await logout();
+          } catch (err) {
+            console.error('Lỗi đăng xuất:', err);
+          }
+        }}
+      />
     </header>
   );
 }
+
