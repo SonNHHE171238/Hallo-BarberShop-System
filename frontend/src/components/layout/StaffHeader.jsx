@@ -23,6 +23,7 @@ export default function StaffHeader() {
   ];
 
   return (
+    <>
     <header className="fixed top-0 w-full bg-surface/90 backdrop-blur-xl border-b border-outline-variant shadow-sm h-20 z-50">
       <div className="flex justify-between items-center px-4 md:px-margin-desktop h-full max-w-[1600px] mx-auto">
         <div className="flex items-center gap-8">
@@ -153,6 +154,7 @@ export default function StaffHeader() {
           </div>
         </div>
       </div>
+    </header>
       {/* Logout Confirmation Modal */}
       <LogoutConfirmModal 
         isOpen={isLogoutModalOpen}
@@ -165,7 +167,7 @@ export default function StaffHeader() {
           }
         }}
       />
-    </header>
+    </>
   );
 }
 

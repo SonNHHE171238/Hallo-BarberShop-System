@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -37,6 +37,7 @@ export default function Navbar() {
   }, []);
 
   return (
+    <>
     <nav
       className={`fixed top-0 w-full z-50 glass-nav border-b border-outline-variant shadow-md transition-all duration-300 ${
         isScrolled ? "py-2" : "py-4"
@@ -231,7 +232,7 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-
+    </nav>
       {/* Logout Confirmation Modal */}
       <LogoutConfirmModal 
         isOpen={isLogoutModalOpen}
@@ -241,7 +242,7 @@ export default function Navbar() {
           setIsMobileMenuOpen(false);
         }}
       />
-    </nav>
+    </>
   );
 }
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -20,6 +20,7 @@ export default function BarberHeader() {
   };
 
   return (
+    <>
     <header className="fixed top-0 w-full bg-surface-container-lowest text-primary font-body-md text-body-md z-50 border-b border-outline-gold">
       <div className="max-w-7xl mx-auto px-gutter flex justify-between items-center h-20">
         {/* Brand Logo */}
@@ -100,6 +101,7 @@ export default function BarberHeader() {
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/customers">Khách Hàng</Link>
         </div>
       </div>
+    </header>
       {/* Logout Confirmation Modal */}
       <LogoutConfirmModal 
         isOpen={isLogoutModalOpen}
@@ -112,7 +114,7 @@ export default function BarberHeader() {
           }
         }}
       />
-    </header>
+    </>
   );
 }
 

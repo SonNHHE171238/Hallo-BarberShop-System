@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal';
@@ -19,6 +19,7 @@ export default function AdminHeader({ onMenuClick }) {
   };
 
   return (
+    <>
     <header className="h-20 flex-shrink-0 border-b border-outline-gold bg-surface-obsidian/90 backdrop-blur-md sticky top-0 z-10 px-4 md:px-8 flex items-center justify-between">
       <div className="flex items-center gap-4">
         <button className="md:hidden text-on-surface-variant hover:text-primary" onClick={onMenuClick}>
@@ -60,6 +61,7 @@ export default function AdminHeader({ onMenuClick }) {
           </div>
         </div>
       </div>
+    </header>
       {/* Logout Confirmation Modal */}
       <LogoutConfirmModal 
         isOpen={isLogoutModalOpen}
@@ -72,7 +74,7 @@ export default function AdminHeader({ onMenuClick }) {
           }
         }}
       />
-    </header>
+    </>
   );
 }
 
