@@ -1,25 +1,22 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/auth.service";
 import { useAuth } from "@/context/AuthContext";
+import LogoutConfirmModal from '../ui/LogoutConfirmModal';
 
 export default function BarberHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const { user, logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
-    if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-      try {
-        await logout();
-      } catch (err) {
-        console.error("Lỗi đăng xuất:", err);
-      }
-    }
+    setIsLogoutModalOpen(true);
+    setIsDropdownOpen(false);
   };
 
   return (
@@ -103,6 +100,20 @@ export default function BarberHeader() {
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/customers">Khách Hàng</Link>
         </div>
       </div>
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={async () => {
+          try {
+            await logout();
+          } catch (err) {
+            console.error('Lỗi đăng xuất:', err);
+          }
+        }}
+      />
     </header>
   );
 }
+
+

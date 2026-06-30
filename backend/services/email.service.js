@@ -29,7 +29,7 @@ function getTransporter() {
   return transporter;
 }
 
-exports.sendOtpEmail = async (to, plainOtp) => {
+exports.sendOtpEmail = async (to, plainOtp, userName = 'bạn') => {
   const transport = getTransporter();
   if (!transport) {
     throw new Error('Email is not configured (set EMAIL_USER and EMAIL_PASS in .env)');
@@ -40,11 +40,11 @@ exports.sendOtpEmail = async (to, plainOtp) => {
   const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
 
   await transport.sendMail({
-    from: `"Barbershop" <${from}>`,
+    from: `"Hallo Barber" <${from}>`,
     to,
-    subject: 'Mã xác thực đăng ký tài khoản Barbershop',
+    subject: 'Mã xác thực đăng ký tài khoản Hallo Barber',
     text: [
-      'Xin chào,',
+      `Xin chào ${userName},`,
       '',
       `Mã OTP xác thực email của bạn là: ${plainOtp}`,
       `Mã có hiệu lực trong ${ttlMinutes} phút.`,
@@ -52,17 +52,17 @@ exports.sendOtpEmail = async (to, plainOtp) => {
       'Nếu bạn không yêu cầu đăng ký, vui lòng bỏ qua email này.',
       '',
       'Trân trọng,',
-      'Barbershop',
+      'Hallo Barber',
     ].join('\n'),
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2 style="color: #1a1a1a;">Xác thực đăng ký Barbershop</h2>
-        <p>Xin chào,</p>
+        <h2 style="color: #1a1a1a;">Xác thực đăng ký Hallo Barber</h2>
+        <p>Xin chào <strong>${userName}</strong>,</p>
         <p>Mã OTP xác thực email của bạn là:</p>
         <p style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #c9a227;">${plainOtp}</p>
         <p>Mã có hiệu lực trong <strong>${ttlMinutes} phút</strong>.</p>
         <p style="color: #666; font-size: 14px;">Nếu bạn không yêu cầu đăng ký, vui lòng bỏ qua email này.</p>
-        <p>Trân trọng,<br/>Barbershop</p>
+        <p>Trân trọng,<br/>Hallo Barber</p>
       </div>
     `,
   });

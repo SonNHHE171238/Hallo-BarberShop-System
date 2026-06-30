@@ -97,10 +97,6 @@ export default function AdminBookingsPage() {
                     <h1 className="text-headline-lg font-headline-lg text-primary tracking-tight uppercase">Quản Lý Lịch Hẹn</h1>
                     <p className="text-body-md font-body-md text-on-surface-variant mt-1">Tổng quan và điều phối lịch đặt chỗ trong hệ thống.</p>
                 </div>
-                <button className="bg-primary text-on-primary px-6 py-3 rounded-lg font-label-md text-label-md font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-lg shadow-primary/10">
-                    <span className="material-symbols-outlined">add_circle</span>
-                    Thêm lịch hẹn mới
-                </button>
             </div>
 
             {/* Filters & Search Bar */}
@@ -262,13 +258,6 @@ export default function AdminBookingsPage() {
                                                     onClick={() => router.push(`/admin/bookings/detail?id=${booking._id}`)}
                                                 >
                                                     <span className="material-symbols-outlined text-[16px]">visibility</span>
-                                                </button>
-                                                <button 
-                                                    className={`p-1.5 transition-colors rounded ${booking.status === 'completed' || booking.status === 'cancelled' ? 'text-outline-variant cursor-not-allowed' : 'text-on-surface-variant hover:text-primary hover:bg-surface-variant'}`}
-                                                    title="Cập nhật"
-                                                    disabled={booking.status === 'completed' || booking.status === 'cancelled'}
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
                                                 </button>
                                             </div>
                                         </td>

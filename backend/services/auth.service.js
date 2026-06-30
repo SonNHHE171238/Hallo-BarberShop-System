@@ -37,7 +37,7 @@ const setUserOtp = async (user, plainOtp) => {
   user.otpHash = hash;
   user.otpExpires = new Date(Date.now() + getOtpTtlMs());
   await user.save();
-  return notifyRegistrationOtp(user.email, plainOtp);
+  return notifyRegistrationOtp(user.email, plainOtp, user.name);
 };
 
 exports.registerUser = async ({ name, email, password, phone }) => {
