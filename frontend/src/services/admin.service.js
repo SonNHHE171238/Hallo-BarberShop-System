@@ -29,7 +29,7 @@ export const adminBarberService = {
     },
 
     getUpcomingBookings: async (barberId) => {
-        return fetchWithAuth(`/admin/barbers/${barberId}/upcoming-bookings`, {
+        return fetchWithAuth(`/admin/barbers/${barberId}/upcoming-bookings?t=${Date.now()}`, {
             method: 'GET',
         });
     },

@@ -340,6 +340,18 @@ exports.deactivateAdminBarber = async (req, res) => {
                 
                 if (barber.totalBookings > 0) barber.totalBookings -= 1;
             }
+            
+            // Dọn dẹp các slot bị lỗi đồng bộ trong BarberSchedule (ghost bookings)
+            const todayStr = normalizeDateString(new Date());
+            await BarberSchedule.updateMany(
+                { barberId: barber._id, date: { $gte: todayStr } },
+                {
+                    $set: {
+                        'availableSlots.$[].isBooked': false,
+                        'availableSlots.$[].bookingId': null,
+                    }
+                }
+            );
         }
 
         barber.isAvailable = false;
@@ -425,7 +437,20 @@ exports.getUpcomingBookings = async (req, res) => {
             bookingDate: { $gte: today }
         }).populate('customerId', 'name phone email').sort({ bookingDate: 1 });
 
-        return res.json({ count: bookings.length, bookings });
+        const todayStr = normalizeDateString(new Date());
+        const schedules = await BarberSchedule.find({
+            barberId,
+            date: { $gte: todayStr }
+        });
+        
+        let scheduleBookedCount = 0;
+        schedules.forEach(s => {
+            scheduleBookedCount += s.availableSlots.filter(slot => slot.isBooked).length;
+        });
+
+        const finalCount = Math.max(bookings.length, scheduleBookedCount);
+
+        return res.json({ count: finalCount, bookings });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: error.message });
