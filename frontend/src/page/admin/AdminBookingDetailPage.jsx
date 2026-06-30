@@ -33,9 +33,7 @@ export default function AdminBookingDetailPage() {
     fetchBooking();
   }, [id]);
 
-  const handleCompleteService = () => {
-    router.push(`/staff/payment?id=${id}`);
-  };
+
 
   if (isLoading) {
     return (
@@ -54,8 +52,7 @@ export default function AdminBookingDetailPage() {
   }
 
   const isCompleted = booking.status === 'completed';
-  const amountPaid = booking.amountPaid || 0;
-  const remaining = Math.max(0, booking.totalPrice - amountPaid);
+
 
   return (
     <div className="w-full bg-[#121212] text-gray-200 font-sans antialiased p-4 h-[calc(100vh-100px)] flex flex-col overflow-hidden rounded-xl">
@@ -131,12 +128,7 @@ export default function AdminBookingDetailPage() {
                     <span className="material-symbols-outlined text-base">list_alt</span>
                     Danh Sách Dịch Vụ
                   </h2>
-                  {!isCompleted && (
-                    <button className="text-[11px] font-bold text-[#e2e8f0] hover:text-white uppercase tracking-wider flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">add</span>
-                      Thêm dịch vụ
-                    </button>
-                  )}
+
                 </div>
 
                 <div className="space-y-3 mb-4">
@@ -156,50 +148,16 @@ export default function AdminBookingDetailPage() {
               </div>
 
               <div className="border-t border-[#2a2a2a] pt-4 mt-auto">
-                <div className="flex justify-between text-xs text-gray-400 mb-3">
-                  <span>Tổng tiền dịch vụ</span>
-                  <span className="font-mono text-gray-300">{booking.totalPrice.toLocaleString('vi-VN')} đ</span>
-                </div>
-                <div className="flex justify-between text-xs text-[#f87171] mb-5">
-                  <span>Đã đặt cọc / Thanh toán</span>
-                  <span className="font-mono">- {amountPaid.toLocaleString('vi-VN')} đ</span>
-                </div>
-                <div className="flex justify-between items-end pt-3 border-t border-[#2a2a2a]/50">
-                  <div>
-                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Cần thanh toán thêm</span>
-                  </div>
-                  <span className="text-2xl font-extrabold text-[#fef08a] font-mono tracking-tight">{remaining.toLocaleString('vi-VN')} đ</span>
+                <div className="flex justify-between items-end">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tổng tiền dịch vụ</span>
+                  <span className="text-2xl font-extrabold text-white font-mono tracking-tight">{(booking.totalPrice || 0).toLocaleString('vi-VN')} đ</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <footer className="flex justify-end gap-3 border-t border-[#2a2a2a] pt-4 mt-2 shrink-0">
-          <button 
-            onClick={() => router.push('/admin/bookings')}
-            className="px-5 py-2.5 border border-[#3a3a3a] text-gray-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#222] hover:text-white transition-all"
-          >
-            Đóng
-          </button>
-          {!isCompleted && remaining > 0 ? (
-            <button
-              onClick={handleCompleteService}
-              className="px-5 py-2.5 bg-[#fef08a] text-black font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 shadow-lg shadow-yellow-500/10 hover:bg-[#fde047] transition-all"
-            >
-              <span className="material-symbols-outlined text-[16px]">payments</span>
-              Thanh toán {remaining.toLocaleString('vi-VN')} đ
-            </button>
-          ) : (
-            <button
-              disabled
-              className="px-5 py-2.5 bg-green-800 text-white font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 opacity-80 cursor-not-allowed"
-            >
-              <span className="material-symbols-outlined text-[16px]">check_circle</span>
-              {remaining === 0 && !isCompleted ? 'Chờ hoàn thành' : 'Đã hoàn thành'}
-            </button>
-          )}
-        </footer>
+
       </div>
     </div>
   );
