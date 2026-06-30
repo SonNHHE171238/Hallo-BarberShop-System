@@ -15,6 +15,7 @@ const staffRoute = require('../routes/staff.route');
 const productRoute = require('../routes/product.route');
 const orderRoute = require('../routes/order.route');
 const cartRoute = require('../routes/cart.route');
+const bookingFeedbackRoutes = require("../routes/bookingfeedback.route");
 const categoryRoute = require('../routes/category.route');
 const errorHandler = require('../middlewares/error.middleware');
 
@@ -38,6 +39,7 @@ app.use('/api/chatbot', chatbotRoute);
 app.use('/api/customer', customerRoute);
 app.use('/api/services', serviceRoute);
 app.use('/api/barbers', barberRoute);
+app.use("/api/bookingfeedbacks", bookingFeedbackRoutes);
 app.use('/api/staff', staffRoute);
 app.use('/api/payment', require('../routes/payment.route'));
 app.use('/api/products', productRoute);

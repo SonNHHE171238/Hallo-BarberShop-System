@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ProductGrid({ selectedCategory }) {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,18 +28,7 @@ export default function ProductGrid({ selectedCategory }) {
   }, [selectedCategory]);
 
   const handleAddToCart = async (product) => {
-    try {
-      // Gọi API ném vào giỏ hàng DB
-      const res = await axios.post("http://localhost:5000/api/cart", {
-        productId: product._id,
-        quantity: 1
-      }, { withCredentials: true });
-      
-      if (res.data.success) {
-        alert("Đã thêm vào giỏ hàng!");
-      }
-    } catch (error) {
-      // Ném lỗi 401 (chưa đăng nhập) -> Fallback xuống LocalStorage
+    if (!user) {
       console.log("Guest mode: adding to LocalStorage");
       const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
       const existingItem = localCart.find(item => item.productId._id === product._id);
@@ -53,6 +44,20 @@ export default function ProductGrid({ selectedCategory }) {
       
       localStorage.setItem('hallo_cart', JSON.stringify(localCart));
       alert("Đã thêm vào giỏ hàng tạm (Guest)!");
+      return;
+    }
+
+    try {
+      const res = await axios.post("http://localhost:5000/api/cart", {
+        productId: product._id,
+        quantity: 1
+      }, { withCredentials: true });
+      
+      if (res.data.success) {
+        alert("Đã thêm vào giỏ hàng!");
+      }
+    } catch (error) {
+      console.error("Error adding to cart:", error);
     }
   };
 

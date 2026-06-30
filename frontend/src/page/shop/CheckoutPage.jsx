@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { QRCodeSVG } from 'qrcode.react';
+import { useAuth } from "@/context/AuthContext";
 
 export default function CheckoutPage() {
+  const { user } = useAuth();
   const router = useRouter();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,20 +29,26 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const fetchCart = async () => {
+      if (!user) {
+        const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
+        setCartItems(localCart);
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await axios.get("http://localhost:5000/api/cart", { withCredentials: true });
         if (res.data.success) {
           setCartItems(res.data.data);
         }
       } catch (error) {
-        const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
-        setCartItems(localCart);
+        console.error("Lỗi giỏ hàng:", error);
       } finally {
         setLoading(false);
       }
     };
     fetchCart();
-  }, []);
+  }, [user]);
 
   const subTotal = cartItems.reduce((total, item) => total + (item.productId.price * item.quantity), 0);
   const shippingFee = subTotal > 2000000 ? 0 : 35000;

@@ -5,65 +5,74 @@ import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CartPage() {
+  const { user } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Lấy giỏ hàng
   useEffect(() => {
     const fetchCart = async () => {
+      if (!user) {
+        const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
+        setCartItems(localCart);
+        setLoading(false);
+        return;
+      }
       try {
-        // Tạm thời giả định user đã đăng nhập, gọi API
-        // Nếu làm guest, sếp có thể đọc từ localStorage ở đây
         const res = await axios.get("http://localhost:5000/api/cart", {
-          withCredentials: true // Gửi cookie token nếu có
+          withCredentials: true 
         });
         if (res.data.success) {
           setCartItems(res.data.data);
         }
       } catch (error) {
         console.error("Lỗi lấy giỏ hàng:", error);
-        // Fallback đọc LocalStorage nếu chưa đăng nhập
-        const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
-        setCartItems(localCart);
       } finally {
         setLoading(false);
       }
     };
     fetchCart();
-  }, []);
+  }, [user]);
 
   const updateQuantity = async (productId, currentQuantity, change) => {
     const newQuantity = currentQuantity + change;
     if (newQuantity < 1) return;
 
+    if (!user) {
+       const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
+       const updated = localCart.map(i => i.productId._id === productId ? { ...i, quantity: newQuantity } : i);
+       localStorage.setItem('hallo_cart', JSON.stringify(updated));
+       setCartItems(updated);
+       return;
+    }
+
     try {
-      // Gọi API update
       const res = await axios.put(`http://localhost:5000/api/cart/${productId}`, { quantity: newQuantity }, { withCredentials: true });
       if (res.data.success) {
          setCartItems(prev => prev.map(item => item.productId._id === productId ? { ...item, quantity: newQuantity } : item));
       }
     } catch (error) {
        console.error(error);
-       // Fallback local storage
-       const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
-       const updated = localCart.map(i => i.productId._id === productId ? { ...i, quantity: newQuantity } : i);
-       localStorage.setItem('hallo_cart', JSON.stringify(updated));
-       setCartItems(updated);
     }
   };
 
   const removeItem = async (productId) => {
+    if (!user) {
+       const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
+       const updated = localCart.filter(i => i.productId._id !== productId);
+       localStorage.setItem('hallo_cart', JSON.stringify(updated));
+       setCartItems(updated);
+       return;
+    }
+
     try {
       await axios.delete(`http://localhost:5000/api/cart/${productId}`, { withCredentials: true });
       setCartItems(prev => prev.filter(item => item.productId._id !== productId));
     } catch (error) {
        console.error(error);
-       const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
-       const updated = localCart.filter(i => i.productId._id !== productId);
-       localStorage.setItem('hallo_cart', JSON.stringify(updated));
-       setCartItems(updated);
     }
   };
 
