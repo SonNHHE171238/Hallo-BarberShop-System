@@ -1,21 +1,29 @@
 "use client";
 
 import React, { useState } from 'react';
-import AccountsTable from '@/components/admin/accounts/AccountsTable';
+import dynamic from 'next/dynamic';
 import AddAccountModal from '@/components/admin/accounts/AddAccountModal';
+
+const AccountsTable = dynamic(() => import('@/components/admin/accounts/AccountsTable'), { 
+    ssr: false,
+    loading: () => (
+        <div className="bg-surface-container/50 border border-outline-variant rounded-xl p-12 flex justify-center items-center flex-1">
+            <span className="text-on-surface-variant animate-pulse font-medium">Đang tải bảng dữ liệu...</span>
+        </div>
+    )
+});
 
 export default function AdminAccountsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [roleFilter, setRoleFilter] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    
-    // Pass total count state from child to parent
     const [totalCount, setTotalCount] = useState(0);
 
+
     return (
-        <div className="max-w-[1400px] mx-auto w-full">
+        <div className="max-w-container-max mx-auto px-6 md:px-margin-desktop py-4 w-full h-[calc(100vh-80px)] flex flex-col overflow-hidden">
             {/* Page Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-6 shrink-0">
                 <div>
                     <h2 className="font-headline-lg text-headline-lg text-on-surface font-semibold tracking-tight">Quản Lý Tài Khoản</h2>
                     <p className="font-body-md text-body-md text-on-surface-variant mt-2 max-w-xl">
@@ -32,7 +40,7 @@ export default function AdminAccountsPage() {
             </div>
 
             {/* Controls (Search & Filter) */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6 items-end justify-between">
+            <div className="flex flex-col md:flex-row gap-4 mb-6 items-end justify-between shrink-0">
                 <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
                     {/* Search */}
                     <div className="relative w-full md:w-80 group">

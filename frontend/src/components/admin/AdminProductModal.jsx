@@ -88,6 +88,7 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
     price: "",
     stock: "",
     image: "",
+    imageFile: null,
   });
 
   const [categories, setCategories] = useState([]);
@@ -116,6 +117,7 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
         price: "",
         stock: "",
         image: "",
+        imageFile: null,
       });
       
       const fetchOptions = async () => {
@@ -149,6 +151,7 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
                 price: prod.price || "",
                 stock: prod.stock || "",
                 image: prod.image || "",
+                imageFile: null,
               });
             }
           } catch (error) {
@@ -181,6 +184,18 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData((prev) => ({ 
+        ...prev, 
+        imageFile: file,
+        image: URL.createObjectURL(file) 
+      }));
+      if (errors.image) setErrors((prev) => ({ ...prev, image: "" }));
     }
   };
 
@@ -228,8 +243,7 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
     if (!formData.categoryId) { newErrors.categoryId = "Vui lòng chọn danh mục."; missingFields.push("Danh mục"); }
     if (formData.price === "" || Number(formData.price) < 0) { newErrors.price = "Giá bán phải từ 0 trở lên."; missingFields.push("Giá bán"); }
     if (formData.stock === "" || Number(formData.stock) < 0 || !Number.isInteger(Number(formData.stock))) { newErrors.stock = "Tồn kho phải là số nguyên dương."; missingFields.push("Số lượng tồn kho"); }
-    if (!formData.image.trim()) { newErrors.image = "Vui lòng nhập đường dẫn ảnh."; missingFields.push("Đường dẫn ảnh"); }
-    else if (!formData.image.startsWith("http")) { newErrors.image = "Đường dẫn ảnh không hợp lệ."; missingFields.push("Định dạng đường dẫn ảnh"); }
+    if (!formData.image.trim() && !formData.imageFile) { newErrors.image = "Vui lòng chọn ảnh."; missingFields.push("Đường dẫn ảnh"); }
 
     setErrors(newErrors);
     return missingFields;
@@ -244,17 +258,32 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
 
     setLoading(true);
     try {
-      const payload = {
-        ...formData,
-        price: Number(formData.price),
-        stock: Number(formData.stock),
-      };
+      let payload;
+      const headers = { withCredentials: true };
+
+      if (formData.imageFile) {
+        payload = new FormData();
+        payload.append("name", formData.name);
+        payload.append("brand", formData.brand);
+        payload.append("categoryId", formData.categoryId);
+        payload.append("description", formData.description);
+        payload.append("price", Number(formData.price));
+        payload.append("stock", Number(formData.stock));
+        payload.append("image", formData.imageFile);
+        headers["Content-Type"] = "multipart/form-data";
+      } else {
+        payload = {
+          ...formData,
+          price: Number(formData.price),
+          stock: Number(formData.stock),
+        };
+      }
 
       let res;
       if (isEditMode) {
-        res = await axios.put(`http://localhost:5000/api/products/${productId}`, payload, { withCredentials: true });
+        res = await axios.put(`http://localhost:5000/api/products/${productId}`, payload, { headers });
       } else {
-        res = await axios.post("http://localhost:5000/api/products", payload, { withCredentials: true });
+        res = await axios.post("http://localhost:5000/api/products", payload, { headers });
       }
 
       if (res.data.success) {
@@ -421,14 +450,12 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
                   </div>
                   
                   <div className="flex-1 flex flex-col">
-                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">Đường dẫn ảnh (URL) <span className="text-error">*</span></label>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1.5 ml-1">Ảnh sản phẩm <span className="text-error">*</span></label>
                     <input 
-                      name="image"
-                      value={formData.image}
-                      onChange={handleChange}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
                       className={`w-full bg-surface-container-lowest border p-2.5 rounded-lg text-on-surface font-body-md focus:ring-1 transition-all ${errors.image ? 'border-error focus:border-error focus:ring-error mb-1' : 'border-outline-variant focus:border-primary focus:ring-primary mb-4'}`} 
-                      placeholder="https://example.com/image.png" 
-                      type="text"
                     />
                     {errors.image && <p className="text-error text-[10px] mb-4 font-bold">{errors.image}</p>}
                     

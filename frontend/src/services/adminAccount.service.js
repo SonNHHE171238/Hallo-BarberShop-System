@@ -14,6 +14,13 @@ export const adminAccountService = {
         });
     },
 
+    updateAccount: async (accountId, data) => {
+        return fetchWithAuth(`/admin/accounts/${accountId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+
     deleteAccount: async (accountId) => {
         return fetchWithAuth(`/admin/accounts/${accountId}`, {
             method: 'DELETE',

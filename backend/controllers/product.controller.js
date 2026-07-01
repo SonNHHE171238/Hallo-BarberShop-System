@@ -54,9 +54,11 @@ exports.getProductById = async (req, res, next) => {
 // Admin: Tạo sản phẩm
 exports.createProduct = async (req, res, next) => {
   try {
-    // In a real app, image upload (multer) would be handled before this, and req.file or req.body.image would be used.
-    // For now we assume image URL is sent in req.body.image
-    const newProduct = new Product(req.body);
+    const productData = { ...req.body };
+    if (req.file) {
+      productData.image = req.file.path;
+    }
+    const newProduct = new Product(productData);
     await newProduct.save();
     res.status(201).json({ success: true, data: newProduct, message: 'Thêm sản phẩm thành công' });
   } catch (error) {
@@ -67,7 +69,11 @@ exports.createProduct = async (req, res, next) => {
 // Admin: Sửa sản phẩm
 exports.updateProduct = async (req, res, next) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const updateData = { ...req.body };
+    if (req.file) {
+      updateData.image = req.file.path;
+    }
+    const product = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     if (!product) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' });
     res.json({ success: true, data: product, message: 'Cập nhật sản phẩm thành công' });
   } catch (error) {

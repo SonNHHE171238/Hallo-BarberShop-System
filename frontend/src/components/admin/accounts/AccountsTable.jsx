@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import useSWR from 'swr';
 import { adminAccountService } from '@/services/adminAccount.service';
 import toast from 'react-hot-toast';
@@ -9,6 +9,12 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
     });
 
     const accounts = response?.users || [];
+    
+    // Fix hydration mismatch for Next.js SSR
+    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Filter accounts based on search term and role filter
     const filteredAccounts = useMemo(() => {
@@ -34,6 +40,25 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
     useEffect(() => {
         onTotalCountChange(filteredAccounts.length);
     }, [filteredAccounts.length, onTotalCountChange]);
+
+    // Pagination
+    const [page, setPage] = useState(1);
+    const itemsPerPage = 10;
+    const tableContainerRef = useRef(null);
+
+    useEffect(() => {
+        setPage(1);
+    }, [searchTerm, roleFilter]);
+
+    const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
+    const paginatedAccounts = filteredAccounts.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+    const handlePageChange = (newPage) => {
+        setPage(newPage);
+        if (tableContainerRef.current) {
+            tableContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 
     const handleDelete = async (accountId) => {
         if (!confirm('Bạn có chắc chắn muốn xóa tài khoản này? Hành động này không thể hoàn tác.')) {
@@ -85,11 +110,13 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
 
     if (error) return <div className="text-error p-4 bg-surface-container rounded border border-error/30 text-center">Lỗi tải dữ liệu tài khoản. Vui lòng tải lại trang.</div>;
 
+
+
     return (
-        <div className="bg-surface-container/50 border border-outline-variant rounded-xl overflow-hidden backdrop-blur-sm shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
-            <div className="overflow-x-auto w-full">
+        <div className="bg-surface-container/50 border border-outline-variant rounded-xl overflow-hidden backdrop-blur-sm shadow-[0_4px_30px_rgba(0,0,0,0.5)] flex-1 flex flex-col min-h-0">
+            <div ref={tableContainerRef} className="overflow-auto custom-scrollbar flex-1 relative">
                 <table className="w-full text-left border-collapse whitespace-nowrap min-w-[800px]">
-                    <thead>
+                    <thead className="sticky top-0 bg-surface-container-low z-10 shadow-sm">
                         <tr className="border-b border-outline-variant bg-surface-container-low text-on-surface-variant font-label-md text-label-md uppercase tracking-wider text-xs">
                             <th className="px-4 py-3 font-semibold">Tên người dùng</th>
                             <th className="px-4 py-3 font-semibold">Vai trò</th>
@@ -99,8 +126,8 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
                             <th className="px-4 py-3 font-semibold text-right">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody className="font-body-md text-[15px] text-on-surface divide-y divide-outline-variant/50">
-                        {isLoading ? (
+                    <tbody className="font-body-md text-[15px] text-on-surface divide-y divide-outline-variant/50" suppressHydrationWarning>
+                        {(!isMounted || isLoading) ? (
                             <tr>
                                 <td colSpan="6" className="px-4 py-6 text-center text-on-surface-variant animate-pulse">Đang tải dữ liệu...</td>
                             </tr>
@@ -109,13 +136,13 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
                                 <td colSpan="6" className="px-4 py-6 text-center text-on-surface-variant">Không tìm thấy tài khoản nào.</td>
                             </tr>
                         ) : (
-                            filteredAccounts.map(account => (
-                                <tr key={account._id} className="hover:bg-surface-container-highest/50 transition-colors group">
+                            paginatedAccounts.map(account => (
+                                <tr key={account._id || account.id} className="hover:bg-surface-container-highest/50 transition-colors group">
                                     <td className="px-4 py-2.5">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center text-primary font-headline-sm font-bold overflow-hidden text-sm">
-                                                {account.profileImageUrl ? (
-                                                    <img src={account.profileImageUrl} alt={account.name} className="w-full h-full object-cover" />
+                                                {account.avatarUrl ? (
+                                                    <img src={account.avatarUrl} alt={account.name} className="w-full h-full object-cover" />
                                                 ) : (
                                                     (account.name || 'U').charAt(0).toUpperCase()
                                                 )}
@@ -123,7 +150,7 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
                                             <div>
                                                 <div className="font-semibold text-on-surface group-hover:text-primary transition-colors flex items-center gap-2">
                                                     {account.name}
-                                                    <span className="text-[11px] text-on-surface-variant/50 font-mono tracking-tighter">#{account._id ? String(account._id).substring(String(account._id).length - 6).toUpperCase() : 'N/A'}</span>
+                                                    <span className="text-[11px] text-on-surface-variant/50 font-mono tracking-tighter">#{(account._id || account.id) ? String(account._id || account.id).substring(String(account._id || account.id).length - 6).toUpperCase() : 'N/A'}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -140,13 +167,15 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
                                         <div className="flex items-center justify-end gap-2">
                                             {/* Chỉnh sửa role/status bị ẩn theo yêu cầu */}
                                             {account.role !== 'admin' && (
-                                                <button 
-                                                    onClick={() => handleDelete(account._id)}
-                                                    className="p-1.5 text-on-surface-variant hover:text-error transition-colors rounded hover:bg-error/10" 
-                                                    title="Xóa mềm (Ẩn tài khoản)"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                                                </button>
+                                                <>
+                                                    <button 
+                                                        onClick={() => handleDelete(account._id || account.id)}
+                                                        className="p-1.5 text-on-surface-variant hover:text-error transition-colors rounded hover:bg-error/10" 
+                                                        title="Xóa mềm (Ẩn tài khoản)"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                    </button>
+                                                </>
                                             )}
                                             {account.role === 'admin' && (
                                                 <span className="text-outline text-[10px] uppercase tracking-wider">Không thể xóa</span>
@@ -161,22 +190,44 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
             </div>
             
             {/* Pagination Footer */}
-            <div className="border-t border-outline-variant bg-surface-container-low px-6 py-4 flex items-center justify-between">
-                <div className="text-label-md font-label-md text-on-surface-variant">
-                    Hiển thị 1 đến {filteredAccounts.length} trong số {filteredAccounts.length} tài khoản
-                </div>
-                {filteredAccounts.length > 0 && (
-                    <div className="flex gap-2">
-                        <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+            {(isMounted && totalPages > 0) && (
+                <div className="border-t border-outline-variant bg-surface-container-low px-6 py-4 flex items-center justify-between shrink-0">
+                    <div className="text-label-md font-label-md text-on-surface-variant hidden sm:block">
+                        Hiển thị {(page - 1) * itemsPerPage + 1} đến {Math.min(page * itemsPerPage, filteredAccounts.length)} trong số {filteredAccounts.length} tài khoản
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                        <button 
+                            onClick={() => handlePageChange(Math.max(1, page - 1))}
+                            disabled={page === 1}
+                            className="p-2 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-bright/10 disabled:opacity-50 transition-colors"
+                        >
                             <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                         </button>
-                        <button className="w-8 h-8 rounded bg-primary text-on-primary font-label-md text-sm font-semibold flex items-center justify-center">1</button>
-                        <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary transition-colors disabled:opacity-50" disabled>
+                        
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                            <button 
+                                key={p}
+                                onClick={() => handlePageChange(p)}
+                                className={`w-8 h-8 rounded font-label-md text-sm font-semibold transition-colors ${
+                                    page === p 
+                                        ? 'bg-primary text-on-primary' 
+                                        : 'border border-outline-variant text-on-surface-variant hover:bg-surface-bright/10'
+                                }`}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                        
+                        <button 
+                            onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+                            disabled={page === totalPages}
+                            className="p-2 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-bright/10 disabled:opacity-50 transition-colors"
+                        >
                             <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                         </button>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 }

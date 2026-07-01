@@ -1,4 +1,5 @@
 const User = require('../models/user.model');
+const cloudStorageService = require('../services/cloudStorage.service');
 
 // Hàm tiện ích ném lỗi thân thiện với người dùng (tiếng Việt)
 const throwUserFriendlyError = (msg, statusCode = 400) => {
@@ -66,66 +67,6 @@ exports.createAccount = async (req, res, next) => {
     }
 };
 
-exports.updateAccountStatus = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-
-        if (!['active', 'banned', 'suspended'].includes(status)) {
-            throwUserFriendlyError('Trạng thái không hợp lệ. Hệ thống chỉ chấp nhận: Đang hoạt động, Bị khóa hoặc Đình chỉ.', 400);
-        }
-
-        const user = await User.findById(id);
-        if (!user) {
-            throwUserFriendlyError('Không tìm thấy tài khoản này. Có thể tài khoản đã bị xóa.', 404);
-        }
-        
-        // Chống Admin tự khoá mình hoặc khoá admin khác (bảo vệ an toàn cơ bản)
-        if (user.role === 'admin' && status !== 'active') {
-             throwUserFriendlyError('Bạn không thể khóa tài khoản của một Quản trị viên khác.', 403);
-        }
-
-        user.status = status;
-        await user.save();
-
-        const message = status === 'active' 
-            ? 'Tài khoản đã được mở khóa và có thể đăng nhập bình thường.' 
-            : 'Tài khoản đã bị khóa. Người dùng sẽ không thể đăng nhập.';
-
-        return res.json({
-            message,
-            user
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
-exports.updateAccountRole = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const { role } = req.body;
-
-        if (!['admin', 'staff', 'barber', 'customer'].includes(role)) {
-            throwUserFriendlyError('Chức vụ được chọn không tồn tại trong hệ thống.', 400);
-        }
-
-        const user = await User.findById(id);
-        if (!user) {
-            throwUserFriendlyError('Không tìm thấy tài khoản này.', 404);
-        }
-
-        user.role = role;
-        await user.save();
-
-        return res.json({
-            message: 'Đã thay đổi chức vụ của tài khoản thành công.',
-            user
-        });
-    } catch (error) {
-        next(error);
-    }
-};
 
 exports.deleteAccount = async (req, res, next) => {
     try {
