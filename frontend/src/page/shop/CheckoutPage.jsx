@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from "@/context/AuthContext";
+import Footer from "@/components/layout/Footer";
 
 export default function CheckoutPage() {
   const { user } = useAuth();
@@ -280,21 +281,7 @@ export default function CheckoutPage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-surface-container-lowest border-t border-outline-variant w-full mt-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter px-margin-mobile md:px-margin-desktop py-section-padding max-w-container-max mx-auto">
-          <div className="space-y-4">
-            <div className="font-headline-sm text-headline-sm text-primary font-bold">HALLO BARBER</div>
-            <p className="text-on-surface-variant max-w-xs">Di sản ngành tóc hiện đại. Nâng tầm phong cách quý ông với sự tỉ mỉ và đẳng cấp nhất.</p>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Operating Hours</a>
-            <a className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Contact Us</a>
-          </div>
-          <div className="space-y-6">
-            <div className="text-on-surface-variant opacity-50 text-xs">© 2024 HALLO BARBER. ALL RIGHTS RESERVED.</div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {/* ================= QR CODE MODAL ================= */}
       {showQR && (

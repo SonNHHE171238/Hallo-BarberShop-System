@@ -4,7 +4,7 @@ const Product = require('../models/product.model');
 // Xem giỏ hàng của user hiện tại
 exports.getCart = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const cartItems = await Cart.find({ userId }).populate('productId');
     res.json({ success: true, data: cartItems });
   } catch (error) {
@@ -15,7 +15,7 @@ exports.getCart = async (req, res, next) => {
 // Thêm sản phẩm vào giỏ hàng (hoặc tăng số lượng nếu đã có)
 exports.addToCart = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const { productId, quantity = 1 } = req.body;
 
     if (!productId) return res.status(400).json({ success: false, message: 'Thiếu thông tin sản phẩm' });
@@ -56,7 +56,7 @@ exports.addToCart = async (req, res, next) => {
 // Cập nhật số lượng của một sản phẩm trong giỏ
 exports.updateCartItem = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const { productId } = req.params;
     const { quantity } = req.body;
 
@@ -84,7 +84,7 @@ exports.updateCartItem = async (req, res, next) => {
 // Xóa sản phẩm khỏi giỏ hàng
 exports.removeFromCart = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const { productId } = req.params;
 
     const result = await Cart.findOneAndDelete({ userId, productId });

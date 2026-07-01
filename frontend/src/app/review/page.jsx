@@ -71,7 +71,7 @@ export default function ReviewSearchPage() {
     <div className="bg-background min-h-screen text-on-surface flex flex-col font-body-md selection:bg-primary selection:text-on-primary">
       <Navbar />
 
-      <main className="flex-grow flex items-center justify-center pt-[120px] pb-section-padding px-margin-mobile md:px-margin-desktop">
+      <main className="flex-grow flex items-center justify-center pt-[120px] pb-24 lg:pb-32 px-margin-mobile md:px-margin-desktop">
         <div className="w-full max-w-container-max">
           
           {/* Header Section */}

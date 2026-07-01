@@ -50,61 +50,27 @@ export default function Navbar() {
         
         {/* Navigation Links (Web) */}
         <div className="hidden md:flex items-center space-x-4 lg:space-x-6 xl:space-x-8">
-          <Link 
-            href="/" 
-            onClick={() => setActiveHash("")}
-            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/" && !activeHash
-                ? "text-primary font-bold border-b-2 border-primary pb-1" 
-                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
-            }`}
-          >
-            Trang chủ
-          </Link>
-          <Link 
-            href="/#about" 
-            onClick={() => setActiveHash("#about")}
-            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/" && activeHash === "#about"
-                ? "text-primary font-bold border-b-2 border-primary pb-1" 
-                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
-            }`}
-          >
-            Về chúng tôi
-          </Link>
-          <Link 
-            href="/#services" 
-            onClick={() => setActiveHash("#services")}
-            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/" && activeHash === "#services"
-                ? "text-primary font-bold border-b-2 border-primary pb-1" 
-                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
-            }`}
-          >
-            Dịch vụ
-          </Link>
-          <Link 
-            href="/#deals" 
-            onClick={() => setActiveHash("#deals")}
-            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/" && activeHash === "#deals"
-                ? "text-primary font-bold border-b-2 border-primary pb-1" 
-                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
-            }`}
-          >
-            Khuyến mãi
-          </Link>
-          <Link 
-            href="/#team" 
-            onClick={() => setActiveHash("#team")}
-            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/" && activeHash === "#team"
-                ? "text-primary font-bold border-b-2 border-primary pb-1" 
-                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
-            }`}
-          >
-            Đội ngũ
-          </Link>
+          <div className="relative group flex items-center h-full py-2">
+            <Link 
+              href="/" 
+              onClick={() => setActiveHash("")}
+              className={`text-body-md font-body-md whitespace-nowrap transition-all flex items-center gap-1 ${
+                pathname === "/" && !activeHash
+                  ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                  : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+              }`}
+            >
+              Trang chủ <span className="material-symbols-outlined text-[16px] transition-transform group-hover:rotate-180">expand_more</span>
+            </Link>
+            {/* Dropdown Menu */}
+            <div className="absolute top-full left-0 w-48 bg-surface-container-high border border-outline-variant rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden flex flex-col mt-2">
+              <Link href="/#about" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Về chúng tôi</Link>
+              <Link href="/#services" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Dịch vụ</Link>
+              <Link href="/#deals" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Khuyến mãi</Link>
+              <Link href="/#team" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors">Đội ngũ</Link>
+            </div>
+          </div>
+
           <Link 
             href="/shop" 
             onClick={() => setActiveHash("")}
@@ -117,16 +83,25 @@ export default function Navbar() {
             Cửa hàng
           </Link>
           <Link 
-            href="#" 
-            className="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md font-body-md whitespace-nowrap"
+            href="/customer/history" 
+            onClick={() => setActiveHash("")}
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/customer/history" 
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
           >
-            Blog
+            Lịch hẹn
           </Link>
           <Link 
-            href="#" 
-            className="text-on-surface-variant hover:text-primary transition-colors duration-200 text-body-md font-body-md whitespace-nowrap"
+            href="/blog" 
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/blog" 
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
           >
-            Tin tức
+            Blog & Tin tức
           </Link>
         </div>
 
@@ -203,11 +178,15 @@ export default function Navbar() {
       >
         <div className="flex flex-col px-4 space-y-4">
           <Link href="/" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/" && !activeHash ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Trang chủ</Link>
-          <Link href="/#about" onClick={() => { setIsMobileMenuOpen(false); setActiveHash("#about"); }} className={`text-body-md font-body-md ${pathname === "/" && activeHash === "#about" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Về chúng tôi</Link>
-          <Link href="/#services" onClick={() => { setIsMobileMenuOpen(false); setActiveHash("#services"); }} className={`text-body-md font-body-md ${pathname === "/" && activeHash === "#services" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Dịch vụ</Link>
-          <Link href="/#deals" onClick={() => { setIsMobileMenuOpen(false); setActiveHash("#deals"); }} className={`text-body-md font-body-md ${pathname === "/" && activeHash === "#deals" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Khuyến mãi</Link>
-          <Link href="/#team" onClick={() => { setIsMobileMenuOpen(false); setActiveHash("#team"); }} className={`text-body-md font-body-md ${pathname === "/" && activeHash === "#team" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Đội ngũ</Link>
+          <div className="flex flex-col space-y-4 pl-4 border-l-2 border-outline-variant/30">
+            <Link href="/#about" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Về chúng tôi</Link>
+            <Link href="/#services" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Dịch vụ</Link>
+            <Link href="/#deals" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Khuyến mãi</Link>
+            <Link href="/#team" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Đội ngũ</Link>
+          </div>
           <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
+          <Link href="/customer/history" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
+          <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/blog" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Blog & Tin tức</Link>
           <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
             {user ? (
               <>

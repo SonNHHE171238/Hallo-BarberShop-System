@@ -79,3 +79,14 @@ exports.deleteProduct = async (req, res, next) => {
     next(error);
   }
 };
+
+// Lấy danh sách thương hiệu (Brand)
+exports.getBrands = async (req, res, next) => {
+  try {
+    const brands = await Product.distinct('brand', { isActive: true });
+    const validBrands = brands.filter(b => b && b.trim() !== '');
+    res.json({ success: true, data: validBrands });
+  } catch (error) {
+    next(error);
+  }
+};

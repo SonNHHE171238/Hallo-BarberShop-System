@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import axios from "axios";
 
-export default function SidebarFilters({ selectedCategory, onSelectCategory }) {
+export default function SidebarFilters({ selectedCategory, onSelectCategory, selectedBrand, onSelectBrand }) {
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -16,15 +17,26 @@ export default function SidebarFilters({ selectedCategory, onSelectCategory }) {
         console.error("Error fetching categories:", error);
       }
     };
+    const fetchBrands = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/products/brands");
+        if (res.data.success) {
+          setBrands(res.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching brands:", error);
+      }
+    };
     fetchCategories();
+    fetchBrands();
   }, []);
 
   return (
-    <aside className="w-full lg:w-64 flex-shrink-0 space-y-12">
+    <aside className="w-full lg:w-56 flex-shrink-0 space-y-8">
       {/* Category Filter */}
       <div>
-        <h3 className="font-headline-md text-headline-md mb-6 text-primary-fixed border-b border-outline-variant/50 pb-2">Danh Mục</h3>
-        <ul className="space-y-4 font-label-md text-label-md tracking-widest uppercase">
+        <h3 className="font-headline-sm text-base font-bold mb-4 text-primary-fixed border-b border-outline-variant/50 pb-2">Danh Mục</h3>
+        <ul className="space-y-3 font-label-md text-xs tracking-widest uppercase">
           <li>
             <button 
               onClick={() => onSelectCategory(null)}
@@ -49,20 +61,26 @@ export default function SidebarFilters({ selectedCategory, onSelectCategory }) {
       </div>
       {/* Brand Filter */}
       <div>
-        <h3 className="font-headline-md text-headline-md mb-6 text-primary-fixed border-b border-outline-variant/50 pb-2">Thương Hiệu</h3>
-        <div className="space-y-4">
-          <label className="flex items-center space-x-4 cursor-pointer group">
-            <input defaultChecked className="form-checkbox h-4 w-4 bg-transparent border-outline-variant text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer" type="checkbox"/>
-            <span className="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">HALLO</span>
+        <h3 className="font-headline-sm text-base font-bold mb-4 text-primary-fixed border-b border-outline-variant/50 pb-2">Thương Hiệu</h3>
+        <div className="space-y-3">
+          <label className="flex items-center space-x-3 cursor-pointer group">
+            <input 
+              checked={!selectedBrand} 
+              onChange={() => onSelectBrand(null)}
+              className="form-radio h-4 w-4 bg-transparent border-outline-variant text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer" type="radio" name="brand_filter"
+            />
+            <span className={`font-body-md text-sm transition-colors ${!selectedBrand ? 'text-primary font-bold' : 'text-on-surface-variant group-hover:text-on-surface'}`}>Tất Cả</span>
           </label>
-          <label className="flex items-center space-x-4 cursor-pointer group">
-            <input className="form-checkbox h-4 w-4 bg-transparent border-outline-variant text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer" type="checkbox"/>
-            <span className="font-body-md text-body-md text-on-surface-variant group-hover:text-on-surface transition-colors">Obsidian</span>
-          </label>
-          <label className="flex items-center space-x-4 cursor-pointer group">
-            <input className="form-checkbox h-4 w-4 bg-transparent border-outline-variant text-primary focus:ring-0 focus:ring-offset-0 cursor-pointer" type="checkbox"/>
-            <span className="font-body-md text-body-md text-on-surface-variant group-hover:text-on-surface transition-colors">Apex</span>
-          </label>
+          {brands.map((brand) => (
+            <label key={brand} className="flex items-center space-x-3 cursor-pointer group">
+              <input 
+                checked={selectedBrand === brand} 
+                onChange={() => onSelectBrand(brand)}
+                className="form-radio h-4 w-4 bg-transparent border-outline-variant text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer" type="radio" name="brand_filter"
+              />
+              <span className={`font-body-md text-sm transition-colors ${selectedBrand === brand ? 'text-primary font-bold' : 'text-on-surface-variant group-hover:text-on-surface'}`}>{brand}</span>
+            </label>
+          ))}
         </div>
       </div>
     </aside>

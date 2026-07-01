@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { bookingService } from "@/services/booking.service";
 import { staffDashboardService } from "@/services/staffDashboard.service";
 import DateTimeSelection from "@/components/booking/DateTimeSelection";
+import axios from "axios";
 
 export default function POSBookingPage() {
   // State: Customer
@@ -13,13 +14,13 @@ export default function POSBookingPage() {
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [newCustomerInfo, setNewCustomerInfo] = useState({ name: "", phone: "", emailOrNote: "" });
 
-  // State: Services & Staff (Dynamic)
-  const [servicesList, setServicesList] = useState([]);
+  // State: Services & Products & Staff (Dynamic)
+  const [allItems, setAllItems] = useState([]);
   const [staffList, setStaffList] = useState([]);
-  const [selectedServices, setSelectedServices] = useState([]); // MULTIPLE selection
+  const [selectedItems, setSelectedItems] = useState([]); // MULTIPLE selection
   const [selectedStaff, setSelectedStaff] = useState(null);
-  const [serviceSearchTerm, setServiceSearchTerm] = useState("");
-  const [serviceSort, setServiceSort] = useState("priceAsc");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState("priceAsc");
   
   // State: Time & Modal
   const [showTimeModal, setShowTimeModal] = useState(false);
@@ -27,22 +28,39 @@ export default function POSBookingPage() {
   const [selectedTime, setSelectedTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Determine if cart has services
+  const hasServices = selectedItems.some(item => item.itemType === 'service');
+  const hasProducts = selectedItems.some(item => item.itemType === 'product');
+
   // Fetch initial data
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [servicesRes, barbersRes] = await Promise.all([
-          bookingService.getServices(),
-          bookingService.getBarbers()
+        const [servicesRes, barbersRes, productsRes] = await Promise.all([
+          bookingService.getServices().catch(() => null),
+          bookingService.getBarbers().catch(() => null),
+          axios.get("http://localhost:5000/api/products?limit=1000", { withCredentials: true }).catch(() => null)
         ]);
+        
+        let combined = [];
+
         if (servicesRes && servicesRes.services) {
-          setServicesList(servicesRes.services);
+          const srvs = servicesRes.services.map(s => ({ ...s, itemType: 'service' }));
+          combined = [...combined, ...srvs];
         }
+        
+        if (productsRes && productsRes.data && productsRes.data.success) {
+          const prods = productsRes.data.data.products.map(p => ({ ...p, itemType: 'product', quantity: 1 })); // Default quantity 1 for POS click
+          combined = [...combined, ...prods];
+        }
+        
+        setAllItems(combined);
+
         if (barbersRes && barbersRes.barbers) {
           setStaffList(barbersRes.barbers);
         }
       } catch (error) {
-        toast.error("Không thể tải dữ liệu dịch vụ và thợ.");
+        toast.error("Không thể tải dữ liệu.");
       }
     };
     fetchInitialData();
@@ -53,14 +71,12 @@ export default function POSBookingPage() {
   const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   const isLikelyEmail = (value) => value.includes('@');
 
-  // Prevent non-numeric paste into phone inputs
   const handlePhonePaste = (e, setter) => {
     const paste = (e.clipboardData || window.clipboardData).getData('text');
     const cleaned = normalizePhone(paste);
     if (cleaned.length === 0) {
       e.preventDefault();
     } else {
-      // allow paste but trim to 10
       e.preventDefault();
       setter(cleaned.slice(0, 10));
     }
@@ -131,63 +147,130 @@ export default function POSBookingPage() {
     setShowNewCustomerForm(false);
   };
 
-  const selectService = (service) => {
-    setSelectedServices(prev => {
-      const isSelected = prev.some(s => s._id === service._id);
+  const selectItem = (item) => {
+    setSelectedItems(prev => {
+      const isSelected = prev.some(i => i._id === item._id);
       if (isSelected) {
-        return prev.filter(s => s._id !== service._id);
+        return prev.filter(i => i._id !== item._id);
       } else {
-        return [...prev, service];
+        return [...prev, item];
       }
     });
   };
 
-  const openTimeModal = () => {
-    if (selectedServices.length === 0 || !selectedStaff) {
-      toast.error("Vui lòng chọn ít nhất 1 dịch vụ và 1 Barber trước khi tiếp tục.");
-      return;
-    }
-    setShowTimeModal(true);
+  const increaseQuantity = (itemId) => {
+    setSelectedItems(prev => prev.map(item => {
+      if (item._id === itemId && item.itemType === 'product') {
+        if (item.stock && item.quantity >= item.stock) {
+          toast.error(`Sản phẩm này chỉ còn ${item.stock} trong kho!`);
+          return item;
+        }
+        return { ...item, quantity: (item.quantity || 1) + 1 };
+      }
+      return item;
+    }));
   };
 
-  const handleFinalConfirm = async () => {
-    if (!selectedDate || !selectedTime) {
-      toast.error("Vui lòng chọn ngày và giờ cắt.");
+  const decreaseQuantity = (itemId) => {
+    setSelectedItems(prev => prev.map(item => {
+      if (item._id === itemId && item.itemType === 'product') {
+        if (item.quantity > 1) {
+          return { ...item, quantity: item.quantity - 1 };
+        }
+      }
+      return item;
+    }));
+  };
+
+  const openTimeModalOrCheckout = async () => {
+    if (selectedItems.length === 0) {
+      toast.error("Vui lòng chọn ít nhất 1 dịch vụ hoặc sản phẩm.");
       return;
+    }
+    if (!customer) {
+      toast.error("Vui lòng nhập thông tin khách hàng trước!");
+      return;
+    }
+
+    if (hasServices) {
+      // If there's a service, must select Barber and open Time Modal
+      if (!selectedStaff) {
+        toast.error("Vui lòng chọn 1 Barber cho dịch vụ.");
+        return;
+      }
+      setShowTimeModal(true);
+    } else {
+      // Only products -> Direct Checkout
+      await handleProcessBoth(true); 
+    }
+  };
+
+  // Hàm xử lý chung: Sinh ra Booking (nếu có service) và Order (nếu có product)
+  const handleProcessBoth = async (onlyProducts = false) => {
+    if (!onlyProducts) {
+      if (!selectedDate || !selectedTime) {
+        toast.error("Vui lòng chọn ngày và giờ cắt.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
     try {
-      const payload = {
-        services: selectedServices.map(s => s._id || s.id),
-        barberId: selectedStaff._id || selectedStaff.id,
-        bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
-        date: selectedDate,
-        timeSlot: selectedTime,
-        bookingType: customer && customer.role === 'customer' ? "user" : "guest",
-        customerId: customer && customer.role === 'customer' ? customer._id : undefined,
-        durationMinutes: selectedServices.reduce((acc, curr) => acc + (curr.durationMinutes || curr.duration || 30), 0),
-        customerName: customer ? customer.name : "",
-        customerPhone: customer ? customer.phone : "",
-        note: customer?.note || "",
-        customerEmail: customer?.email || undefined,
-      };
+      const servicesOnly = selectedItems.filter(i => i.itemType === 'service');
+      const productsOnly = selectedItems.filter(i => i.itemType === 'product');
 
-      await bookingService.createBookingSinglePage(payload);
-      
-      toast.success("Đặt lịch thành công!");
+      let orderRes = null;
+      let bookingRes = null;
+
+      // 1. Nếu có sản phẩm -> Tạo Order
+      if (productsOnly.length > 0) {
+        const orderPayload = {
+          items: productsOnly.map(p => ({
+            productId: p._id,
+            quantity: p.quantity || 1
+          })),
+          customerName: customer ? customer.name : "Khách vãng lai",
+          customerPhone: customer ? customer.phone : "",
+          shippingAddress: "Mua tại cửa hàng",
+          paymentMethod: "cash",
+        };
+        // Gửi bằng axios với credentials
+        orderRes = await axios.post("http://localhost:5000/api/orders", orderPayload, { withCredentials: true });
+      }
+
+      // 2. Nếu có dịch vụ -> Tạo Booking
+      if (servicesOnly.length > 0) {
+        const bookingPayload = {
+          services: servicesOnly.map(s => s._id),
+          barberId: selectedStaff._id || selectedStaff.id,
+          bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
+          date: selectedDate,
+          timeSlot: selectedTime,
+          bookingType: customer && customer.role === 'customer' ? "user" : "guest",
+          customerId: customer && customer.role === 'customer' ? customer._id : undefined,
+          durationMinutes: servicesOnly.reduce((acc, curr) => acc + (curr.durationMinutes || curr.duration || 30), 0),
+          customerName: customer ? customer.name : "",
+          customerPhone: customer ? customer.phone : "",
+          note: customer?.note || "",
+          customerEmail: customer?.email || undefined,
+        };
+        bookingRes = await bookingService.createBookingSinglePage(bookingPayload);
+      }
+
+      toast.success("Thanh toán / Lên lịch thành công!");
       setShowTimeModal(false);
       
       // Reset form
       setPhoneInput("");
       setCustomer(null);
-      setSelectedServices([]);
+      setSelectedItems([]);
       setSelectedStaff(null);
       setSelectedDate("");
       setSelectedTime("");
+      setSearchTerm("");
       setNewCustomerInfo({ name: "", phone: "", emailOrNote: "" });
     } catch (error) {
-      toast.error(error.message || "Có lỗi xảy ra khi tạo lịch hẹn.");
+      toast.error(error.response?.data?.message || error.message || "Có lỗi xảy ra khi tạo đơn.");
     } finally {
       setIsSubmitting(false);
     }
@@ -198,33 +281,37 @@ export default function POSBookingPage() {
   };
 
   // Calculations
-  const subTotal = selectedServices.reduce((acc, curr) => acc + (curr.price || 0), 0);
+  const subTotal = selectedItems.reduce((acc, curr) => {
+    const qty = curr.itemType === 'product' ? (curr.quantity || 1) : 1;
+    return acc + ((curr.price || 0) * qty);
+  }, 0);
   const vat = Math.round(subTotal * 0.08);
   const total = subTotal + vat;
 
-  // Filtered + Sorted services for display
-  const displayedServices = servicesList
-    .filter(s => {
-      if (!serviceSearchTerm) return true;
-      const term = serviceSearchTerm.trim().toLowerCase();
-      return (s.name || '').toLowerCase().includes(term) || (s.description || '').toLowerCase().includes(term);
-    })
-    .slice() // clone before sort
-    .sort((a, b) => {
-      const pa = a.price || 0;
-      const pb = b.price || 0;
-      if (serviceSort === 'priceAsc') return pa - pb;
-      return pb - pa;
-    });
+  // Filtered + Sorted items for display
+  // REQUIREMENT: không hiển thị 1 list ra POS trước (Chỉ hiện khi có Search)
+  const displayedItems = searchTerm.trim() === "" 
+    ? [] 
+    : allItems
+        .filter(i => {
+          const term = searchTerm.trim().toLowerCase();
+          return (i.name || '').toLowerCase().includes(term) || (i.description || '').toLowerCase().includes(term);
+        })
+        .sort((a, b) => {
+          const pa = a.price || 0;
+          const pb = b.price || 0;
+          if (sortOrder === 'priceAsc') return pa - pb;
+          return pb - pa;
+        });
 
   return (
-    <div className="w-full flex flex-col lg:flex-row max-w-[1600px] mx-auto min-h-screen">
+    <div className="w-full flex-1 flex flex-col lg:flex-row max-w-[1600px] mx-auto overflow-hidden h-full">
       {/* Left Side: Selection */}
-      <section className="flex-1 p-4 md:p-8 lg:p-12 border-r border-outline-variant">
+      <section className="flex-1 p-4 md:p-8 lg:p-12 border-r border-outline-variant overflow-y-auto custom-scrollbar pb-32">
         <header className="mb-10">
-          <h1 className="font-headline-lg text-3xl md:text-headline-lg text-primary mb-3">Đặt Lịch Tại Quầy</h1>
+          <h1 className="font-headline-lg text-3xl md:text-headline-lg text-primary mb-3">POS & Thu Ngân</h1>
           <p className="text-on-surface-variant font-body-md max-w-2xl">
-            Quản lý đặt lịch nhanh cho khách vãng lai với sự chuẩn xác và đẳng cấp Heritage.
+            Tạo lịch cắt hoặc thanh toán mua sản phẩm trực tiếp tại quầy một cách nhanh chóng.
           </p>
         </header>
 
@@ -242,7 +329,7 @@ export default function POSBookingPage() {
                   </span>
                   <input
                     className="w-full bg-surface-container border border-outline-variant rounded-lg p-4 pl-12 focus:outline-none focus:border-primary text-on-surface placeholder:text-outline-variant/40 transition-all font-body-md"
-                    placeholder="Nhập số điện thoại..."
+                    placeholder="Nhập số điện thoại khách hàng..."
                     type="tel"
                     value={phoneInput}
                     onChange={(e) => setPhoneInput(normalizePhone(e.target.value))}
@@ -351,27 +438,27 @@ export default function POSBookingPage() {
           </div>
         </div>
 
-        {/* Services Section */}
+        {/* Services & Products Section */}
         <div className="mb-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
             <div>
-              <h2 className="font-headline-sm text-2xl text-on-surface mb-1">Chọn Dịch Vụ</h2>
-              <span className="font-label-md text-xs text-gold-dim">{servicesList.length} Dịch vụ hiện có tại chi nhánh</span>
+              <h2 className="font-headline-sm text-2xl text-on-surface mb-1">Thêm Dịch vụ / Sản phẩm</h2>
+              <span className="font-label-md text-xs text-gold-dim">Tìm kiếm để thêm vào giỏ hàng POS</span>
             </div>
             <div className="relative w-full md:max-w-md flex items-center gap-3">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant text-lg">search</span>
               <input
                 className="w-full bg-surface-container border border-outline-variant rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:border-primary text-on-surface placeholder:text-outline-variant/40 transition-all text-sm font-body-md"
-                placeholder="Tìm kiếm dịch vụ..."
+                placeholder="Ví dụ: Cắt tóc, sáp vuốt..."
                 type="text"
-                value={serviceSearchTerm}
-                onChange={(e) => setServiceSearchTerm(e.target.value)}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
               <select
-                value={serviceSort}
-                onChange={(e) => setServiceSort(e.target.value)}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
                 className="bg-surface-container border border-outline-variant rounded-lg h-11 px-3 text-sm"
-                aria-label="Sắp xếp dịch vụ theo giá"
+                aria-label="Sắp xếp theo giá"
               >
                 <option value="priceAsc">Giá: Tăng dần</option>
                 <option value="priceDesc">Giá: Giảm dần</option>
@@ -379,145 +466,173 @@ export default function POSBookingPage() {
             </div>
           </div>
 
-          {/* Flexible Service Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {displayedServices.map(service => {
-              const isSelected = selectedServices.some(s => s._id === service._id);
-              return (
-                <div
-                  key={service._id || service.id}
-                  onClick={() => selectService(service)}
-                  className={`bg-surface-container/70 backdrop-blur-md p-5 rounded-xl cursor-pointer transition-all duration-300 flex flex-col justify-between min-h-[140px] relative overflow-hidden group border ${
-                    isSelected ? 'border-primary bg-primary/5 scale-[0.98]' : 'border-outline-variant hover:border-primary'
-                  }`}
-                >
-                  <div className="relative z-10">
-                    <div className="w-full h-36 mb-3 overflow-hidden rounded-lg bg-surface-container">
-                      {((service.images && service.images[0]) || service.image) && (
-                        <img src={(service.images && service.images[0]) || service.image} alt={service.name} className="w-full h-full object-cover" />
-                      )}
+          {searchTerm.trim() === "" ? (
+            <div className="text-center py-10 bg-surface-container-lowest border border-dashed border-outline-variant/50 rounded-xl">
+              <span className="material-symbols-outlined text-4xl text-outline-variant mb-2">search</span>
+              <p className="text-on-surface-variant font-body-md">Vui lòng gõ từ khóa để tìm kiếm Dịch vụ hoặc Sản phẩm.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              {displayedItems.map(item => {
+                const isSelected = selectedItems.some(i => i._id === item._id);
+                const isProduct = item.itemType === 'product';
+                
+                return (
+                  <div
+                    key={item._id || item.id}
+                    onClick={() => selectItem(item)}
+                    className={`bg-surface-container/70 backdrop-blur-md p-5 rounded-xl cursor-pointer transition-all duration-300 flex flex-col justify-between min-h-[140px] relative overflow-hidden group border ${
+                      isSelected ? 'border-primary bg-primary/5 scale-[0.98]' : 'border-outline-variant hover:border-primary'
+                    }`}
+                  >
+                    <div className="absolute top-2 right-2 z-20">
+                       <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${isProduct ? 'border-gold-dim text-gold-dim' : 'border-primary text-primary'}`}>
+                         {isProduct ? 'Sản phẩm' : 'Dịch vụ'}
+                       </span>
                     </div>
-                    <h3 className={`font-headline-sm text-xl transition-colors ${isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'}`}>
-                      {service.name}
-                    </h3>
-                    <p className="font-label-md text-on-surface-variant text-xs mt-1">{service.durationMinutes || service.duration || 30} phút</p>
+
+                    <div className="relative z-10">
+                      <div className="w-full h-36 mb-3 overflow-hidden rounded-lg bg-surface-container">
+                        {((item.images && item.images[0]) || item.image) ? (
+                          <img src={(item.images && item.images[0]) || item.image} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-surface-container-high">
+                            <span className="material-symbols-outlined text-outline-variant text-4xl">inventory_2</span>
+                          </div>
+                        )}
+                      </div>
+                      <h3 className={`font-headline-sm text-lg line-clamp-2 leading-tight transition-colors ${isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'}`}>
+                        {item.name}
+                      </h3>
+                      {!isProduct && <p className="font-label-md text-on-surface-variant text-xs mt-1">{item.durationMinutes || item.duration || 30} phút</p>}
+                      {isProduct && <p className="font-label-md text-on-surface-variant text-xs mt-1">Kho: {item.stock}</p>}
+                    </div>
+                    <div className="flex justify-between items-end relative z-10 mt-4">
+                      <span className="font-label-md font-bold text-primary text-lg">{item.price ? item.price.toLocaleString('vi-VN') : 0}đ</span>
+                      <span className={`material-symbols-outlined text-2xl transition-colors ${isSelected ? 'text-primary' : 'text-outline-variant group-hover:text-primary'}`} style={{ fontVariationSettings: isSelected ? "'FILL' 1" : "'FILL' 0" }}>
+                        {isSelected ? 'check_circle' : 'add_circle'}
+                      </span>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
-                  <div className="flex justify-between items-end relative z-10">
-                    <span className="font-label-md font-bold text-primary text-lg">{service.price ? service.price.toLocaleString('vi-VN') : 0}đ</span>
-                    <span className={`material-symbols-outlined text-2xl transition-colors ${isSelected ? 'text-primary' : 'text-outline-variant group-hover:text-primary'}`} style={{ fontVariationSettings: isSelected ? "'FILL' 1" : "'FILL' 0" }}>
-                      {isSelected ? 'check_circle' : 'add_circle'}
+                );
+              })}
+              {displayedItems.length === 0 && (
+                <div className="col-span-full text-center py-10 text-on-surface-variant">Không tìm thấy kết quả nào phù hợp.</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Staff Selection (Only show if there's at least one service selected) */}
+        {hasServices && (
+          <div className="mb-12 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+              <div>
+                <h2 className="font-headline-sm text-2xl text-on-surface mb-1">Chỉ Định Barber</h2>
+                <span className="font-label-md text-xs text-gold-dim">Bắt buộc khi có đặt Dịch vụ</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 bg-surface-container-low border border-outline-variant/20 rounded-xl p-6">
+              {staffList.map(staff => {
+                const isSelected = selectedStaff && (selectedStaff._id === staff._id);
+                const name = staff.userId?.name || "Unknown Barber";
+                const title = staff.specialties?.join(", ") || "Stylist";
+                const imageUrl = staff.profileImageUrl;
+                const firstChar = name.charAt(0).toUpperCase();
+
+                return (
+                  <div
+                    key={staff._id || staff.id}
+                    onClick={() => setSelectedStaff(staff)}
+                    className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all group ${
+                      isSelected ? 'border-primary bg-primary/10' : 'border-outline-variant/20 hover:bg-primary/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full overflow-hidden border transition-colors flex items-center justify-center bg-surface-container ${
+                        isSelected ? 'border-primary' : 'border-outline-variant group-hover:border-primary/50'
+                      }`}>
+                        {imageUrl ? (
+                          <img alt={name} className="w-full h-full object-cover" src={imageUrl} />
+                        ) : (
+                          <span className="text-primary font-bold">{firstChar}</span>
+                        )}
+                      </div>
+                      <div>
+                        <span className={`font-label-md block font-semibold transition-colors ${
+                          isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'
+                        }`}>
+                          {name}
+                        </span>
+                        <span className={`text-[10px] uppercase tracking-widest line-clamp-1 ${
+                          isSelected ? 'text-primary/70' : 'text-on-surface-variant'
+                        }`}>
+                          {title}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`material-symbols-outlined transition-colors ${
+                      isSelected ? 'text-primary' : 'text-outline-variant group-hover:text-primary'
+                    }`}>
+                      {isSelected ? 'check_circle' : 'radio_button_unchecked'}
                     </span>
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Staff Selection */}
-        <div className="mb-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-            <div>
-              <h2 className="font-headline-sm text-2xl text-on-surface mb-1">Chỉ Định Barber</h2>
-              <span className="font-label-md text-xs text-gold-dim">Đội ngũ chuyên gia đang sẵn sàng</span>
-            </div>
-            <div className="relative w-full md:max-w-md">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant text-lg">search</span>
-              <input
-                className="w-full bg-surface-container border border-outline-variant rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:border-primary text-on-surface placeholder:text-outline-variant/40 transition-all text-sm font-body-md"
-                placeholder="Tìm barber..."
-                type="text"
-              />
+                );
+              })}
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 bg-surface-container-low border border-outline-variant/20 rounded-xl p-6">
-            {staffList.map(staff => {
-              const isSelected = selectedStaff && (selectedStaff._id === staff._id);
-              const name = staff.userId?.name || "Unknown Barber";
-              const title = staff.specialties?.join(", ") || "Stylist";
-              const imageUrl = staff.profileImageUrl;
-              const firstChar = name.charAt(0).toUpperCase();
-
-              return (
-                <div
-                  key={staff._id || staff.id}
-                  onClick={() => setSelectedStaff(staff)}
-                  className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all group ${
-                    isSelected ? 'border-primary bg-primary/10' : 'border-outline-variant/20 hover:bg-primary/5'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full overflow-hidden border transition-colors flex items-center justify-center bg-surface-container ${
-                      isSelected ? 'border-primary' : 'border-outline-variant group-hover:border-primary/50'
-                    }`}>
-                      {imageUrl ? (
-                        <img alt={name} className="w-full h-full object-cover" src={imageUrl} />
-                      ) : (
-                        <span className="text-primary font-bold">{firstChar}</span>
-                      )}
-                    </div>
-                    <div>
-                      <span className={`font-label-md block font-semibold transition-colors ${
-                        isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'
-                      }`}>
-                        {name}
-                      </span>
-                      <span className={`text-[10px] uppercase tracking-widest line-clamp-1 ${
-                        isSelected ? 'text-primary/70' : 'text-on-surface-variant'
-                      }`}>
-                        {title}
-                      </span>
-                    </div>
-                  </div>
-                  <span className={`material-symbols-outlined transition-colors ${
-                    isSelected ? 'text-primary' : 'text-outline-variant group-hover:text-primary'
-                  }`}>
-                    {isSelected ? 'check_circle' : 'radio_button_unchecked'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        )}
       </section>
 
       {/* Right Side: Booking Summary & Checkout */}
-      <aside className="w-full lg:w-[450px] bg-surface-container/30 backdrop-blur-md border-l border-outline-variant/50">
-        <div className="sticky top-20 flex flex-col p-6 md:p-10 lg:p-12 h-[calc(100vh-80px)]">
-          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-8 border-b border-outline-variant/20 pb-6">
-            Tóm Tắt Đặt Lịch
+      <aside className="w-full lg:w-[450px] bg-surface-container/30 backdrop-blur-md border-l border-outline-variant/50 shrink-0 flex flex-col h-full">
+        <div className="flex flex-col p-6 md:p-8 lg:p-10 h-full overflow-hidden">
+          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-6 border-b border-outline-variant/20 pb-4 shrink-0">
+            Tóm Tắt Đơn POS
           </h2>
 
           {/* Summary List */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-8 pr-2">
-            {selectedServices.length === 0 ? (
-              <p className="text-on-surface-variant text-sm text-center mt-10">Chưa chọn dịch vụ nào</p>
+          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-4 pr-2">
+            {selectedItems.length === 0 ? (
+              <p className="text-on-surface-variant text-sm text-center mt-10">Giỏ hàng trống</p>
             ) : (
-              selectedServices.map(service => (
-                <div key={service._id} className="flex justify-between items-start animate-fade-in bg-surface-container-low p-4 rounded-xl border border-outline-variant/30">
-                  <div>
-                    <h4 className="font-body-md font-semibold text-on-surface text-base">{service.name}</h4>
-                    <p className="font-label-md text-on-surface-variant text-xs mt-1">
-                      Thời gian: {service.durationMinutes || service.duration || 30} phút
-                    </p>
+              selectedItems.map(item => {
+                const isProduct = item.itemType === 'product';
+                return (
+                  <div key={item._id} className="flex justify-between items-start animate-fade-in bg-surface-container-low p-4 rounded-xl border border-outline-variant/30">
+                    <div className="flex-1 pr-4">
+                      <h4 className="font-body-md font-semibold text-on-surface text-base leading-tight mb-1">{item.name}</h4>
+                      {!isProduct && (
+                        <span className="text-[10px] text-primary border border-primary/50 rounded px-1.5 py-0.5 uppercase">Dịch vụ</span>
+                      )}
+                      {isProduct && (
+                         <div className="flex items-center gap-3 mt-2 bg-surface p-1 rounded w-fit border border-outline-variant/50">
+                            <button onClick={() => decreaseQuantity(item._id)} className="w-6 h-6 flex items-center justify-center hover:bg-surface-variant rounded text-on-surface">-</button>
+                            <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
+                            <button onClick={() => increaseQuantity(item._id)} className="w-6 h-6 flex items-center justify-center hover:bg-surface-variant rounded text-on-surface">+</button>
+                         </div>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="font-body-md font-bold text-on-surface block">
+                        {item.price ? ((item.price || 0) * (item.quantity || 1)).toLocaleString('vi-VN') : 0}đ
+                      </span>
+                      <button 
+                        onClick={() => selectItem(item)}
+                        className="text-[10px] text-error hover:underline uppercase tracking-tighter mt-2 inline-block"
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-body-md font-bold text-on-surface block">{service.price ? service.price.toLocaleString('vi-VN') : 0}đ</span>
-                    <button 
-                      onClick={() => selectService(service)}
-                      className="text-[10px] text-error hover:underline uppercase tracking-tighter mt-1"
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              ))
+                )
+              })
             )}
             
             {/* Display Barber in Summary */}
-            {selectedServices.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-outline-variant/20">
+            {hasServices && (
+              <div className="mt-4 pt-4 border-t border-outline-variant/20 shrink-0">
                 <p className="font-label-md text-on-surface-variant text-sm">
                   Barber phụ trách: <span className="text-primary/80 font-bold ml-1">{selectedStaff ? (selectedStaff.userId?.name || "Unknown Barber") : 'Chưa chỉ định'}</span>
                 </p>
@@ -526,7 +641,7 @@ export default function POSBookingPage() {
           </div>
 
           {/* Totals */}
-          <div className="border-t border-outline-variant/20 pt-8 space-y-4">
+          <div className="border-t border-outline-variant/20 pt-6 space-y-4 shrink-0">
             <div className="flex justify-between font-body-md text-on-surface-variant">
               <span>Tạm tính</span>
               <span className="font-label-md">{subTotal.toLocaleString('vi-VN')}đ</span>
@@ -535,31 +650,36 @@ export default function POSBookingPage() {
               <span>Thuế VAT (8%)</span>
               <span className="font-label-md">{vat.toLocaleString('vi-VN')}đ</span>
             </div>
-            <div className="flex justify-between font-headline-md text-3xl text-primary pt-6">
+            <div className="flex justify-between font-headline-md text-3xl text-primary pt-4">
               <span>Tổng Tiền</span>
               <span className="font-bold tracking-tight">{total.toLocaleString('vi-VN')}đ</span>
             </div>
           </div>
 
           {/* Actions Footer */}
-          <div className="mt-10 space-y-4">
+          <div className="mt-6 space-y-4 shrink-0">
             <button 
               onClick={handlePrint}
-              className="w-full py-5 border border-outline-gold text-primary rounded-lg font-label-md font-bold flex items-center justify-center gap-3 hover:bg-primary/5 transition-all active:scale-[0.98] group"
+              disabled={selectedItems.length === 0}
+              className="w-full py-5 border border-outline-gold text-primary rounded-lg font-label-md font-bold flex items-center justify-center gap-3 hover:bg-primary/5 transition-all active:scale-[0.98] group disabled:opacity-50"
             >
               <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">print</span>
               IN HÓA ĐƠN TẠM
             </button>
             <button 
-              onClick={openTimeModal}
-              className="w-full py-5 bg-primary text-on-primary rounded-lg font-label-md font-bold flex items-center justify-center gap-3 hover:brightness-110 shadow-[0_0_20px_rgba(233,193,118,0.1)] transition-all active:scale-[0.98]"
+              onClick={openTimeModalOrCheckout}
+              disabled={selectedItems.length === 0}
+              className={`w-full py-5 rounded-lg font-label-md font-bold flex items-center justify-center gap-3 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 ${hasServices ? 'bg-primary text-on-primary hover:brightness-110 shadow-primary/20' : 'bg-green-600 text-white hover:bg-green-500 shadow-green-600/20'}`}
             >
-              <span className="material-symbols-outlined">schedule</span>
-              CHỌN GIỜ & XÁC NHẬN
+              <span className="material-symbols-outlined">
+                {hasServices ? 'schedule' : 'point_of_sale'}
+              </span>
+              {hasServices ? 'CHỌN GIỜ & XÁC NHẬN' : 'THANH TOÁN NGAY'}
             </button>
           </div>
         </div>
       </aside>
+
       {/* Time Selection Modal */}
       {showTimeModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
@@ -577,7 +697,7 @@ export default function POSBookingPage() {
             <div className="mb-8">
               <DateTimeSelection 
                 selectedBarber={selectedStaff}
-                selectedServices={selectedServices}
+                selectedServices={selectedItems.filter(i => i.itemType === 'service')}
                 selectedDate={selectedDate}
                 setSelectedDate={setSelectedDate}
                 selectedTime={selectedTime}
@@ -593,7 +713,7 @@ export default function POSBookingPage() {
                 Hủy
               </button>
               <button 
-                onClick={handleFinalConfirm}
+                onClick={() => handleProcessBoth(false)}
                 disabled={isSubmitting || !selectedDate || !selectedTime}
                 className="px-8 py-3 bg-primary text-on-primary rounded-lg font-label-md font-bold hover:brightness-110 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
