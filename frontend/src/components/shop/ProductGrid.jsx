@@ -123,7 +123,7 @@ export default function ProductGrid({ selectedCategory, selectedBrand }) {
 
   return (
     <div className="flex-grow flex flex-col">
-      <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-8 gap-x-6">
+      <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-8 gap-x-6 content-start">
         {products.map((product) => (
           <div key={product._id} className="group flex flex-col bg-surface-container-low border border-outline-variant/30 hover:border-outline-variant transition-all duration-500 rounded-lg overflow-hidden">
             <div className="relative aspect-square overflow-hidden bg-background flex items-center justify-center p-4">

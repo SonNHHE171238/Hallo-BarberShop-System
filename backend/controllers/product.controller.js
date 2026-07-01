@@ -3,7 +3,7 @@ const Product = require('../models/product.model');
 // Lấy danh sách sản phẩm (có filter và phân trang)
 exports.getProducts = async (req, res, next) => {
   try {
-    const { categoryId, brand, isBestSeller, search, includeInactive, page = 1, limit = 12 } = req.query;
+    const { categoryId, brand, isBestSeller, search, includeInactive, page = 1, limit = 12, sort } = req.query;
     let filter = includeInactive === 'true' ? {} : { isActive: true };
 
     if (categoryId) filter.categoryId = categoryId;
@@ -14,9 +14,15 @@ exports.getProducts = async (req, res, next) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const total = await Product.countDocuments(filter);
     
+    let sortOptions = { createdAt: -1 };
+    if (sort === 'price_desc') sortOptions = { price: -1 };
+    else if (sort === 'price_asc') sortOptions = { price: 1 };
+    else if (sort === 'stock_asc') sortOptions = { stock: 1 };
+    else if (sort === 'stock_desc') sortOptions = { stock: -1 };
+
     const products = await Product.find(filter)
       .populate('categoryId', 'name')
-      .sort({ createdAt: -1 })
+      .sort(sortOptions)
       .skip(skip)
       .limit(parseInt(limit));
 
@@ -86,6 +92,28 @@ exports.getBrands = async (req, res, next) => {
     const brands = await Product.distinct('brand', { isActive: true });
     const validBrands = brands.filter(b => b && b.trim() !== '');
     res.json({ success: true, data: validBrands });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Lấy thống kê kho hàng
+exports.getProductStats = async (req, res, next) => {
+  try {
+    const totalProducts = await Product.countDocuments();
+    const lowStock = await Product.countDocuments({ stock: { $lte: 10 } });
+    const Category = require('../models/category.model');
+    const totalCategories = await Category.countDocuments();
+    
+    res.json({
+      success: true,
+      data: {
+        totalProducts,
+        lowStock,
+        totalCategories,
+        monthlyRevenue: 0 // Mocked since we don't have orders yet
+      }
+    });
   } catch (error) {
     next(error);
   }

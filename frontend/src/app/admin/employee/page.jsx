@@ -104,10 +104,11 @@ export default function AdminStaffPage() {
         
         // Chuyển đổi dữ liệu từ API sang format của bảng
         const apiBarbers = response.barbers.map(item => {
-          const b = item.barber;
-          const u = item.user;
+          const b = item.barber || {};
+          const u = item.user || {};
+          const bId = String(b._id || b.id || "000000");
           return {
-            id: b._id.substring(b._id.length - 6).toUpperCase(), // Lấy 6 ký tự cuối làm ID cho gọn
+            id: bId.length > 6 ? bId.substring(bId.length - 6).toUpperCase() : bId.toUpperCase(),
             name: u.name,
             role: b.experienceYears >= 5 ? "Master Barber" : "Junior Barber",
             type: "barber",
@@ -123,8 +124,10 @@ export default function AdminStaffPage() {
         });
 
         // Xử lý dữ liệu Staff Khác (nếu có)
-        const apiStaffs = (response.staffs || []).map(u => ({
-            id: u._id.substring(u._id.length - 6).toUpperCase(),
+        const apiStaffs = (response.staffs || []).map(u => {
+          const uId = String(u._id || u.id || "000000");
+          return {
+            id: uId.length > 6 ? uId.substring(uId.length - 6).toUpperCase() : uId.toUpperCase(),
             name: u.name,
             role: "Lễ tân / Thợ phụ",
             type: "staff",
@@ -136,7 +139,8 @@ export default function AdminStaffPage() {
             shift: "Ca Hành Chính",
             email: u.email,
             phone: u.phone || "Chưa cập nhật"
-        }));
+          };
+        });
 
         // Gộp cả 2 danh sách lại để hiển thị
         setStaffList([...apiBarbers, ...apiStaffs]);

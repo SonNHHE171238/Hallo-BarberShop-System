@@ -83,10 +83,10 @@ export default function Navbar() {
             Cửa hàng
           </Link>
           <Link 
-            href="/customer/history" 
+            href={user ? "/customer/history" : "/review"} 
             onClick={() => setActiveHash("")}
             className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/customer/history" 
+              pathname === "/customer/history" || pathname === "/review"
                 ? "text-primary font-bold border-b-2 border-primary pb-1" 
                 : "text-on-surface-variant hover:text-primary transition-colors duration-200"
             }`}
@@ -185,7 +185,7 @@ export default function Navbar() {
             <Link href="/#team" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Đội ngũ</Link>
           </div>
           <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
-          <Link href="/customer/history" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
+          <Link href={user ? "/customer/history" : "/review"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/review" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
           <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/blog" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Blog & Tin tức</Link>
           <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
             {user ? (
