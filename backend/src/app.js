@@ -40,6 +40,7 @@ app.use("/api/barbers", barberRoute);
 app.use("/api/staff", staffRoute);
 app.use("/api/payment", require("../routes/payment.route"));
 app.use("/api/rosters", rosterRoute);
+app.use("/api/absences", require("../routes/absence.route"));
 
 app.get("/", (req, res) => {
   res.send("Hallo BarberShop API is running");
