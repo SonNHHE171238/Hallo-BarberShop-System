@@ -6,3 +6,10 @@ backend/server.js
 backend/implementation_plan.md
 backend/test-booking-flow.js
 backend/pos_booking_plan.md
+test case/runner.js
+test case/TC_book_appointment.md
+test case/TC_general.md
+test case/TC_get_barber_bookings.md
+test case/TC_get_barber_list.md
+test case/TC_get_service_list.md
+test case/test.js
