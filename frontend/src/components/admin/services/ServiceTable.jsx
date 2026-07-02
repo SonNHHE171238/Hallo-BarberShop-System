@@ -43,16 +43,22 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
   const formatService = (service) => ({
     id: service._id || service.id || service.name,
     name: service.name || 'Không tên',
-    category: service.category || 'Khác',
+    category: service.category === 'perm'
+      ? 'Uốn'
+      : service.category === 'color'
+        ? 'Hóa chất'
+        : service.category === 'treatment'
+          ? 'Chăm sóc'
+          : service.category === 'cut'
+            ? 'Cắt'
+            : (service.category || 'Khác'),
     price: typeof service.price === 'number' ? `${service.price.toLocaleString('vi-VN')} VNĐ` : (service.price || '0 VNĐ'),
     duration: service.durationMinutes ? `${service.durationMinutes} phút` : (service.duration || '0 phút'),
     status: service.isActive === false ? 'paused' : 'active',
     image: (service.images && service.images[0]) || service.image || 'https://via.placeholder.com/100',
   });
 
-  const renderedServices = services.length
-    ? services.map((service) => ({ raw: service, formatted: formatService(service) }))
-    : defaultServices.map((service) => ({ raw: service, formatted: service }));
+  const renderedServices = services.map((service) => ({ raw: service, formatted: formatService(service) }));
 
   return (
     <div className="glass-panel overflow-hidden shadow-2xl rounded-t-lg">
@@ -68,9 +74,29 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/30">
-            {renderedServices.map(({ raw, formatted }) => (
-              <tr key={formatted.id} className="hover:bg-surface-bright/5 transition-all duration-300 ease-in-out group hover:-translate-y-[2px]">
-                <td className="px-8 py-6">
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="px-8 py-12 text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                    <p className="text-body-md font-medium">Đang tải dữ liệu...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : renderedServices.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="px-8 py-12 text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-outline-variant">search_off</span>
+                    <p className="text-body-md font-medium">Không tìm thấy kết quả phù hợp</p>
+                    <p className="text-body-sm text-on-surface-variant">Vui lòng thử lại với từ khóa khác</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              renderedServices.map(({ raw, formatted }) => (
+                <tr key={formatted.id} className="hover:bg-surface-bright/5 transition-all duration-300 ease-in-out group hover:-translate-y-[2px]">
+                  <td className="px-8 py-6">
                   <div className="flex items-center gap-4">
                     <div className="h-16 w-16 bg-surface-container overflow-hidden border border-outline-variant rounded-md">
                       <img 
@@ -112,7 +138,8 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
                   </div>
                 </td>
               </tr>
-            ))}
+              ))
+            )}
           </tbody>
         </table>
       </div>

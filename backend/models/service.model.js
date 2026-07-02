@@ -9,8 +9,15 @@ const serviceSchema = new mongoose.Schema(
     hairTypes: [String], // Compatible hair types: ["straight", "wavy", "curly", "coily"]
     styleCompatibility: [String], // Compatible styles: ["short", "medium", "long", "beard"]
     expertiseRequired: [String], // Required barber expertise tags
-    price: { type: Number, required: true },
-    durationMinutes: Number,
+    price: { 
+      type: Number, 
+      required: true,
+      min: [0, "Price cannot be negative"]
+    },
+    durationMinutes: { 
+      type: Number,
+      min: [0, "Duration cannot be negative"]
+    },
     isActive: { type: Boolean, default: true },
     category: {
       type: String,

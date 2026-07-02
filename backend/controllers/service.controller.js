@@ -127,6 +127,23 @@ exports.getAllServices = async (req, res) => {
 
     const total = await Service.countDocuments(query);
 
+    const hasSearchOrFilter = Object.keys(query).length > 0;
+    if (hasSearchOrFilter && total === 0) {
+      const warningMessage = "Không thấy kết quả phù hợp cho tìm kiếm/lọc dịch vụ.";
+      console.warn(warningMessage, { search, category, isActive });
+      return res.status(200).json({
+        success: true,
+        message: warningMessage,
+        services,
+        pagination: {
+          page: parsedPage,
+          limit: parsedLimit,
+          total,
+          pages: Math.ceil(total / parsedLimit),
+        },
+      });
+    }
+
     res.status(200).json({
       success: true,
       services,
