@@ -1,4 +1,4 @@
-﻿const Booking = require("../models/booking.model");
+const Booking = require("../models/booking.model");
 const mongoose = require("mongoose");
 const BarberSchedule = require("../models/barber-schedule.model");
 const BarberAbsence = require("../models/barber-absence.model");
@@ -493,20 +493,27 @@ exports.updateBookingStatus = async (req, res) => {
 
     // Handle no-show status
     if (status === "no_show") {
-      if (!isBarber && !isAdmin) {
+      if (!["barber", "admin", "manager"].includes(userRole)) {
         return res
           .status(403)
           .json({ message: "Only barbers or admins can mark no-shows" });
       }
 
-      // Record the no-show
-      const noShow = new NoShow({
-        customerId: booking.customerId,
-        bookingId: booking._id,
-        markedBy: userId,
-        reason: reason || "Customer did not show up",
-      });
-      await noShow.save();
+      // Record the no-show only if the customer is a registered user
+      if (booking.customerId) {
+        const noShow = new NoShow({
+          customerId: booking.customerId,
+          bookingId: booking._id,
+          barberId: booking.barberId,
+          serviceId: booking.services && booking.services.length > 0 
+            ? (booking.services[0]._id || booking.services[0]) 
+            : null,
+          originalBookingDate: booking.bookingDate,
+          markedBy: userId,
+          reason: "no_show",
+        });
+        await noShow.save();
+      }
     }
 
     // Handle completion
@@ -615,7 +622,7 @@ exports.cancelBooking = async (req, res) => {
     }
 
     // Check if user can cancel this booking
-    if (booking.customerId.toString() !== userId) {
+    if (!booking.customerId || booking.customerId.toString() !== userId) {
       return res
         .status(403)
         .json({ message: "Not authorized to cancel this booking" });
@@ -690,19 +697,22 @@ exports.cancelBooking = async (req, res) => {
     const isLateCancellation = hoursDifference < 2;
 
     try {
-      await NoShow.create({
-        customerId: booking.customerId,
-        bookingId: booking._id,
-        barberId: booking.barberId,
-        serviceId: booking.services && booking.services.length > 0 ? booking.services[0]._id : null,
-        originalBookingDate: booking.bookingDate,
-        markedBy: userId,
-        reason: isLateCancellation ? "late_cancellation" : "customer_cancelled",
-        description: reason,
-        isWithinPolicy: !isLateCancellation,
-      });
-
-          } catch (noShowError) {
+      if (booking.customerId) {
+        await NoShow.create({
+          customerId: booking.customerId,
+          bookingId: booking._id,
+          barberId: booking.barberId,
+          serviceId: booking.services && booking.services.length > 0 
+            ? (booking.services[0]._id || booking.services[0]) 
+            : null,
+          originalBookingDate: booking.bookingDate,
+          markedBy: userId,
+          reason: isLateCancellation ? "late_cancellation" : "customer_cancelled",
+          description: reason,
+          isWithinPolicy: !isLateCancellation,
+        });
+      }
+    } catch (noShowError) {
       console.error("Error creating no-show record:", noShowError);
       // Don't fail the cancellation if no-show tracking fails
     }

@@ -131,6 +131,28 @@ class BookingAdminService {
     
     await booking.save();
 
+    // Create NoShow record for tracking and penalty logic
+    const NoShow = require('../models/no-show.model');
+    try {
+      if (booking.customerId) {
+        await NoShow.create({
+          customerId: booking.customerId,
+          bookingId: booking._id,
+          barberId: booking.barberId,
+          serviceId: booking.services && booking.services.length > 0 
+            ? (booking.services[0]._id || booking.services[0]) 
+            : null,
+          originalBookingDate: booking.bookingDate,
+          markedBy: adminId,
+          reason: 'no_show',
+          description: note
+        });
+      }
+    } catch (noShowError) {
+      console.error('Error creating no-show record by admin:', noShowError);
+      // Don't fail the entire admin action if this fails, but it should succeed
+    }
+
     if (booking.barberId && booking.bookingDate) {
       const dateStr = new Date(booking.bookingDate).toISOString().split('T')[0];
       const startHour = new Date(booking.bookingDate).getHours();
