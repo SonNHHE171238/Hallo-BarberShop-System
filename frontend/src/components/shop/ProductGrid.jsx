@@ -1,67 +1,160 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 
-const mockProducts = [
-  {
-    id: 1,
-    brand: "HALLO",
-    name: "Matte Clay Pomade",
-    price: "600k",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAdSSBn04JXKDHVOOk7fgC9dvPyUGIna6clqqTxU-hKlNJ0EwYy95IS6pGQ-n8FD8aXLinpDqWliR2c2uZjsUn9AfvzBZ8cCTa1YDl9n06TpLyNU5eUh3r7cmhRvJMSFYj1VrCkXQs8ENTxvHSLHe5j1KRF8jNXXYxczRuM21SUueT6ZB68mb4dnumejh23Qrsv9hWY19u2k28uyPRHLVmJK3gSXkRkW7eyQ7HkzbDzMY4aAEEg0ovZ9zpnJFMTSrVWCHj8393mW1xf",
-    isBestSeller: true,
-  },
-  {
-    id: 2,
-    brand: "Obsidian",
-    name: "Architect Beard Oil",
-    price: "800k",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDis6jJDZF5SjnLE__oQaK5kQtq3SzaLcrwDOc61Ur_8fspgUXvbl20AJs5X7FHL-b7lAH5wr0xKk72QwmUTU2zimei1eXDX4np2HKuosYVdh2aLVrsxSX40SCqUoLWnUmUeIMkRQXUgtyd9ULDspcy_xAHp5JVeU8SK7ByTkM8EA9Ejh-iTS_uVfds8IuUlu6_6dzuZI7AC6RGI-rVIroyut0HLlJaR4V-y-8j9Am9e6HCbHjus6YLR6eHu3mfTqDwgM8ayG0kyBWJ",
-    isBestSeller: false,
-  },
-  {
-    id: 3,
-    brand: "Apex",
-    name: "Precision Razor",
-    price: "1.150k",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCHAeDNacpY4Rm97XgKXsu0gkroEds8rmvgbUHaue_SJLi7MHsxdmuLJviiF5bq6Le4AA1qcDiUePyo24IFgIMEayl_XiwCfaaGE6XTytQdU8XWQgEzBcHZc8nu3AaJIVI8u-snq4tx6thO1ViB0-HXNTz7A3PrM5AHjBslUducfYMCbmUc0jgFlyCPxq2qoetJdE5zgQsdsOwmmylcpkZyp8KSHiGDSZtiESOwqdmektVKy-DHC7V7wqarYYFurc4Tzaef3Y13nXsb",
-    isBestSeller: false,
-  },
-  {
-    id: 4,
-    brand: "HALLO",
-    name: "Charcoal Face Wash",
-    price: "700k",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAIIMKpNCnhAHvabpdU9ngptU5L1DHCQ50CGAtjCiTm_OFWMazP95q89KUOtpt9xUSMw5P0FvnWhBkoNuH14xSSkEi_leU8fbPg1KdHhuDgKHWF-xqTDoaHhk6z9Owu2qIWufSXmhCpDMDbTDl5CG4uiLGOVP3GceUuH15JQl1nUNC_zSFMTySAsOofLLCWJqE42baRLt2dh0geX4Sg3mnm-KFOe4zga8sqk7JyTViE_5pW1Ya-2cLKbq6CvSzMb3byBeR_jI5PpbHI",
-    isBestSeller: false,
+export default function ProductGrid({ selectedCategory, selectedBrand }) {
+  const { user } = useAuth();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategory, selectedBrand]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        let url = `http://localhost:5000/api/products?limit=20&page=${page}&`;
+        if (selectedCategory) url += `categoryId=${selectedCategory}&`;
+        if (selectedBrand) url += `brand=${encodeURIComponent(selectedBrand)}&`;
+
+        const res = await axios.get(url);
+        if (res.data.success) {
+          setProducts(res.data.data.products);
+          setTotalPages(res.data.data.totalPages);
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [selectedCategory, selectedBrand, page]);
+
+  const handleAddToCart = async (product) => {
+    if (!user) {
+      console.log("Guest mode: adding to LocalStorage");
+      const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
+      const existingItem = localCart.find(item => item.productId._id === product._id);
+      
+      if (existingItem) {
+        existingItem.quantity += 1;
+      } else {
+        localCart.push({
+          productId: product,
+          quantity: 1
+        });
+      }
+      
+      localStorage.setItem('hallo_cart', JSON.stringify(localCart));
+      alert("Đã thêm vào giỏ hàng tạm (Guest)!");
+      return;
+    }
+
+    try {
+      const res = await axios.post("http://localhost:5000/api/cart", {
+        productId: product._id,
+        quantity: 1
+      }, { withCredentials: true });
+      
+      if (res.data.success) {
+        alert("Đã thêm vào giỏ hàng!");
+      }
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex-grow flex items-center justify-center min-h-[400px]">Đang tải sản phẩm...</div>;
   }
-];
 
-export default function ProductGrid() {
+  if (products.length === 0) {
+    return <div className="flex-grow flex items-center justify-center min-h-[400px]">Chưa có sản phẩm nào.</div>;
+  }
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    
+    return (
+      <div className="flex justify-center items-center space-x-2 mt-12">
+        <button 
+          onClick={() => {
+            setPage(p => Math.max(1, p - 1));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          disabled={page === 1}
+          className="p-2 border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary disabled:opacity-50 disabled:hover:border-outline-variant disabled:hover:text-on-surface-variant transition-colors rounded flex items-center justify-center"
+        >
+          <span className="material-symbols-outlined">chevron_left</span>
+        </button>
+        
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+          <button
+            key={p}
+            onClick={() => {
+              setPage(p);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`w-10 h-10 flex items-center justify-center font-bold text-sm rounded transition-colors ${page === p ? 'bg-primary text-on-primary' : 'border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary'}`}
+          >
+            {p}
+          </button>
+        ))}
+        
+        <button 
+          onClick={() => {
+            setPage(p => Math.min(totalPages, p + 1));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          disabled={page === totalPages}
+          className="p-2 border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary disabled:opacity-50 disabled:hover:border-outline-variant disabled:hover:text-on-surface-variant transition-colors rounded flex items-center justify-center"
+        >
+          <span className="material-symbols-outlined">chevron_right</span>
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-y-12 gap-x-8">
-      {mockProducts.map((product) => (
-        <div key={product.id} className="group flex flex-col bg-surface-container-low border border-outline-variant/30 hover:border-outline-variant transition-all duration-500">
-          <div className="relative aspect-[4/5] overflow-hidden bg-background flex items-center justify-center p-6">
-            <img 
-              alt={product.name} 
-              className="w-full h-full object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out" 
-              src={product.image} 
-            />
-            {product.isBestSeller && (
-              <span className="absolute top-0 right-0 bg-primary text-on-primary font-label-md text-[10px] px-3 py-1 uppercase tracking-[0.2em]">
-                Bán Chạy
-              </span>
-            )}
+    <div className="flex-grow flex flex-col">
+      <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-8 gap-x-6 content-start">
+        {products.map((product) => (
+          <div key={product._id} className="group flex flex-col bg-surface-container-low border border-outline-variant/30 hover:border-outline-variant transition-all duration-500 rounded-lg overflow-hidden">
+            <div className="relative aspect-square overflow-hidden bg-background flex items-center justify-center p-4">
+              <img 
+                alt={product.name} 
+                className="w-full h-full object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out" 
+                src={product.image} 
+              />
+              {product.isBestSeller && (
+                <span className="absolute top-0 right-0 bg-primary text-on-primary font-label-md text-[9px] px-2 py-1 uppercase tracking-[0.1em]">
+                  Bán Chạy
+                </span>
+              )}
+            </div>
+            <div className="p-5 flex flex-col flex-grow">
+              <span className="font-label-md text-[10px] text-primary uppercase tracking-[0.2em] mb-2">{product.brand}</span>
+              <h4 className="font-body-lg text-base font-bold mb-2 text-white group-hover:text-primary transition-colors line-clamp-2">{product.name}</h4>
+              <p className="font-label-md text-base font-semibold text-on-surface-variant mb-6">
+                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+              </p>
+              <button 
+                onClick={() => handleAddToCart(product)}
+                className="mt-auto w-full bg-transparent border border-outline-variant text-primary font-label-md text-xs py-3 uppercase tracking-wider hover:bg-primary hover:text-on-primary transition-all duration-300 rounded"
+              >
+                Thêm Vào Giỏ
+              </button>
+            </div>
           </div>
-          <div className="p-8 flex flex-col flex-grow">
-            <span className="font-label-md text-[12px] text-primary uppercase tracking-[0.3em] mb-3">{product.brand}</span>
-            <h4 className="font-headline-sm text-headline-sm mb-3 text-white group-hover:text-primary transition-colors">{product.name}</h4>
-            <p className="font-label-md text-headline-sm text-on-surface-variant mb-8">{product.price}</p>
-            <button className="mt-auto w-full bg-transparent border border-outline-variant text-primary font-label-md text-label-md py-4 uppercase tracking-widest hover:bg-primary hover:text-on-primary transition-all duration-300">
-              Thêm Vào Giỏ
-            </button>
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
+      {renderPagination()}
     </div>
   );
 }

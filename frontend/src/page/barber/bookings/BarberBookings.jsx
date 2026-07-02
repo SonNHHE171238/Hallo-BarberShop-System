@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { barberService } from '@/services/barber.service';
 import toast from 'react-hot-toast';
 
-export default function BarberAppointments() {
+export default function BarberBookings() {
   const [appointments, setAppointments] = useState([]);
   const [stats, setStats] = useState({ total: 0 });
   const [isLoading, setIsLoading] = useState(true);

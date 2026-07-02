@@ -144,10 +144,10 @@ export default function ChatbotWidget() {
       }
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: selectedImage.mimeType });
-      
+
       const formData = new FormData();
       formData.append('image', blob, 'test.jpg');
-      
+
       const res = await fetch("http://localhost:5000/api/chatbot/test-stability-preview", {
         method: "POST",
         body: formData,
@@ -288,7 +288,7 @@ export default function ChatbotWidget() {
                   <div key={idx} className="flex justify-start">
                     <div className="max-w-[85%] rounded-2xl p-3 text-sm font-body-md flex flex-col gap-2 bg-surface-container-high border border-outline-gold/30 text-on-surface rounded-bl-none shadow-sm">
                       {msg.content && <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>}
-                      <button 
+                      <button
                         onClick={() => { setBarberData(msg.barbers); setSelectedBarber(null); setIsBarberMenuOpen(true); }}
                         className="mt-2 bg-secondary text-on-secondary py-2 px-4 rounded-xl text-xs uppercase tracking-wider font-bold hover:bg-secondary-fixed transition-colors text-center shadow-md flex justify-center items-center gap-2"
                       >
@@ -364,9 +364,9 @@ export default function ChatbotWidget() {
                   </svg>
                 </button>
                 <div className="mt-2 flex flex-col gap-2">
-                  <button 
-                    type="button" 
-                    onClick={handleTestStability} 
+                  <button
+                    type="button"
+                    onClick={handleTestStability}
                     disabled={isTestStabilityLoading}
                     className="text-[10px] bg-secondary text-white px-2 py-1 rounded shadow hover:bg-secondary/90 disabled:opacity-50 whitespace-nowrap"
                   >
@@ -516,10 +516,10 @@ export default function ChatbotWidget() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="p-4 overflow-y-auto custom-scrollbar flex flex-col gap-3">
+            <div className="p-4 overflow-y-auto custom-scrollbar flex flex-col gap-3 max-h-[260px]">
               <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedBarber === 'Any' ? 'border-primary bg-primary/10' : 'border-outline-variant bg-surface-container'}`}>
-                <input 
-                  type="radio" 
+                <input
+                  type="radio"
                   name="barberSelection"
                   className="w-4 h-4 text-primary bg-surface-container-highest border-outline-variant focus:ring-primary focus:ring-2"
                   checked={selectedBarber === 'Any'}
@@ -533,8 +533,8 @@ export default function ChatbotWidget() {
 
               {barberData.map((barber, i) => (
                 <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedBarber === barber.name ? 'border-primary bg-primary/10' : 'border-outline-variant bg-surface-container'}`}>
-                  <input 
-                    type="radio" 
+                  <input
+                    type="radio"
                     name="barberSelection"
                     className="w-4 h-4 text-primary bg-surface-container-highest border-outline-variant focus:ring-primary focus:ring-2"
                     checked={selectedBarber === barber.name}
@@ -551,16 +551,16 @@ export default function ChatbotWidget() {
               ))}
             </div>
             <div className="p-4 border-t border-outline-variant bg-surface-container-high">
-              <button 
+              <button
                 onClick={() => {
                   if (selectedBarber) {
                     setIsBarberMenuOpen(false);
                     const userMsg = selectedBarber === 'Any' ? `Tôi không yêu cầu thợ cụ thể, tiệm tự sắp xếp nhé` : `Tôi muốn đặt thợ: ${selectedBarber}`;
-                    
+
                     const history = messages.filter(m => m.role === 'user' || m.role === 'ai').map(m => ({ role: m.role, content: m.content }));
                     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
                     setIsLoading(true);
-                    
+
                     fetch(getBaseUrl(), {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },

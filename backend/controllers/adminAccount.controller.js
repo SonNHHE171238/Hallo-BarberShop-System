@@ -1,4 +1,5 @@
 const User = require('../models/user.model');
+const cloudStorageService = require('../services/cloudStorage.service');
 
 // Hàm tiện ích ném lỗi thân thiện với người dùng (tiếng Việt)
 const throwUserFriendlyError = (msg, statusCode = 400) => {
@@ -78,6 +79,7 @@ exports.createAccount = async (req, res, next) => {
     }
 };
 
+<<<<<<< HEAD
 exports.updateAccountStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
@@ -157,6 +159,8 @@ exports.updateAccountRole = async (req, res, next) => {
         next(error);
     }
 };
+=======
+>>>>>>> 6a67a7c500e66decc940da50c37f498f1078ec2f
 
 exports.deleteAccount = async (req, res, next) => {
     try {
