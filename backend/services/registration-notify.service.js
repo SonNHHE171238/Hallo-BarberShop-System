@@ -10,12 +10,12 @@ const logOtpToConsole = (email, plainOtp) => {
  * Sends registration OTP to the user's email.
  * Falls back to console only when email fails and LOG_OTP_TO_CONSOLE is enabled.
  */
-exports.notifyRegistrationOtp = async (email, plainOtp) => {
+exports.notifyRegistrationOtp = async (email, plainOtp, userName = 'bạn') => {
   const consoleFallback =
     process.env.LOG_OTP_TO_CONSOLE === '1' || process.env.LOG_OTP_TO_CONSOLE === 'true';
 
   try {
-    await sendOtpEmail(email, plainOtp);
+    await sendOtpEmail(email, plainOtp, userName);
     console.log(`[OTP] Sent to ${email}`);
     return { sent: true };
   } catch (err) {

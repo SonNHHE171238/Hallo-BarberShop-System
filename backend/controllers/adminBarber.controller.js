@@ -1,6 +1,7 @@
 const User = require('../models/user.model');
 const Barber = require('../models/barber.model');
 const BarberSchedule = require('../models/barber-schedule.model');
+const Booking = require('../models/booking.model');
 const { uploadAvatar } = require('../services/cloudStorage.service');
 
 const isString = (value) => typeof value === 'string' && value.trim().length > 0;
@@ -296,6 +297,8 @@ exports.updateAdminBarber = async (req, res) => {
 exports.deactivateAdminBarber = async (req, res) => {
     try {
         const { barberId } = req.params;
+        const { action } = req.body || {}; // 'cancel', 'manual'
+        
         const barber = await Barber.findById(barberId);
         if (!barber) {
             return res.status(404).json({ message: 'Không tìm thấy barber.' });
@@ -304,6 +307,51 @@ exports.deactivateAdminBarber = async (req, res) => {
         const user = await User.findById(barber.userId);
         if (!user) {
             return res.status(404).json({ message: 'Không tìm thấy tài khoản người dùng tương ứng.' });
+        }
+
+        // Handle upcoming bookings based on action
+        if (action === 'cancel') {
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            const upcomingBookings = await Booking.find({
+                barberId: barber._id,
+                status: { $in: ['pending', 'confirmed'] },
+                bookingDate: { $gte: todayDate }
+            });
+            
+            for (const booking of upcomingBookings) {
+                booking.status = 'cancelled';
+                booking.rejectionReason = 'barber_unavailable';
+                booking.rejectionNote = 'Tài khoản thợ cắt tóc đã bị vô hiệu hoá.';
+                await booking.save();
+                
+                const bDate = new Date(booking.bookingDate);
+                const dateStr = normalizeDateString(bDate);
+                try {
+                    await BarberSchedule.unmarkSlotsAsBooked(
+                        barber._id,
+                        dateStr,
+                        booking._id,
+                        null
+                    );
+                } catch(e) {
+                    console.error('Lỗi khi giải phóng slot:', e);
+                }
+                
+                if (barber.totalBookings > 0) barber.totalBookings -= 1;
+            }
+            
+            // Dọn dẹp các slot bị lỗi đồng bộ trong BarberSchedule (ghost bookings)
+            const todayStr = normalizeDateString(new Date());
+            await BarberSchedule.updateMany(
+                { barberId: barber._id, date: { $gte: todayStr } },
+                {
+                    $set: {
+                        'availableSlots.$[].isBooked': false,
+                        'availableSlots.$[].bookingId': null,
+                    }
+                }
+            );
         }
 
         barber.isAvailable = false;
@@ -371,6 +419,38 @@ exports.activateAdminBarber = async (req, res) => {
         );
 
         return res.json({ message: 'Barber đã được kích hoạt lại.' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getUpcomingBookings = async (req, res) => {
+    try {
+        const { barberId } = req.params;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const bookings = await Booking.find({
+            barberId,
+            status: { $in: ['pending', 'confirmed'] },
+            bookingDate: { $gte: today }
+        }).populate('customerId', 'name phone email').sort({ bookingDate: 1 });
+
+        const todayStr = normalizeDateString(new Date());
+        const schedules = await BarberSchedule.find({
+            barberId,
+            date: { $gte: todayStr }
+        });
+        
+        let scheduleBookedCount = 0;
+        schedules.forEach(s => {
+            scheduleBookedCount += s.availableSlots.filter(slot => slot.isBooked).length;
+        });
+
+        const finalCount = Math.max(bookings.length, scheduleBookedCount);
+
+        return res.json({ count: finalCount, bookings });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: error.message });

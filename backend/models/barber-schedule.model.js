@@ -13,7 +13,7 @@ const barberScheduleSchema = new Schema({
     },
     workingHours: {
         start: { type: String, default: "09:00" }, // "HH:MM" format
-        end: { type: String, default: "18:00" }
+        end: { type: String, default: "19:00" }
     },
     availableSlots: [{
         time: { type: String, required: true }, // Format: "HH:MM"
@@ -107,7 +107,7 @@ barberScheduleSchema.statics.getAvailableSlots = async function(barberId, date) 
         schedule = new this({
             barberId,
             date,
-            workingHours: { start: "09:00", end: "18:00" }
+            workingHours: { start: "09:00", end: "19:00" }
         });
         schedule.generateDefaultSlots();
         await schedule.save();
@@ -136,7 +136,7 @@ barberScheduleSchema.statics.markSlotsAsBooked = async function(barberId, date, 
         schedule = new this({
             barberId,
             date,
-            workingHours: { start: "09:00", end: "18:00" }
+            workingHours: { start: "09:00", end: "19:00" }
         });
         schedule.generateDefaultSlots();
 
@@ -321,7 +321,7 @@ barberScheduleSchema.statics.getRealTimeAvailability = async function(barberId, 
         schedule = new this({
             barberId,
             date,
-            workingHours: { start: "09:00", end: "18:00" }
+            workingHours: { start: "09:00", end: "19:00" }
         });
         schedule.generateDefaultSlots();
         await schedule.save();

@@ -10,7 +10,7 @@ const throwUserFriendlyError = (msg, statusCode = 400) => {
 
 exports.getAllAccounts = async (req, res, next) => {
     try {
-        const users = await User.find({ isDeleted: { $ne: true } })
+        const users = await User.find({})
             .select('-passwordHash -otpHash -resetTokenHash')
             .sort({ createdAt: -1 });
         return res.json({ users });
@@ -48,6 +48,18 @@ exports.createAccount = async (req, res, next) => {
 
         const savedUser = await newUser.save();
         
+        // Khởi tạo Barber profile nếu role là 'barber'
+        if (role === 'barber') {
+            const Barber = require('../models/barber.model');
+            await Barber.create({
+                userId: savedUser._id,
+                bio: 'Thợ cắt tóc mới tại Hallo Barber',
+                experienceYears: 0,
+                specialties: ['Cắt tóc nam'],
+                workingSince: new Date()
+            });
+        }
+
         const responseUser = savedUser.toObject();
         delete responseUser.passwordHash;
 
@@ -85,6 +97,11 @@ exports.updateAccountStatus = async (req, res, next) => {
              throwUserFriendlyError('Bạn không thể khóa tài khoản của một Quản trị viên khác.', 403);
         }
 
+        // Ngăn khóa thợ cắt tóc ở trang tài khoản chung để bắt buộc qua luồng xử lý lịch hẹn
+        if (user.role === 'barber' && status !== 'active') {
+             throwUserFriendlyError('Không thể khóa tài khoản Thợ cắt tóc tại đây. Vui lòng sang trang Quản lý Thợ để khóa nhằm xử lý các lịch hẹn của khách.', 400);
+        }
+
         user.status = status;
         await user.save();
 
@@ -118,6 +135,20 @@ exports.updateAccountRole = async (req, res, next) => {
         user.role = role;
         await user.save();
 
+        if (role === 'barber') {
+            const Barber = require('../models/barber.model');
+            const existingBarber = await Barber.findOne({ userId: user._id });
+            if (!existingBarber) {
+                await Barber.create({
+                    userId: user._id,
+                    bio: 'Thợ cắt tóc mới tại Hallo Barber',
+                    experienceYears: 0,
+                    specialties: ['Cắt tóc nam'],
+                    workingSince: new Date()
+                });
+            }
+        }
+
         return res.json({
             message: 'Đã thay đổi chức vụ của tài khoản thành công.',
             user
@@ -140,13 +171,16 @@ exports.deleteAccount = async (req, res, next) => {
             throwUserFriendlyError('Bạn không thể xóa tài khoản của Quản trị viên. Hãy hạ cấp họ xuống trước.', 403);
         }
 
-        // Soft delete
-        user.isDeleted = true;
-        user.status = 'banned'; // Đảm bảo không thể đăng nhập
-        await user.save();
+        // Ngăn xóa thợ cắt tóc ở trang tài khoản chung để tránh mất dữ liệu lịch hẹn đột ngột
+        if (user.role === 'barber') {
+             throwUserFriendlyError('Không thể xóa tài khoản Thợ cắt tóc tại đây. Vui lòng sang trang Quản lý Thợ để vô hiệu hóa tài khoản.', 400);
+        }
+
+        // Hard delete
+        await User.findByIdAndDelete(id);
 
         return res.json({
-            message: 'Đã xóa tài khoản thành công (Khóa mềm).',
+            message: 'Đã xóa tài khoản vĩnh viễn khỏi hệ thống.',
             user
         });
     } catch (error) {

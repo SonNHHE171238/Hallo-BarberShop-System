@@ -116,14 +116,14 @@ export default function AdminBarberSchedule({
                     <div className="rounded-3xl border border-outline-gold/50 bg-surface p-6">
                         <div className="flex items-center justify-between gap-3 mb-5">
                             <h4 className="font-semibold text-on-surface">Lịch tuần tới</h4>
-                            <span className="text-label-sm text-on-surface-variant bg-surface-container-high px-3 py-1 rounded-full">{selectedBarber.scheduleSummary.length} ngày</span>
+                            <span className="text-label-sm text-on-surface-variant bg-surface-container-high px-3 py-1 rounded-full">{selectedBarber.scheduleSummary.filter(item => item.bookedSlots > 0).length} ngày</span>
                         </div>
                         
-                        {selectedBarber.scheduleSummary.length === 0 ? (
-                            <div className="text-center py-6 text-on-surface-variant">Chưa có dữ liệu lịch làm việc.</div>
+                        {selectedBarber.scheduleSummary.filter(item => item.bookedSlots > 0).length === 0 ? (
+                            <div className="text-center py-6 text-on-surface-variant">Thợ không có lịch hẹn nào.</div>
                         ) : (
                             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20">
-                                {selectedBarber.scheduleSummary.map((item) => (
+                                {selectedBarber.scheduleSummary.filter(item => item.bookedSlots > 0).map((item) => (
                                     <div key={item.date} className="rounded-2xl border border-outline-variant/30 bg-surface-container-high p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                         <div>
                                             <div className="font-semibold text-on-surface">{new Date(item.date).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}</div>

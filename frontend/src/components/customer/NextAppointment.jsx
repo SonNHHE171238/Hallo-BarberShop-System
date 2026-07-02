@@ -65,7 +65,7 @@ export default function NextAppointment({ appointment }) {
           </div>
         </div>
         <div className="flex gap-4 w-full sm:w-auto">
-          <Link href="/booking" className="flex-1 sm:flex-none px-8 py-3 border border-outline text-on-surface font-label-md text-xs uppercase tracking-widest hover:bg-surface-variant transition-colors rounded text-center">Đổi lịch</Link>
+          <Link href={`/customer/change-schedule?bookingId=${appointment._id}`} className="flex-1 sm:flex-none px-8 py-3 border border-outline text-on-surface font-label-md text-xs uppercase tracking-widest hover:bg-surface-variant transition-colors rounded text-center">Đổi lịch</Link>
           <button className="flex-1 sm:flex-none px-8 py-3 bg-primary-container text-on-primary-container font-label-md text-xs uppercase tracking-widest hover:opacity-90 transition-opacity rounded font-bold" onClick={() => console.log('Chi tiết clicked')}>Chi tiết</button>
         </div>
       </div>

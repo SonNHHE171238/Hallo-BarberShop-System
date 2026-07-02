@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import LogoutConfirmModal from '../ui/LogoutConfirmModal';
 
 export default function AdminHeader({ onMenuClick }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const getPageTitle = () => {
     if (pathname.includes('/admin/employee')) return 'Quản Lý Nhân Viên';
@@ -17,6 +19,7 @@ export default function AdminHeader({ onMenuClick }) {
   };
 
   return (
+    <>
     <header className="h-20 flex-shrink-0 border-b border-outline-gold bg-surface-obsidian/90 backdrop-blur-md sticky top-0 z-10 px-4 md:px-8 flex items-center justify-between">
       <div className="flex items-center gap-4">
         <button className="md:hidden text-on-surface-variant hover:text-primary" onClick={onMenuClick}>
@@ -49,10 +52,7 @@ export default function AdminHeader({ onMenuClick }) {
           {/* Profile Menu Popup */}
           <div className={`absolute top-full right-0 mt-2 w-48 bg-surface-container-high border border-outline-gold rounded-lg shadow-xl overflow-hidden transition-all duration-200 origin-top-right ${isProfileMenuOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
             <button 
-              onClick={() => {
-                setIsProfileMenuOpen(false);
-                logout();
-              }}
+              onClick={() => { setIsProfileMenuOpen(false); setIsLogoutModalOpen(true); }}
               className="w-full flex items-center gap-3 px-4 py-3 text-error hover:bg-error/10 transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">logout</span>
@@ -62,5 +62,19 @@ export default function AdminHeader({ onMenuClick }) {
         </div>
       </div>
     </header>
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={async () => {
+          try {
+            await logout();
+          } catch (err) {
+            console.error('Lỗi đăng xuất:', err);
+          }
+        }}
+      />
+    </>
   );
 }
+

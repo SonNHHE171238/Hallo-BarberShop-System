@@ -4,10 +4,12 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import LogoutConfirmModal from "../ui/LogoutConfirmModal";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("");
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -35,6 +37,7 @@ export default function Navbar() {
   }, []);
 
   return (
+    <>
     <nav
       className={`fixed top-0 w-full z-50 glass-nav border-b border-outline-variant shadow-md transition-all duration-300 ${
         isScrolled ? "py-2" : "py-4"
@@ -155,7 +158,7 @@ export default function Navbar() {
                   <span className="material-symbols-outlined text-sm">dashboard</span>
                   Bảng điều khiển
                 </Link>
-                <button onClick={logout} className="flex items-center gap-2 w-full text-left px-4 py-3 text-body-md text-error hover:bg-error/10 transition-colors border-t border-outline-variant">
+                <button onClick={() => setIsLogoutModalOpen(true)} className="flex items-center gap-2 w-full text-left px-4 py-3 text-body-md text-error hover:bg-error/10 transition-colors border-t border-outline-variant">
                   <span className="material-symbols-outlined text-sm">logout</span>
                   Đăng xuất
                 </button>
@@ -218,7 +221,7 @@ export default function Navbar() {
                 <Link href={`/${user.role}/dashboard`} onClick={() => setIsMobileMenuOpen(false)} className="font-label-md text-label-md text-on-surface hover:text-primary uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-sm">dashboard</span> Bảng điều khiển
                 </Link>
-                <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="font-label-md text-label-md text-error hover:text-error/80 uppercase tracking-wider flex items-center gap-2 text-left">
+                <button onClick={() => { setIsLogoutModalOpen(true); }} className="font-label-md text-label-md text-error hover:text-error/80 uppercase tracking-wider flex items-center gap-2 text-left">
                   <span className="material-symbols-outlined text-sm">logout</span> Đăng xuất
                 </button>
               </>
@@ -230,5 +233,17 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmModal 
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={() => {
+          logout();
+          setIsMobileMenuOpen(false);
+        }}
+      />
+    </>
   );
 }
+
+
