@@ -46,27 +46,30 @@ const staffController = {
       if (status === 'completed') {
         booking.completedAt = new Date();
         
-        // Xử lý thanh toán nếu có gửi lên
-        if (amountPaid !== undefined) {
-          booking.amountPaid = (booking.amountPaid || 0) + Number(amountPaid);
-          if (booking.amountPaid >= (booking.totalPrice || 0)) {
-            booking.paymentStatus = 'paid';
-          } else if (booking.amountPaid > 0) {
-            booking.paymentStatus = 'partial_paid';
-          }
+        // Tự động update amountPaid khớp với số tiền tổng dịch vụ
+        const currentAmountPaid = booking.amountPaid || 0;
+        const total = booking.totalPrice || 0;
+        
+        if (currentAmountPaid < total) {
+          const remainingToPay = total - currentAmountPaid;
+          booking.amountPaid = total;
+          booking.paymentStatus = 'paid';
           
           if (paymentMethod) {
             booking.paymentMethod = paymentMethod;
           }
           
-          // Tạo dòng lưu vết vào sổ cái Payment
+          // Ghi nhận số tiền còn thiếu vào sổ cái Payment
           await Payment.create({
             target_type: 'booking',
             target_id: booking._id,
-            amount: Number(amountPaid),
+            amount: remainingToPay,
             method: paymentMethod || 'cash',
             status: 'success'
           });
+        } else if (currentAmountPaid >= total) {
+          booking.amountPaid = currentAmountPaid;
+          booking.paymentStatus = 'paid';
         }
       } else if (status === 'no_show') {
         booking.noShowAt = new Date();

@@ -2,17 +2,22 @@
 
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { fetchWithAuth } from '@/services/api';
 
 const fetcher = (url) => fetchWithAuth(url);
 
 export default function AdminBookingsPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('');
-    const [page, setPage] = useState(1);
+    
+    const pageStr = searchParams.get('page');
+    const page = pageStr ? parseInt(pageStr, 10) : 1;
     const limit = 10;
 
     // Fetch all bookings for admin
@@ -52,9 +57,15 @@ export default function AdminBookingsPage() {
     const totalPages = Math.ceil(filteredBookings.length / limit) || 1;
     const currentBookings = filteredBookings.slice((page - 1) * limit, page * limit);
 
+    const setPageUrl = (newPage) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('page', newPage.toString());
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
-            setPage(newPage);
+            setPageUrl(newPage);
         }
     };
 
@@ -110,7 +121,7 @@ export default function AdminBookingsPage() {
                                 value={statusFilter}
                                 onChange={(e) => {
                                     setStatusFilter(e.target.value);
-                                    setPage(1);
+                                    setPageUrl(1);
                                 }}
                                 className="w-full bg-surface-container border border-outline-variant rounded-lg py-1.5 pl-9 pr-7 text-sm font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none"
                             >
@@ -131,7 +142,7 @@ export default function AdminBookingsPage() {
                                 value={dateFilter}
                                 onChange={(e) => {
                                     setDateFilter(e.target.value);
-                                    setPage(1);
+                                    setPageUrl(1);
                                 }}
                                 className="w-full bg-surface-container border border-outline-variant rounded-lg py-1.5 pl-9 pr-3 text-sm font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors [color-scheme:dark]" 
                             />
