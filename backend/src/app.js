@@ -18,17 +18,6 @@ const cartRoute = require('../routes/cart.route');
 const bookingFeedbackRoutes = require("../routes/bookingfeedback.route");
 const categoryRoute = require('../routes/category.route');
 const errorHandler = require('../middlewares/error.middleware');
-const authRoute = require("../routes/auth.route");
-const bookingRoute = require("../routes/booking.route");
-const adminBarberRoute = require("../routes/adminBarber.route");
-const adminAccountRoute = require("../routes/adminAccount.route");
-const chatbotRoute = require("../routes/chatbot.route");
-const customerRoute = require("../routes/customer.route");
-const serviceRoute = require("../routes/service.route");
-const barberRoute = require("../routes/barber.route");
-const staffRoute = require("../routes/staff.route");
-const rosterRoute = require("../routes/roster.route");
-const errorHandler = require("../middlewares/error.middleware");
 
 const app = express();
 
@@ -59,17 +48,6 @@ app.use('/api/products', productRoute);
 app.use('/api/orders', orderRoute);
 app.use('/api/cart', cartRoute);
 app.use('/api/categories', categoryRoute);
-app.use("/api/auth", authRoute);
-app.use("/api/bookings", bookingRoute);
-app.use("/api/admin/barbers", adminBarberRoute);
-app.use("/api/admin/accounts", adminAccountRoute);
-app.use("/api/chatbot", chatbotRoute);
-app.use("/api/customer", customerRoute);
-app.use("/api/services", serviceRoute);
-app.use("/api/barbers", barberRoute);
-app.use("/api/staff", staffRoute);
-app.use("/api/payment", require("../routes/payment.route"));
-app.use("/api/rosters", rosterRoute);
 
 app.get("/", (req, res) => {
   res.send("Hallo BarberShop API is running");
