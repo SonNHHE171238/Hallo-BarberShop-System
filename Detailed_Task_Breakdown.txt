@@ -1,0 +1,101 @@
+========================================================================
+BẢN PHÂN RÃ CÔNG VIỆC CHI TIẾT DỰ ÁN BARBERSHOP (5 TUẦN)
+Mô hình team: 1 BA, 3 Dev, 1 Tester 
+Format chuẩn: [Tên Tiếng Việt] | [Tên Tiếng Anh - Screen] | [Actor]
+========================================================================
+
+------------------------------------------------------------------------
+🔄 ITERATION 1: CORE BOOKING (Tiến độ: Tuần 1 - Tuần 2)
+Mục tiêu: Hoàn thiện xương sống của hệ thống Đặt lịch và Quản lý nhân sự.
+------------------------------------------------------------------------
+
+A. DANH SÁCH MÀN HÌNH (SCREENS)
+1. Màn hình Đăng nhập / Đăng ký | Auth Screen | Customer, Guest
+   -> Mô tả: Giao diện cho phép người dùng tạo tài khoản mới, đăng nhập bằng Email/Password hoặc Google OAuth, và khôi phục mật khẩu.
+
+2. Màn hình Trang chủ | Home Screen | Customer, Guest
+   -> Mô tả: Giao diện chính hiển thị banner quảng cáo, các dịch vụ cắt tóc nổi bật, và danh sách đội ngũ thợ cắt tóc.
+
+3. Màn hình Đặt lịch (4 bước) | Booking Wizard Screen | Customer
+   -> Mô tả: Luồng đặt lịch bao gồm 4 bước liên tiếp: Chọn Dịch vụ -> Chọn Thợ -> Chọn Khung giờ -> Xác nhận thông tin.
+
+4. Màn hình Lịch sử Đặt lịch | My Bookings Screen | Customer
+   -> Mô tả: Nơi khách hàng xem lại các lịch hẹn sắp tới, lịch sử đã cắt, và có thể hủy lịch nếu chưa quá hạn.
+
+5. Màn hình Quản lý Dịch vụ | Service Management Screen | Admin
+   -> Mô tả: Giao diện dạng bảng (Table) cho phép Admin Thêm, Sửa, Xóa các dịch vụ cắt tóc và cấu hình giá/thời lượng.
+
+6. Màn hình Quản lý Hồ sơ Thợ | Barber Management Screen | Admin
+   -> Mô tả: Giao diện quản lý danh sách thợ cắt tóc, tải lên ảnh đại diện và gắn chuyên môn cho từng thợ.
+
+7. Màn hình Cấu hình Giờ làm việc | Working Hours Config Screen | Admin
+   -> Mô tả: Giao diện cài đặt giờ mở/đóng cửa và cấu hình độ dài mỗi ca cắt (ví dụ: 30 phút/ca) để hệ thống tự chia slot.
+
+8. Bảng điều khiển Lịch hẹn trong ngày | Daily Schedule Dashboard Screen | Staff, Barber
+   -> Mô tả: Giao diện dạng Lịch (Calendar) hoặc Bảng (Board) hiển thị tất cả các ca cắt tóc trong ngày để nhân viên theo dõi.
+
+9. Biểu mẫu Xin nghỉ phép | Absence Request Screen | Staff, Barber
+   -> Mô tả: Form cho phép thợ cắt tóc gửi yêu cầu báo vắng mặt hoặc xin nghỉ phép đột xuất để hệ thống khóa lịch.
+
+B. NHÓM LOGIC LÕI (BACKEND/API)
+10. Thuật toán tự động chia khung giờ | Generate Time Slots API | System
+11. Validate chống trùng lịch & Cập nhật Slot | Concurrency Control API | System
+12. Đặt lịch hộ khách Walk-in tại quầy | Walk-in Booking API | Staff
+
+
+------------------------------------------------------------------------
+🔄 ITERATION 2: E-COMMERCE & VOUCHER (Tiến độ: Tuần 3 - Tuần 4)
+Mục tiêu: Xây dựng hệ thống bán sản phẩm online và Tri ân khách hàng.
+------------------------------------------------------------------------
+
+A. DANH SÁCH MÀN HÌNH (SCREENS)
+13. Màn hình Danh sách Sản phẩm | Product Listing Screen | Customer, Guest
+    -> Mô tả: Giao diện hiển thị các sản phẩm bán tại tiệm (sáp, gôm), có tích hợp bộ lọc và thanh tìm kiếm.
+
+14. Màn hình Chi tiết Sản phẩm | Product Detail Screen | Customer, Guest
+    -> Mô tả: Hiển thị thông tin chi tiết, hình ảnh, giá bán, số lượng tồn kho và nút thêm vào giỏ hàng.
+
+15. Màn hình Giỏ hàng | Cart Screen | Customer
+    -> Mô tả: Giao diện xem lại các sản phẩm đã chọn, điều chỉnh số lượng và xem tạm tính tổng tiền.
+
+16. Màn hình Thanh toán | Checkout Screen | Customer
+    -> Mô tả: Giao diện điền địa chỉ giao hàng, áp dụng mã giảm giá và chọn phương thức thanh toán.
+
+17. Màn hình Viết Đánh giá | Review Form Screen | Customer
+    -> Mô tả: Giao diện chấm điểm (Rating sao) và viết nhận xét cho Thợ cắt tóc hoặc Sản phẩm sau khi hoàn thành.
+
+18. Màn hình Quản lý Kho Sản phẩm | Product Management Screen | Admin, Staff
+    -> Mô tả: Giao diện cho phép cập nhật thông tin sản phẩm, danh mục và theo dõi số lượng tồn kho.
+
+19. Màn hình Quản lý Đơn hàng | Order Fulfillment Screen | Admin, Staff
+    -> Mô tả: Giao diện cho nhân viên xem danh sách đơn hàng online và cập nhật trạng thái (Chờ duyệt -> Đang giao).
+
+20. Màn hình Quản lý Mã giảm giá | Voucher Management Screen | Admin
+    -> Mô tả: Giao diện tạo mã khuyến mãi, cài đặt ngày hết hạn và số lượng mã tối đa được sử dụng.
+
+B. NHÓM LOGIC LÕI (BACKEND/API)
+21. Tự động trừ Tồn kho & Áp dụng Giảm giá | Inventory & Discount API | System
+22. Xử lý Thanh toán & Đổi trạng thái Đơn hàng | Payment Gateway API | System
+
+
+------------------------------------------------------------------------
+🔄 ITERATION 3: DASHBOARD & BONUS (Tiến độ: Tuần 5)
+Mục tiêu: Thống kê báo cáo, nội dung tĩnh và tính năng đột phá (AI Chatbot).
+------------------------------------------------------------------------
+
+A. DANH SÁCH MÀN HÌNH (SCREENS)
+23. Màn hình Thống kê Doanh thu | Analytics Dashboard Screen | Admin
+    -> Mô tả: Giao diện tổng quan (Dashboard) chứa các biểu đồ thống kê doanh thu, tỷ lệ khách hủy lịch và sản phẩm bán chạy.
+
+24. Màn hình Tin tức & Blog | News & Blog Screen | Customer, Guest
+    -> Mô tả: Giao diện đọc các bài viết về mẹo chăm sóc tóc hoặc tin tức khuyến mãi từ cửa hàng.
+
+25. Màn hình Quản trị Bài viết | Blog CMS Screen | Admin
+    -> Mô tả: Trình soạn thảo văn bản (Rich Text) để Admin viết và đăng tải các bài blog mới.
+
+26. Giao diện Chatbot AI | AI Chatbox Screen | Customer, Guest
+    -> Mô tả: Khung chat nhỏ hiển thị góc dưới màn hình, tích hợp AI để tư vấn và hỗ trợ đặt lịch tự động.
+
+B. NHÓM LOGIC LÕI (BACKEND/API)
+27. Tổng hợp dữ liệu thống kê | Aggregation Dashboard API | System
+28. Kết nối LLM tự động nhận diện ý định | AI Booking Engine API | System

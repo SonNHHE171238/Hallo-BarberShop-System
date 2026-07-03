@@ -1,11 +1,10 @@
-import React from "react";
-import LoginPage from "@/page/LoginPage";
-
 export const metadata = {
-  title: "Đăng nhập | HALLO BARBER",
-  description: "Đăng nhập vào hệ thống HALLO BARBER Client Portal.",
+  title: 'Đăng nhập | HALLO BARBER',
+  description: 'Sign in to your account',
 };
 
-export default function LoginRoute() {
+import LoginPage from '@/page/auth/LoginPage';
+
+export default function Page() {
   return <LoginPage />;
 }

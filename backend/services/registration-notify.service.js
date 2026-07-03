@@ -1,10 +1,6 @@
 const { sendOtpEmail } = require('./email.service');
 
-const logOtpToConsole = (email, plainOtp) => {
-  console.log(
-    `\n========== Registration OTP ==========\n  Email: ${email}\n  Code:  ${plainOtp}\n========================================\n`
-  );
-};
+
 
 /**
  * Sends registration OTP to the user's email.
@@ -16,13 +12,9 @@ exports.notifyRegistrationOtp = async (email, plainOtp) => {
 
   try {
     await sendOtpEmail(email, plainOtp);
-    console.log(`[OTP] Sent to ${email}`);
     return { sent: true };
   } catch (err) {
     console.error(`[OTP] Failed to send email to ${email}:`, err.message);
-    if (consoleFallback) {
-      logOtpToConsole(email, plainOtp);
-    }
     return { sent: false, error: err.message };
   }
 };
