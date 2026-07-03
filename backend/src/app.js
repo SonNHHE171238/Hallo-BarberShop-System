@@ -12,8 +12,15 @@ const customerRoute = require("../routes/customer.route");
 const serviceRoute = require("../routes/service.route");
 const barberRoute = require("../routes/barber.route");
 const staffRoute = require("../routes/staff.route");
-const rosterRoute = require("../routes/roster.route");
+const productRoute = require("../routes/product.route");
+const orderRoute = require("../routes/order.route");
+const cartRoute = require("../routes/cart.route");
+const bookingFeedbackRoutes = require("../routes/bookingfeedback.route");
+const categoryRoute = require("../routes/category.route");
+const brandRoute = require("../routes/brand.route");
+const analyticsRoute = require("../routes/analytics.route");
 const errorHandler = require("../middlewares/error.middleware");
+const rosterRoute = require("../routes/roster.route");
 
 const app = express();
 
@@ -37,8 +44,15 @@ app.use("/api/chatbot", chatbotRoute);
 app.use("/api/customer", customerRoute);
 app.use("/api/services", serviceRoute);
 app.use("/api/barbers", barberRoute);
+app.use("/api/bookingfeedbacks", bookingFeedbackRoutes);
 app.use("/api/staff", staffRoute);
 app.use("/api/payment", require("../routes/payment.route"));
+app.use("/api/products", productRoute);
+app.use("/api/orders", orderRoute);
+app.use("/api/cart", cartRoute);
+app.use("/api/categories", categoryRoute);
+app.use("/api/brands", brandRoute);
+app.use("/api/analytics", analyticsRoute);
 app.use("/api/rosters", rosterRoute);
 app.use("/api/absences", require("../routes/absence.route"));
 
