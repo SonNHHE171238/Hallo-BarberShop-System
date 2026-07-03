@@ -1,5 +1,3 @@
-const app = require('./src/app');
-const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 
@@ -11,6 +9,9 @@ const localDbEnvPath = path.join(__dirname, 'local-env', 'db.env');
 if (fs.existsSync(localDbEnvPath)) {
   require('dotenv').config({ path: localDbEnvPath, override: true });
 }
+
+const app = require('./src/app');
+const mongoose = require('mongoose');
 
 const PORT = process.env.PORT || 3000;
 

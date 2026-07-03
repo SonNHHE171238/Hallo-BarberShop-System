@@ -58,11 +58,8 @@ exports.createService = async (req, res) => {
       images: images || [],
     });
 
-    if (imageBase64) {
-      const uploadedImageUrl = await uploadAvatar({ avatarBase64: imageBase64, filename: `service-${name.replace(/\s+/g, '-').toLowerCase()}` });
-      if (uploadedImageUrl) {
-        service.images = [uploadedImageUrl];
-      }
+    if (req.file) {
+      service.images = [req.file.path];
     }
 
     await service.save();
@@ -107,6 +104,8 @@ exports.getAllServices = async (req, res) => {
     // 3. Active status filter
     if (isActive !== undefined && isActive !== "") {
       query.isActive = isActive === "true";
+    } else {
+      query.isActive = true; // Chỉ gọi dữ liệu có isActive == true mặc định
     }
 
     // 4. Pagination config
@@ -195,11 +194,8 @@ exports.updateService = async (req, res) => {
     if (isActive !== undefined) service.isActive = isActive;
     if (category !== undefined) service.category = category;
     if (images !== undefined) service.images = images;
-    if (imageBase64) {
-      const uploadedImageUrl = await uploadAvatar({ avatarBase64: imageBase64, filename: `service-${service.name.replace(/\s+/g, '-').toLowerCase()}` });
-      if (uploadedImageUrl) {
-        service.images = [uploadedImageUrl];
-      }
+    if (req.file) {
+      service.images = [req.file.path];
     }
 
     await service.save();
@@ -215,11 +211,11 @@ exports.updateService = async (req, res) => {
   }
 };
 
-// @desc    Delete a service (Admin only)
+// @desc    Delete a service (Admin only) (Soft Delete)
 // @route   DELETE /api/services/:id
 exports.deleteService = async (req, res) => {
   try {
-    const service = await Service.findByIdAndDelete(req.params.id);
+    const service = await Service.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
     if (!service) {
       return res.status(404).json({ message: "Service not found." });
     }

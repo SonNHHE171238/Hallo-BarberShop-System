@@ -1,4 +1,4 @@
-import BarberAppointments from "@/page/barber/bookings/BarberAppointments";
+import BarberBookings from "@/page/barber/bookings/BarberBookings";
 
 export const metadata = {
   title: "Lịch hẹn | Barber",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function BookingsPage() {
-  return <BarberAppointments />;
+  return <BarberBookings />;
 }

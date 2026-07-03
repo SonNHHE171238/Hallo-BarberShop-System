@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { adminBarberService } from "@/services/adminBarber.service";
-import AdminBarberManagement from "@/components/admin/AdminBarberManagement";
 
 // MOCK DATA
 const mockStaff = [
@@ -95,16 +94,6 @@ const mockStaff = [
 
 export default function AdminStaffPage() {
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'barber', 'staff'
-
-  // Pagination state (for All and Staff tabs)
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
-
-  // Cuộn lên đầu trang khi chuyển tab để tránh việc giữ nguyên vị trí cuộn cũ gây cảm giác "tự động lăn xuống"
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [activeTab]);
-
   const [staffList, setStaffList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -115,10 +104,11 @@ export default function AdminStaffPage() {
         
         // Chuyển đổi dữ liệu từ API sang format của bảng
         const apiBarbers = response.barbers.map(item => {
-          const b = item.barber;
-          const u = item.user;
+          const b = item.barber || {};
+          const u = item.user || {};
+          const bId = String(b._id || b.id || "000000");
           return {
-            id: b._id.substring(b._id.length - 6).toUpperCase(), // Lấy 6 ký tự cuối làm ID cho gọn
+            id: bId.length > 6 ? bId.substring(bId.length - 6).toUpperCase() : bId.toUpperCase(),
             name: u.name,
             role: b.experienceYears >= 5 ? "Master Barber" : "Junior Barber",
             type: "barber",
@@ -135,11 +125,11 @@ export default function AdminStaffPage() {
 
         // Xử lý dữ liệu Staff Khác (nếu có)
         const apiStaffs = (response.staffs || []).map(u => {
-            const rawId = u._id || u.id || Math.random().toString(36).substring(2, 8);
-            return {
-            id: String(rawId).slice(-6).toUpperCase(),
+          const uId = String(u._id || u.id || "000000");
+          return {
+            id: uId.length > 6 ? uId.substring(uId.length - 6).toUpperCase() : uId.toUpperCase(),
             name: u.name,
-            role: "Lễ tân / Thợ phụ",
+            role: "Lễ tân",
             type: "staff",
             avatar: u.avatarUrl,
             rating: null,
@@ -149,7 +139,7 @@ export default function AdminStaffPage() {
             shift: "Ca Hành Chính",
             email: u.email,
             phone: u.phone || "Chưa cập nhật"
-            };
+          };
         });
 
         // Gộp cả 2 danh sách lại để hiển thị
@@ -180,38 +170,15 @@ export default function AdminStaffPage() {
     <div className="flex-1 flex flex-col relative w-full h-full min-h-screen">
       {/* Page Content */}
       <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full">
-        {/* Summary Bento Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-6 rounded-lg flex flex-col justify-between">
-            <span className="text-outline text-xs uppercase tracking-widest font-medium">Tổng nhân sự</span>
-            <div className="mt-4 flex items-end justify-between">
-              <span className="text-4xl font-bold text-primary">{totalStaff}</span>
-              <span className="text-green-400 text-xs flex items-center">
-                <span className="material-symbols-outlined text-sm mr-1">trending_up</span>+Mới
+        {/* Summary Banner */}
+        <div className="mb-6">
+          <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant py-3 px-6 rounded-lg flex items-center justify-between w-full border-l-4 border-l-primary shadow-sm">
+            <span className="text-outline text-sm uppercase tracking-widest font-bold">Tổng nhân sự</span>
+            <div className="flex items-center gap-4">
+              <span className="text-green-400 text-xs flex items-center font-bold bg-green-400/10 px-2 py-1 rounded-full">
+                <span className="material-symbols-outlined text-[14px] mr-1">trending_up</span>+Mới
               </span>
-            </div>
-          </div>
-          <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-6 rounded-lg flex flex-col justify-between border-l-4 border-l-primary">
-            <span className="text-outline text-xs uppercase tracking-widest font-medium">Đang hoạt động</span>
-            <div className="mt-4 flex items-end justify-between">
-              <span className="text-4xl font-bold text-on-surface">{activeStaff}</span>
-              <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-bold">LIVE NOW</span>
-            </div>
-          </div>
-          <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-6 rounded-lg flex flex-col justify-between">
-            <span className="text-outline text-xs uppercase tracking-widest font-medium">Doanh thu TB/Barber</span>
-            <div className="mt-4 flex items-end justify-between">
-              <span className="text-2xl font-bold text-on-surface">-</span>
-              <span className="text-outline text-xs">VNĐ / tháng</span>
-            </div>
-          </div>
-          <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-6 rounded-lg flex flex-col justify-between">
-            <span className="text-outline text-xs uppercase tracking-widest font-medium">Đánh giá trung bình</span>
-            <div className="mt-4 flex items-end justify-between">
-              <span className="text-4xl font-bold text-on-surface">{avgRating}</span>
-              <div className="flex text-primary">
-                <span className="material-symbols-outlined icon-fill">star</span>
-              </div>
+              <span className="text-2xl font-black text-primary">{totalStaff}</span>
             </div>
           </div>
         </div>
@@ -245,195 +212,95 @@ export default function AdminStaffPage() {
             </button>
           </div>
 
-          {activeTab !== 'barber' && (
-            <button className="bg-primary text-on-primary px-6 py-2.5 rounded font-bold flex items-center shadow-lg hover:bg-primary-fixed transition-colors active:scale-95">
-              <span className="material-symbols-outlined mr-2">person_add</span>
-              Thêm Nhân Viên
-            </button>
-          )}
+          <button className="bg-primary text-on-primary px-6 py-2.5 rounded font-bold flex items-center shadow-lg hover:bg-primary-fixed transition-colors active:scale-95">
+            <span className="material-symbols-outlined mr-2">person_add</span>
+            Thêm Nhân Viên
+          </button>
         </div>
 
-        {activeTab === 'barber' ? (
-          <div className="mt-8">
-            <AdminBarberManagement />
-          </div>
-        ) : (
-          <>
-            {/* Staff Table List */}
-            <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant overflow-hidden rounded-xl mb-12">
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left border-collapse min-w-[800px]">
-                  <thead>
-                    <tr className="border-b border-outline-variant bg-surface-container-high/50">
-                      <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Nhân viên</th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Liên hệ</th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Chức vụ</th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold text-center">Trạng thái</th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Ca làm</th>
-                      {activeTab !== 'staff' && (
-                        <>
-                          <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold text-right">Doanh thu</th>
-                          <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold text-right">Đánh giá</th>
-                        </>
-                      )}
-                      <th className="px-6 py-4"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm font-medium">
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan="7" className="text-center py-8 text-outline">Đang tải dữ liệu nhân sự...</td>
-                      </tr>
-                    ) : filteredStaff.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="text-center py-8 text-outline">Không có nhân sự nào.</td>
-                      </tr>
-                    ) : (
-                      filteredStaff.map((staff) => (
-                      <tr key={staff.id} className="border-b border-outline-variant/30 hover:bg-white/5 transition-colors group">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-4">
-                            <div className="relative w-10 h-10 rounded-full overflow-hidden border border-outline-variant bg-surface-variant flex items-center justify-center shrink-0">
-                              {staff.avatar ? (
-                                <img src={staff.avatar} alt={staff.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-on-surface-variant font-bold text-xs uppercase">
-                                  {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                                </span>
-                              )}
-                              <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-surface ${staff.status === 'active' ? 'bg-green-500' : 'bg-outline-variant'}`}></div>
-                            </div>
-                            <div>
-                              <p className="font-bold text-on-surface">{staff.name}</p>
-                              <p className="text-xs text-outline">{staff.id}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-on-surface-variant truncate max-w-[150px]">{staff.email}</p>
-                          <p className="text-xs text-outline">{staff.phone}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            staff.type === 'barber' ? 'bg-primary/10 text-primary' : 'bg-tertiary-container/20 text-tertiary'
-                          }`}>
-                            {staff.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                            staff.status === 'active' ? 'text-green-400 bg-green-400/10' : 'text-outline-variant bg-outline-variant/10'
-                          }`}>
-                            {staff.status === 'active' ? 'Đang làm' : 'Nghỉ ca'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-on-surface-variant font-label-md">{staff.shift}</span>
-                        </td>
-                        {activeTab !== 'staff' && (
-                          <>
-                            <td className="px-6 py-4 text-right">
-                              {staff.revenue ? (
-                                <p className="font-bold text-on-surface">{staff.revenue}</p>
-                              ) : (
-                                <span className="text-outline">-</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              {staff.rating ? (
-                                <div className="flex flex-col items-end">
-                                  <div className="flex items-center text-primary">
-                                    <span className="font-bold mr-1">{staff.rating.toFixed(1)}</span>
-                                    <span className="material-symbols-outlined text-[14px] icon-fill">star</span>
-                                  </div>
-                                  <span className="text-[10px] text-outline">{staff.reviews} đánh giá</span>
-                                </div>
-                              ) : (
-                                <span className="text-outline">-</span>
-                              )}
-                            </td>
-                          </>
-                        )}
-                        <td className="px-6 py-4 text-right">
-                          {staff.type === 'barber' ? (
-                            <button 
-                              onClick={() => setActiveTab('barber')}
-                              className="text-outline hover:text-primary p-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                              title="Chuyển sang tab quản lý Thợ"
-                            >
-                              <span className="material-symbols-outlined">edit</span>
-                            </button>
+        {/* Staff Table List */}
+        <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant overflow-hidden rounded-xl mb-4">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="border-b border-outline-variant bg-surface-container-high/50">
+                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Nhân viên</th>
+                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Liên hệ</th>
+                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Chức vụ</th>
+                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold text-center">Trạng thái</th>
+                  <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Ca làm</th>
+                  <th className="px-6 py-4"></th>
+                </tr>
+              </thead>
+              <tbody className="text-sm font-medium">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-8 text-outline">Đang tải dữ liệu nhân sự...</td>
+                  </tr>
+                ) : filteredStaff.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-8 text-outline">Không có nhân sự nào.</td>
+                  </tr>
+                ) : (
+                  filteredStaff.map((staff) => (
+                  <tr key={staff.id} className="border-b border-outline-variant/30 hover:bg-white/5 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative w-10 h-10 rounded-full overflow-hidden border border-outline-variant bg-surface-variant flex items-center justify-center shrink-0">
+                          {staff.avatar ? (
+                            <img src={staff.avatar} alt={staff.name} className="w-full h-full object-cover" />
                           ) : (
-                            <button className="text-outline hover:text-primary p-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Chỉnh sửa nhân viên">
-                              <span className="material-symbols-outlined">edit</span>
-                            </button>
+                            <span className="text-on-surface-variant font-bold text-xs uppercase">
+                              {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                            </span>
                           )}
-                        </td>
-                      </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                          <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-surface ${staff.status === 'active' ? 'bg-green-500' : 'bg-outline-variant'}`}></div>
+                        </div>
+                        <div>
+                          <p className="font-bold text-on-surface">{staff.name}</p>
+                          <p className="text-xs text-outline">{staff.id}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-on-surface-variant truncate max-w-[150px]">{staff.email}</p>
+                      <p className="text-xs text-outline">{staff.phone}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        staff.type === 'barber' ? 'bg-primary/10 text-primary' : 'bg-tertiary-container/20 text-tertiary'
+                      }`}>
+                        {staff.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
+                        staff.status === 'active' ? 'text-green-400 bg-green-400/10' : 'text-outline-variant bg-outline-variant/10'
+                      }`}>
+                        {staff.status === 'active' ? 'Đang làm' : 'Nghỉ ca'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-on-surface-variant font-label-md">{staff.shift}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="text-outline hover:text-primary p-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+                        <span className="material-symbols-outlined">edit</span>
+                      </button>
+                    </td>
+                  </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-            {/* Shift Management Table Overview (Re-used from HTML) */}
-            <div className="mt-12">
-              <div className="flex justify-between items-end mb-6">
-                <div>
-                  <h2 className="font-headline-md text-headline-md text-primary font-bold">LỊCH TRÌNH TRỰC CA</h2>
-                  <p className="text-outline text-sm mt-1">Tuần từ 22/05 - 28/05, 2024</p>
-                </div>
-                <button className="text-outline hover:text-primary transition-colors flex items-center text-sm font-bold">
-                  Xem chi tiết lịch <span className="material-symbols-outlined ml-1">arrow_right_alt</span>
-                </button>
-              </div>
-              <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant overflow-hidden rounded-xl">
-                <div className="overflow-x-auto custom-scrollbar">
-                  <table className="w-full text-left border-collapse min-w-[800px]">
-                    <thead>
-                      <tr className="border-b border-outline-variant bg-surface-container-high/50">
-                        <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Nhân viên</th>
-                        <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Thứ 2</th>
-                        <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Thứ 3</th>
-                        <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Thứ 4</th>
-                        <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Thứ 5</th>
-                        <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Thứ 6</th>
-                        <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Thứ 7</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm font-medium">
-                      <tr className="border-b border-outline-variant/30 hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4 flex items-center">
-                          <div className="w-8 h-8 rounded bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold mr-3 uppercase">LT</div>
-                          <span className="font-bold">Lê Minh Tuân</span>
-                        </td>
-                        <td className="px-6 py-4"><span className="bg-primary/10 text-primary-fixed-dim px-2 py-1 rounded text-[10px] font-bold">CA SÁNG</span></td>
-                        <td className="px-6 py-4"><span className="bg-primary/10 text-primary-fixed-dim px-2 py-1 rounded text-[10px] font-bold">CA SÁNG</span></td>
-                        <td className="px-6 py-4 text-outline-variant italic text-[10px]">NGHỈ</td>
-                        <td className="px-6 py-4"><span className="bg-primary/10 text-primary-fixed-dim px-2 py-1 rounded text-[10px] font-bold">CA SÁNG</span></td>
-                        <td className="px-6 py-4"><span className="bg-primary/10 text-primary-fixed-dim px-2 py-1 rounded text-[10px] font-bold">CA SÁNG</span></td>
-                        <td className="px-6 py-4"><span className="bg-secondary-container/30 text-secondary px-2 py-1 rounded text-[10px] font-bold">CA FULL</span></td>
-                      </tr>
-                      <tr className="border-b border-outline-variant/30 hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4 flex items-center">
-                          <div className="w-8 h-8 rounded bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold mr-3 uppercase">QB</div>
-                          <span className="font-bold">Trần Quốc Bảo</span>
-                        </td>
-                        <td className="px-6 py-4"><span className="bg-secondary-container/30 text-secondary px-2 py-1 rounded text-[10px] font-bold">CA CHIỀU</span></td>
-                        <td className="px-6 py-4"><span className="bg-secondary-container/30 text-secondary px-2 py-1 rounded text-[10px] font-bold">CA CHIỀU</span></td>
-                        <td className="px-6 py-4"><span className="bg-secondary-container/30 text-secondary px-2 py-1 rounded text-[10px] font-bold">CA CHIỀU</span></td>
-                        <td className="px-6 py-4 text-outline-variant italic text-[10px]">NGHỈ</td>
-                        <td className="px-6 py-4"><span className="bg-secondary-container/30 text-secondary px-2 py-1 rounded text-[10px] font-bold">CA CHIỀU</span></td>
-                        <td className="px-6 py-4"><span className="bg-secondary-container/30 text-secondary px-2 py-1 rounded text-[10px] font-bold">CA CHIỀU</span></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+        <div className="flex justify-end mb-12">
+          <button className="text-outline hover:text-primary transition-colors flex items-center text-sm font-bold">
+            Xem chi tiết lịch <span className="material-symbols-outlined ml-1">arrow_right_alt</span>
+          </button>
+        </div>
 
       </div>
     </div>

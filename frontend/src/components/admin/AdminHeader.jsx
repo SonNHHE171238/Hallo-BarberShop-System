@@ -10,12 +10,15 @@ export default function AdminHeader({ onMenuClick }) {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const getPageTitle = () => {
+    if (pathname.includes('/pos')) return 'POS & Thu Ngân';
     if (pathname.includes('/admin/employee')) return 'Quản Lý Nhân Viên';
-    if (pathname.includes('/admin/bookings')) return 'Lịch Hẹn';
+    if (pathname.includes('/admin/bookings')) return 'Quản Lý Lịch Hẹn';
     if (pathname.includes('/admin/services')) return 'Dịch Vụ';
     if (pathname.includes('/admin/inventory')) return 'Kho Hàng';
-    if (pathname.includes('/admin/analytics')) return 'Phân Tích';
-    return 'Bảng Điều Khiển - Admin';
+    if (pathname.includes('/admin/products')) return 'Quản Lý Sản Phẩm';
+    if (pathname.includes('/admin/analytics')) return 'Phân Tích Kinh Doanh';
+    if (pathname === '/admin' || pathname === '/admin/') return 'Bảng Điều Khiển - Admin';
+    return '';
   };
 
   return (
@@ -30,10 +33,6 @@ export default function AdminHeader({ onMenuClick }) {
         </h1>
       </div>
       <div className="flex items-center gap-4 md:gap-6">
-        <button className="text-on-surface-variant hover:text-primary transition-colors active:scale-95">
-          <span className="material-symbols-outlined">settings</span>
-        </button>
-
         {/* User Profile Dropdown */}
         <div className="relative">
           <div 

@@ -1,4 +1,4 @@
-import StaffAppointments from "@/page/staff/bookings/StaffAppointments";
+import StaffBookings from "@/page/staff/bookings/StaffBookings";
 
 export const metadata = {
   title: "Quản lý Lịch hẹn | STAFF",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function BookingsPage() {
-  return <StaffAppointments />;
+  return <StaffBookings />;
 }
