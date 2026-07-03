@@ -11,16 +11,13 @@ export default function AdminBookingsPage() {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [dateFilter, setDateFilter] = useState(() => {
-        const today = new Date();
-        return today.toISOString().split('T')[0];
-    });
+    const [dateFilter, setDateFilter] = useState('');
     const [page, setPage] = useState(1);
     const limit = 10;
 
     // Fetch all bookings for admin
     const { data: response, error, isLoading } = useSWR(
-        '/bookings/all', 
+        '/bookings/all?limit=10000', 
         fetcher,
         { refreshInterval: 30000 } // Auto refresh every 30s as discussed
     );
@@ -79,57 +76,43 @@ export default function AdminBookingsPage() {
         if (!dateStr) return '';
         try {
             const date = new Date(dateStr);
-            const today = new Date();
-            const isToday = date.toDateString() === today.toDateString();
-            
-            const formatted = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-            return isToday ? `Hôm nay, ${formatted}` : formatted;
+            return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
         } catch (e) {
             return dateStr;
         }
     };
 
     return (
-        <div className="max-w-[1400px] mx-auto">
-            {/* Page Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h1 className="text-headline-lg font-headline-lg text-primary tracking-tight uppercase">Quản Lý Lịch Hẹn</h1>
-                    <p className="text-body-md font-body-md text-on-surface-variant mt-1">Tổng quan và điều phối lịch đặt chỗ trong hệ thống.</p>
-                </div>
-                <button className="bg-primary text-on-primary px-6 py-3 rounded-lg font-label-md text-label-md font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-lg shadow-primary/10">
-                    <span className="material-symbols-outlined">add_circle</span>
-                    Thêm lịch hẹn mới
-                </button>
-            </div>
+        <div className="w-full max-w-[1300px] mx-auto flex flex-col h-[calc(100vh-160px)]">
+            {/* Thêm lịch hẹn bị xóa */}
 
             {/* Filters & Search Bar */}
-            <div className="glass-panel bg-surface-container-low/60 rounded-xl border border-outline-gold p-4 md:p-6 mb-8 flex flex-col xl:flex-row gap-4 items-center justify-between">
-                <div className="flex flex-col md:flex-row items-center gap-4 w-full">
+            <div className="flex-none glass-panel bg-surface-container-low/60 rounded-xl border border-outline-gold p-3 mb-4 flex flex-col xl:flex-row gap-3 items-center justify-between">
+                <div className="flex flex-col md:flex-row items-center gap-3 w-full">
                     {/* Search Input */}
                     <div className="relative flex-1 w-full md:max-w-md">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                        <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
                         <input 
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-surface-container border border-outline-variant rounded-lg py-2 pl-10 pr-4 text-body-md font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" 
+                            className="w-full bg-surface-container border border-outline-variant rounded-lg py-1.5 pl-9 pr-3 text-sm font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" 
                             placeholder="Mã đơn, Tên khách, SĐT..." 
                         />
                     </div>
                     
                     {/* Right Side Controls */}
-                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
                         {/* Status Dropdown */}
-                        <div className="relative w-full sm:w-48">
-                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">filter_list</span>
+                        <div className="relative w-full sm:w-56">
+                            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">filter_list</span>
                             <select 
                                 value={statusFilter}
                                 onChange={(e) => {
                                     setStatusFilter(e.target.value);
                                     setPage(1);
                                 }}
-                                className="w-full bg-surface-container border border-outline-variant rounded-lg py-2 pl-10 pr-8 text-body-md font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none"
+                                className="w-full bg-surface-container border border-outline-variant rounded-lg py-1.5 pl-9 pr-7 text-sm font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none"
                             >
                                 <option value="all">Tất cả trạng thái</option>
                                 <option value="pending">Đang chờ</option>
@@ -137,12 +120,12 @@ export default function AdminBookingsPage() {
                                 <option value="completed">Hoàn thành</option>
                                 <option value="cancelled">Đã hủy</option>
                             </select>
-                            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+                            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
                         </div>
 
                         {/* Date Picker */}
-                        <div className="relative w-full sm:w-48">
-                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">calendar_month</span>
+                        <div className="relative w-full sm:w-40">
+                            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_month</span>
                             <input 
                                 type="date"
                                 value={dateFilter}
@@ -150,7 +133,7 @@ export default function AdminBookingsPage() {
                                     setDateFilter(e.target.value);
                                     setPage(1);
                                 }}
-                                className="w-full bg-surface-container border border-outline-variant rounded-lg py-2 pl-10 pr-4 text-body-md font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors [color-scheme:dark]" 
+                                className="w-full bg-surface-container border border-outline-variant rounded-lg py-1.5 pl-9 pr-3 text-sm font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors [color-scheme:dark]" 
                             />
                         </div>
                     </div>
@@ -158,14 +141,13 @@ export default function AdminBookingsPage() {
             </div>
 
             {/* Data Table */}
-            <div className="glass-panel bg-surface-container-low/60 rounded-xl border border-outline-gold overflow-hidden mb-6">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-outline-gold bg-surface-container-high/80 text-xs">
+            <div className="flex-1 glass-panel bg-surface-container-low/60 rounded-xl border border-outline-gold overflow-hidden mb-4 min-h-0 flex flex-col">
+                <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
+                    <table className="w-full min-w-[1000px] text-left border-collapse">
+                        <thead className="sticky top-0 z-10">
+                            <tr className="border-b border-outline-gold bg-surface-container-high text-xs shadow-sm">
                                 <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Mã đơn</th>
                                 <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Khách hàng</th>
-                                <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Dịch vụ</th>
                                 <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Barber</th>
                                 <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Thời gian</th>
                                 <th className="px-3 py-2.5 text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Trạng thái</th>
@@ -202,22 +184,9 @@ export default function AdminBookingsPage() {
                                             #{booking._id ? booking._id.slice(-6).toUpperCase() : 'UNKNOWN'}
                                         </td>
                                         <td className="px-3 py-2.5">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium text-on-surface text-[14px]">{booking.customerName || booking.customerId?.name || 'Khách Vãng Lai'}</span>
-                                                <span className="text-on-surface-variant text-[12px] whitespace-nowrap">{(booking.customerPhone || booking.customerId?.phone) ? `- ${booking.customerPhone || booking.customerId?.phone}` : ''}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-3 py-2.5">
                                             <div className="font-medium text-on-surface text-[14px]">
-                                                {booking.services && booking.services.length > 0 
-                                                    ? booking.services[0].name || 'Dịch vụ đã xóa'
-                                                    : (booking.serviceId?.name || 'Chưa chọn dịch vụ')}
+                                                {booking.customerName || booking.customerId?.name || 'Khách Vãng Lai'}
                                             </div>
-                                            {booking.services && booking.services.length > 1 && (
-                                                <div className="text-on-surface-variant text-[11px]">
-                                                    + {booking.services.length - 1} dịch vụ khác
-                                                </div>
-                                            )}
                                         </td>
                                         <td className="px-3 py-2.5">
                                             <div className="flex items-center gap-2">
@@ -234,7 +203,7 @@ export default function AdminBookingsPage() {
                                             </div>
                                         </td>
                                         <td className="px-3 py-2.5">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-col gap-0.5">
                                                 <span className="font-medium text-on-surface text-[14px]">
                                                     {booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                                                 </span>
@@ -282,7 +251,7 @@ export default function AdminBookingsPage() {
 
             {/* Pagination */}
             {!isLoading && filteredBookings.length > 0 && (
-                <div className="flex items-center justify-between mt-4 pb-8">
+                <div className="flex-none flex items-center justify-between pt-2">
                     <p className="text-on-surface-variant text-sm font-body-md">
                         Hiển thị <span className="font-medium text-on-surface">{(page - 1) * limit + 1}</span> đến <span className="font-medium text-on-surface">{Math.min(page * limit, filteredBookings.length)}</span> trong số <span className="font-medium text-on-surface">{filteredBookings.length}</span> lịch hẹn
                     </p>

@@ -16,7 +16,12 @@ exports.getAllBrands = async (req, res, next) => {
 // Admin: Tạo thương hiệu mới
 exports.createBrand = async (req, res, next) => {
   try {
-    const { name, description, logoUrl } = req.body;
+    const { name, description } = req.body;
+    let logoUrl = req.body.logoUrl;
+    if (req.file) {
+      logoUrl = req.file.path;
+    }
+
     if (!name) return res.status(400).json({ success: false, message: 'Tên hãng là bắt buộc' });
     
     const newBrand = new Brand({ name, description, logoUrl });
@@ -32,7 +37,11 @@ exports.createBrand = async (req, res, next) => {
 exports.updateBrand = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, logoUrl, isActive } = req.body;
+    const { name, description, isActive } = req.body;
+    let logoUrl = req.body.logoUrl;
+    if (req.file) {
+      logoUrl = req.file.path;
+    }
     
     // Nếu đổi tên hãng, phải cập nhật luôn tên hãng ở tất cả sản phẩm đang dùng hãng này
     const brandToUpdate = await Brand.findById(id);

@@ -14,10 +14,7 @@ export default function StaffBookings() {
   const router = useRouter();
 
   // Filters State
-  const [dateFilter, setDateFilter] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
+  const [dateFilter, setDateFilter] = useState(''); // Default: Tất cả thời gian
   const [barberFilter, setBarberFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'waiting', 'serving'
 
@@ -26,7 +23,7 @@ export default function StaffBookings() {
     try {
       const [appRes, barbersRes] = await Promise.all([
         staffDashboardService.getAppointmentsList({
-          date: dateFilter,
+          date: dateFilter || 'all',
           barberId: barberFilter,
           status: statusFilter
         }),
@@ -69,13 +66,6 @@ export default function StaffBookings() {
     );
   }
 
-  // Format date for display in the filter UI
-  const displayDate = new Date(dateFilter).toLocaleDateString('vi-VN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  });
-
   return (
     <div className="w-full">
       <div className="flex-1 overflow-y-auto p-12 space-y-8 pb-24 max-w-[1400px] mx-auto animate-fade-in">
@@ -86,14 +76,13 @@ export default function StaffBookings() {
         </div>
 
         {/* Filters & Actions */}
-        <section className="flex flex-col lg:flex-row justify-between items-end gap-6">
-          <div className="flex flex-wrap gap-4 items-end">
+        <section className="flex flex-col lg:flex-row justify-between items-center gap-6">
+          <div className="flex flex-wrap gap-6 items-center">
 
-            <div className="space-y-2">
-              <label className="font-label-md text-xs text-outline uppercase tracking-wider">Ngày làm việc</label>
+            <div className="flex items-center gap-3">
+              <label className="font-label-md text-xs text-outline uppercase tracking-wider whitespace-nowrap">Ngày làm việc:</label>
               <div className="flex items-center gap-2 bg-surface-container border border-outline-variant px-4 h-11 rounded-lg focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
                 <span className="material-symbols-outlined text-gold-dim text-lg">event</span>
-                {/* Native date picker with transparent background overlaid on the styled container */}
                 <input
                   type="date"
                   value={dateFilter}
@@ -103,8 +92,8 @@ export default function StaffBookings() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="font-label-md text-xs text-outline uppercase tracking-wider">Thợ Barber</label>
+            <div className="flex items-center gap-3">
+              <label className="font-label-md text-xs text-outline uppercase tracking-wider whitespace-nowrap">Thợ Barber:</label>
               <select
                 value={barberFilter}
                 onChange={(e) => setBarberFilter(e.target.value)}
@@ -117,8 +106,8 @@ export default function StaffBookings() {
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="font-label-md text-xs text-outline uppercase tracking-wider">Trạng thái</label>
+            <div className="flex items-center gap-3">
+              <label className="font-label-md text-xs text-outline uppercase tracking-wider whitespace-nowrap">Trạng thái:</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}

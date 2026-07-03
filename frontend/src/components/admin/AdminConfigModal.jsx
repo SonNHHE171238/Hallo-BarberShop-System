@@ -21,7 +21,7 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
     if (isOpen) {
       fetchData();
       setIsEditing(null);
-      setFormData({ name: '', description: '', logoUrl: '' });
+      setFormData({ name: '', description: '', logoUrl: '', logoFile: null });
     }
   }, [isOpen, activeTab]);
 
@@ -47,13 +47,14 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
     setFormData({ 
         name: item.name, 
         description: item.description || '', 
-        logoUrl: item.logoUrl || '' 
+        logoUrl: item.logoUrl || '',
+        logoFile: null
     });
   };
 
   const handleCancelEdit = () => {
     setIsEditing(null);
-    setFormData({ name: '', description: '', logoUrl: '' });
+    setFormData({ name: '', description: '', logoUrl: '', logoFile: null });
   };
 
   const handleSubmit = async (e) => {
@@ -69,11 +70,27 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
         ? 'http://localhost:5000/api/categories' 
         : 'http://localhost:5000/api/brands';
 
+      let payload;
+      let headers = { withCredentials: true };
+
+      if (activeTab === 'brands') {
+        payload = new FormData();
+        payload.append('name', formData.name);
+        payload.append('description', formData.description);
+        if (formData.logoFile) {
+          payload.append('logo', formData.logoFile);
+        } else if (formData.logoUrl) {
+          payload.append('logoUrl', formData.logoUrl);
+        }
+      } else {
+        payload = formData;
+      }
+
       let res;
       if (isEditing) {
-        res = await axios.put(`${url}/${isEditing}`, formData, { withCredentials: true });
+        res = await axios.put(`${url}/${isEditing}`, payload, headers);
       } else {
-        res = await axios.post(url, formData, { withCredentials: true });
+        res = await axios.post(url, payload, headers);
       }
 
       if (res.data.success) {
@@ -182,14 +199,42 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
 
               {activeTab === 'brands' && (
                 <div>
-                  <label className="block text-xs uppercase tracking-wider font-bold text-outline mb-1">Đường dẫn Logo (Tùy chọn)</label>
-                  <input 
-                    type="text" 
-                    value={formData.logoUrl}
-                    onChange={(e) => setFormData({...formData, logoUrl: e.target.value})}
-                    className="w-full bg-surface-container border border-outline-variant rounded p-2 text-sm focus:border-primary outline-none text-on-surface"
-                    placeholder="https://..."
-                  />
+                  <label className="block text-xs uppercase tracking-wider font-bold text-outline mb-1">Logo Hãng (Tùy chọn)</label>
+                  <div className="flex items-center gap-3">
+                    {(formData.logoUrl || formData.logoFile) ? (
+                      <div className="relative w-12 h-12 rounded border border-outline-variant shrink-0 bg-white">
+                        <img 
+                          src={formData.logoFile ? URL.createObjectURL(formData.logoFile) : formData.logoUrl} 
+                          alt="preview" 
+                          className="w-full h-full object-cover rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({...formData, logoUrl: '', logoFile: null})}
+                          className="absolute -top-2 -right-2 bg-error text-white rounded-full w-5 h-5 flex items-center justify-center hover:brightness-110"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">close</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-12 h-12 rounded border border-dashed border-outline-variant flex items-center justify-center shrink-0 cursor-pointer hover:bg-surface-bright/10 text-on-surface-variant transition-colors">
+                        <span className="material-symbols-outlined text-[20px]">add_photo_alternate</span>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files[0]) {
+                              setFormData({...formData, logoFile: e.target.files[0]});
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                    <div className="flex-1">
+                      <span className="text-xs text-on-surface-variant">Tải ảnh lên từ máy tính của bạn</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
