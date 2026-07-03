@@ -150,7 +150,9 @@ exports.getAllAdminBarbers = async (req, res) => {
         nextWeek.setDate(new Date().getDate() + 7);
         const nextWeekStr = normalizeDateString(nextWeek);
 
-        const barbers = await Barber.find().populate('userId', 'name email phone avatarUrl status');
+        const barberUsers = await User.find({ role: 'barber' }).select('name email phone avatarUrl status');
+        const barbers = await Barber.find();
+        
         const barberIds = barbers.map((barber) => barber._id);
 
         const schedules = await BarberSchedule.find({
@@ -165,30 +167,39 @@ exports.getAllAdminBarbers = async (req, res) => {
             return acc;
         }, {});
 
-        const result = barbers.map((barber) => {
-            const summarySchedules = (scheduleMap[barber._id.toString()] || []).map((schedule) => {
-                const available = schedule.availableSlots.filter((slot) => !slot.isBooked && !slot.isBlocked);
-                const booked = schedule.availableSlots.filter((slot) => slot.isBooked);
-                const blocked = schedule.availableSlots.filter((slot) => !slot.isBooked && slot.isBlocked);
-                return {
-                    date: schedule.date,
-                    isOffDay: schedule.isOffDay,
-                    offReason: schedule.offReason,
-                    availableSlots: available.length,
-                    bookedSlots: booked.length,
-                    blockedSlots: blocked.length,
-                };
-            });
+        const result = barberUsers.map((user) => {
+            const barberProfile = barbers.find(b => b.userId && b.userId.toString() === user._id.toString());
+            
+            let summarySchedules = [];
+            if (barberProfile) {
+                summarySchedules = (scheduleMap[barberProfile._id.toString()] || []).map((schedule) => {
+                    const available = schedule.availableSlots.filter((slot) => !slot.isBooked && !slot.isBlocked);
+                    const booked = schedule.availableSlots.filter((slot) => slot.isBooked);
+                    const blocked = schedule.availableSlots.filter((slot) => !slot.isBooked && slot.isBlocked);
+                    return {
+                        date: schedule.date,
+                        isOffDay: schedule.isOffDay,
+                        offReason: schedule.offReason,
+                        availableSlots: available.length,
+                        bookedSlots: booked.length,
+                        blockedSlots: blocked.length,
+                    };
+                });
+            }
 
-            const userData = barber.userId || {};
             return {
-                barber,
+                barber: barberProfile || {
+                    _id: user._id, // fallback ID
+                    experienceYears: 0,
+                    rating: 5,
+                    preferredWorkingHours: { start: '08:00', end: '20:00' }
+                },
                 user: {
-                    name: userData.name || '',
-                    phone: userData.phone || '',
-                    avatarUrl: userData.avatarUrl || '',
-                    email: userData.email || '',
-                    status: userData.status || '',
+                    name: user.name || 'Thợ chưa có tên',
+                    phone: user.phone || '',
+                    avatarUrl: user.avatarUrl || '',
+                    email: user.email || '',
+                    status: user.status || 'active',
                 },
                 scheduleSummary: summarySchedules,
             };

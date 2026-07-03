@@ -9,8 +9,13 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("");
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setActiveHash(window.location.hash);
@@ -83,7 +88,7 @@ export default function Navbar() {
             Cửa hàng
           </Link>
           <Link 
-            href={user ? "/customer/history" : "/review"} 
+            href={(mounted && user) ? "/customer/history" : "/review"} 
             onClick={() => setActiveHash("")}
             className={`text-body-md font-body-md whitespace-nowrap transition-all ${
               pathname === "/customer/history" || pathname === "/review"
@@ -111,7 +116,7 @@ export default function Navbar() {
             <span className="material-symbols-outlined">shopping_bag</span>
           </Link>
           
-          {user ? (
+          {(mounted && user) ? (
             <div className="relative group hidden md:flex items-center space-x-2 mr-4 cursor-pointer py-2">
               <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center border border-outline-variant">
                 {user.avatarUrl ? (
@@ -185,10 +190,10 @@ export default function Navbar() {
             <Link href="/#team" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Đội ngũ</Link>
           </div>
           <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
-          <Link href={user ? "/customer/history" : "/review"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/review" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
+          <Link href={(mounted && user) ? "/customer/history" : "/review"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/review" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
           <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/blog" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Blog & Tin tức</Link>
           <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
-            {user ? (
+            {(mounted && user) ? (
               <>
                 <div className="flex items-center space-x-3 mb-2 px-2">
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center border border-outline-variant">

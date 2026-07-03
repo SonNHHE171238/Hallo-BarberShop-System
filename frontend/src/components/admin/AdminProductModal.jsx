@@ -199,17 +199,25 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
     }
   };
 
-  const handleCreateBrand = () => {
+  const handleCreateBrand = async () => {
     if (!newBrandName.trim()) {
       toast.error("Vui lòng nhập tên hãng");
       return;
     }
-    if (!brands.includes(newBrandName.trim())) {
-      setBrands((prev) => [...prev, newBrandName.trim()]);
+    try {
+      const res = await axios.post("http://localhost:5000/api/brands", { name: newBrandName.trim() }, { withCredentials: true });
+      if (res.data.success) {
+        if (!brands.includes(newBrandName.trim())) {
+          setBrands((prev) => [...prev, newBrandName.trim()]);
+        }
+        setFormData((prev) => ({ ...prev, brand: newBrandName.trim() }));
+        setNewBrandName("");
+        setShowBrandModal(false);
+        toast.success("Tạo hãng thành công");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Lỗi khi tạo hãng");
     }
-    setFormData((prev) => ({ ...prev, brand: newBrandName.trim() }));
-    setNewBrandName("");
-    setShowBrandModal(false);
   };
 
   const handleCreateCategory = async () => {

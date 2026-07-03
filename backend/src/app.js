@@ -17,6 +17,7 @@ const orderRoute = require('../routes/order.route');
 const cartRoute = require('../routes/cart.route');
 const bookingFeedbackRoutes = require("../routes/bookingfeedback.route");
 const categoryRoute = require('../routes/category.route');
+const brandRoute = require('../routes/brand.route');
 const errorHandler = require('../middlewares/error.middleware');
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api/products', productRoute);
 app.use('/api/orders', orderRoute);
 app.use('/api/cart', cartRoute);
 app.use('/api/categories', categoryRoute);
+app.use('/api/brands', brandRoute);
 
 app.get('/', (req, res) => {
     res.send('Hallo BarberShop API is running');
