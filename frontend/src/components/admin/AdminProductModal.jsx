@@ -259,7 +259,9 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
     setLoading(true);
     try {
       let payload;
-      const headers = { withCredentials: true };
+      const axiosConfig = { 
+        withCredentials: true
+      };
 
       if (formData.imageFile) {
         payload = new FormData();
@@ -270,7 +272,7 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
         payload.append("price", Number(formData.price));
         payload.append("stock", Number(formData.stock));
         payload.append("image", formData.imageFile);
-        headers["Content-Type"] = "multipart/form-data";
+        axiosConfig.headers = { "Content-Type": "multipart/form-data" };
       } else {
         payload = {
           ...formData,
@@ -281,9 +283,9 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
 
       let res;
       if (isEditMode) {
-        res = await axios.put(`http://localhost:5000/api/products/${productId}`, payload, { headers });
+        res = await axios.put(`http://localhost:5000/api/products/${productId}`, payload, axiosConfig);
       } else {
-        res = await axios.post("http://localhost:5000/api/products", payload, { headers });
+        res = await axios.post("http://localhost:5000/api/products", payload, axiosConfig);
       }
 
       if (res.data.success) {
