@@ -155,19 +155,17 @@ const staffDashboardService = {
   },
 
   getAppointmentsList: async ({ date, barberId, status }) => {
-    // Determine the date range
-    let targetDate = new Date();
-    if (date) {
-      targetDate = new Date(date);
-    }
-    const start = new Date(targetDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(targetDate);
-    end.setHours(23, 59, 59, 999);
+    const query = {};
 
-    const query = {
-      bookingDate: { $gte: start, $lte: end }
-    };
+    if (date && date !== 'all') {
+      const targetDate = new Date(date);
+      const start = new Date(targetDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(targetDate);
+      end.setHours(23, 59, 59, 999);
+      
+      query.bookingDate = { $gte: start, $lte: end };
+    }
 
     if (barberId && barberId !== 'all') {
       query.barberId = barberId;

@@ -16,11 +16,13 @@ router.get("/", serviceController.getAllServices);
 // Chi tiết service
 router.get("/:id", serviceController.getServiceDetail);
 
+const uploadCloud = require("../config/cloudinary.config");
+
 // ==========================================
 // ADMIN-ONLY ENDPOINTS (Chỉ Admin được truy cập)
 // ==========================================
-router.post("/", authenticate, authorizeRoles("admin"), serviceController.createService);
-router.put("/:id", authenticate, authorizeRoles("admin"), serviceController.updateService);
+router.post("/", authenticate, authorizeRoles("admin"), uploadCloud.single('image'), serviceController.createService);
+router.put("/:id", authenticate, authorizeRoles("admin"), uploadCloud.single('image'), serviceController.updateService);
 router.delete("/:id", authenticate, authorizeRoles("admin"), serviceController.deleteService);
 
 module.exports = router;

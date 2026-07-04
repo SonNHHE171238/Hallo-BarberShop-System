@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import ServicePageHeader from '@/components/admin/services/ServicePageHeader';
-import ServiceFilterBar from '@/components/admin/services/ServiceFilterBar';
 import ServiceTable from '@/components/admin/services/ServiceTable';
 import ServicePagination from '@/components/admin/services/ServicePagination';
 import { serviceService } from '@/services/service.service';
@@ -111,12 +109,10 @@ export default function AdminServicesPage() {
       const file = files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        const base64String = reader.result.split(',')[1];
         setFormData((prev) => ({
           ...prev,
           imageFile: file,
           imagePreview: reader.result,
-          imageBase64: base64String,
         }));
       };
       reader.readAsDataURL(file);
@@ -135,22 +131,21 @@ export default function AdminServicesPage() {
     setFormSuccess('');
     setFormLoading(true);
 
-    const payload = {
-      name: formData.name.trim(),
-      description: formData.description.trim(),
-      price: Number(formData.price),
-      durationMinutes: Number(formData.durationMinutes),
-      category: formData.category,
-    };
-
-    if (formData.imageBase64) {
-      payload.imageBase64 = formData.imageBase64;
-    }
-
-    if (!payload.name || Number.isNaN(payload.price) || payload.price < 0 || payload.durationMinutes <= 0) {
+    if (!formData.name.trim() || Number.isNaN(Number(formData.price)) || Number(formData.price) < 0 || Number(formData.durationMinutes) <= 0) {
       setFormError('Tên dịch vụ, giá và thời lượng phải hợp lệ và không được âm.');
       setFormLoading(false);
       return;
+    }
+
+    const payload = new FormData();
+    payload.append('name', formData.name.trim());
+    payload.append('description', formData.description.trim());
+    payload.append('price', Number(formData.price));
+    payload.append('durationMinutes', Number(formData.durationMinutes));
+    payload.append('category', formData.category);
+
+    if (formData.imageFile) {
+      payload.append('image', formData.imageFile);
     }
 
     try {
@@ -175,44 +170,104 @@ export default function AdminServicesPage() {
   };
 
   return (
-    <div className="max-w-container-max mx-auto w-full">
-      <ServicePageHeader onCreate={openForm} />
+    <div className="max-w-container-max mx-auto px-6 md:px-margin-desktop py-4 w-full h-[calc(100vh-80px)] flex flex-col overflow-hidden">
+      
+
+
+      <div className="bg-surface-container-highest/60 backdrop-blur-md rounded-lg overflow-hidden border border-outline-variant flex-1 flex flex-col min-h-0">
+        
+        {/* Filter Bar Integrated */}
+        <div className="p-4 border-b border-outline-variant flex flex-wrap items-center justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-on-surface-variant text-body-md hidden sm:inline whitespace-nowrap">Danh mục:</span>
+            <select 
+              value={categoryFilter} 
+              onChange={(e) => setCategoryFilter(e.target.value)} 
+              className="bg-surface-container border border-outline-variant px-3 py-2 rounded focus:ring-1 focus:ring-primary text-body-md outline-none"
+            >
+              <option value="all">Tất cả</option>
+              <option value="cut">Cắt</option>
+              <option value="perm">Uốn</option>
+              <option value="color">Hóa chất</option>
+              <option value="combo">Combo</option>
+              <option value="styling">Styling</option>
+              <option value="treatment">Chăm sóc</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end relative">
+            <div className="relative">
+              <input 
+                type="text" 
+                placeholder="Tìm kiếm..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-surface-container-lowest border border-outline-variant rounded px-3 py-1.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary text-on-surface pl-8"
+              />
+              <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline-variant text-[18px] pointer-events-none">search</span>
+            </div>
+            
+            <button 
+              onClick={openForm}
+              className="flex items-center gap-1 bg-primary text-on-primary px-4 py-2 rounded hover:brightness-110 active:scale-95 transition-all font-bold uppercase tracking-wider text-[13px]"
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              Thêm mới
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-auto flex-1 custom-scrollbar relative">
+          <ServiceTable services={services} loading={loading} onEdit={openEditForm} onDelete={async (service) => {
+            if (!confirm(`Xóa dịch vụ "${service.name}"?`)) return;
+            try {
+              await serviceService.deleteService(service._id || service.id);
+              setServices((prev) => prev.filter((s) => !(s._id === (service._id || service.id) || s.id === (service._id || service.id))));
+            } catch (err) {
+              alert(err.message || 'Lỗi khi xóa dịch vụ');
+            }
+          }} />
+        </div>
+
+        <div className="border-t border-outline-variant shrink-0 bg-surface-container-highest/60">
+          <ServicePagination page={page} pages={pages} total={total} onPageChange={handlePageChange} />
+        </div>
+      </div>
+
       {formOpen && (
         <div
           className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-4 bg-black/40"
           onClick={(e) => { if (e.target === e.currentTarget) closeForm(); }}
         >
-          <div className="w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <section className="rounded-3xl border border-outline-gold bg-surface-container-low p-6 shadow-2xl shadow-black/5 mb-8">
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-auto custom-scrollbar">
+            <section className="rounded-2xl border border-outline-gold bg-surface-container-low p-5 shadow-2xl shadow-black/5 mb-0">
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="font-headline-sm text-headline-sm">{formData.id ? 'Chỉnh sửa dịch vụ' : 'Tạo dịch vụ mới'}</h3>
-                  <p className="text-body-sm text-on-surface-variant">
-                  </p>
+                  <h3 className="font-bold text-headline-sm text-primary">{formData.id ? 'Chỉnh sửa dịch vụ' : 'Tạo dịch vụ mới'}</h3>
                 </div>
-                <div className="flex items-center gap-3">
-                  {formLoading && <span className="font-medium text-on-surface-variant">Đang gửi...</span>}
-                  <button type="button" onClick={closeForm} className="text-on-surface-variant px-3 py-2 hover:text-primary">Đóng</button>
+                <div className="flex items-center gap-3 mt-2 sm:mt-0">
+                  {formLoading && <span className="font-medium text-on-surface-variant text-sm">Đang gửi...</span>}
+                  <button type="button" onClick={closeForm} className="text-on-surface-variant px-2 py-1 hover:text-error text-sm font-bold">Đóng</button>
                 </div>
               </div>
 
-              {formError ? <div className="mb-5 rounded-2xl bg-error/10 border border-error/50 px-4 py-3 text-error">{formError}</div> : null}
-              {formSuccess ? <div className="mb-5 rounded-2xl bg-success/10 border border-success/50 px-4 py-3 text-success">{formSuccess}</div> : null}
+              {formError ? <div className="mb-4 rounded-xl bg-error/10 border border-error/50 px-3 py-2 text-error text-sm">{formError}</div> : null}
+              {formSuccess ? <div className="mb-4 rounded-xl bg-success/10 border border-success/50 px-3 py-2 text-success text-sm">{formSuccess}</div> : null}
 
-              <form className="grid grid-cols-1 gap-6 md:grid-cols-2" onSubmit={handleSubmit}>
-                <div className="space-y-2">
-                  <label className="font-label-sm text-on-surface-variant">Tên dịch vụ</label>
+              <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Tên dịch vụ</label>
                   <input
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-3xl border border-outline-variant bg-surface p-4 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:border-primary outline-none"
                     placeholder="Ví dụ: Cắt tóc nam"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="font-label-sm text-on-surface-variant">Giá (VNĐ)</label>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Giá (VNĐ)</label>
                   <input
                     name="price"
                     type="number"
@@ -220,40 +275,40 @@ export default function AdminServicesPage() {
                     value={formData.price}
                     onChange={handleChange}
                     required
-                    className="w-full rounded-3xl border border-outline-variant bg-surface p-4 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:border-primary outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="Ví dụ: 250000"
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="font-label-sm text-on-surface-variant">Mô tả</label>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Mô tả</label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
-                    rows={4}
-                    className="w-full rounded-3xl border border-outline-variant bg-surface p-4 text-on-surface"
+                    rows={2}
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:border-primary outline-none custom-scrollbar"
                     placeholder="Mô tả ngắn về dịch vụ"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="font-label-sm text-on-surface-variant">Thời lượng (phút)</label>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Thời lượng (phút)</label>
                   <input
                     name="durationMinutes"
                     type="number"
                     min="1"
                     value={formData.durationMinutes}
                     onChange={handleChange}
-                    className="w-full rounded-3xl border border-outline-variant bg-surface p-4 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:border-primary outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="Ví dụ: 45"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="font-label-sm text-on-surface-variant">Danh mục</label>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Danh mục</label>
                   <select
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="w-full rounded-3xl border border-outline-variant bg-surface p-4 text-on-surface"
+                    className="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:border-primary outline-none"
                   >
                     <option value="cut">Cắt</option>
                     <option value="perm">Uốn</option>
@@ -263,12 +318,15 @@ export default function AdminServicesPage() {
                     <option value="treatment">Chăm sóc</option>
                   </select>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="font-label-sm text-on-surface-variant">Ảnh dịch vụ</label>
-                  <div className="rounded-3xl border border-outline-variant bg-surface p-4">
-                    <label className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-outline-variant bg-surface px-4 py-8 text-center text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer">
-                      <span>Chọn ảnh</span>
-                      <span className="text-[12px]">PNG, JPG hoặc JPEG</span>
+
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Ảnh minh họa (Bắt buộc nếu chưa có ảnh)</label>
+                  <div className="flex gap-4">
+                    {formData.imagePreview && (
+                      <img src={formData.imagePreview} alt="Preview" className="h-16 w-16 rounded-lg object-cover border border-outline-variant shrink-0" />
+                    )}
+                    <label className="flex-1 flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-outline-variant bg-surface px-4 py-3 text-center text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer">
+                      <span className="font-bold text-[13px]">Chọn ảnh (PNG, JPG)</span>
                       <input
                         type="file"
                         name="imageFile"
@@ -277,30 +335,15 @@ export default function AdminServicesPage() {
                         className="hidden"
                       />
                     </label>
-                    {formData.imagePreview ? (
-                      <div className="mt-4 flex items-center gap-4">
-                        <img src={formData.imagePreview} alt="Preview" className="h-24 w-24 rounded-2xl object-cover border border-outline-variant" />
-                        <div className="text-body-sm text-on-surface-variant">
-                          {formData.imageFile ? formData.imageFile.name : 'Ảnh hiện tại'}
-                        </div>
-                      </div>
-                    ) : null}
                   </div>
                 </div>
-                <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={closeForm}
-                    className="rounded-3xl border border-outline-variant bg-transparent px-8 py-4 text-on-surface transition-colors hover:border-primary"
-                  >
-                    Hủy
-                  </button>
+                <div className="md:col-span-2 pt-2 mt-2 border-t border-outline-variant flex justify-end">
                   <button
                     type="submit"
                     disabled={formLoading}
-                    className="rounded-3xl bg-primary text-on-primary px-8 py-4 font-semibold hover:bg-primary-fixed-dim transition-colors"
+                    className="bg-primary text-on-primary px-6 py-2 rounded font-bold uppercase tracking-wider text-[13px] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
                   >
-                    Lưu dịch vụ
+                    {formLoading ? 'Đang lưu...' : 'Lưu dịch vụ'}
                   </button>
                 </div>
               </form>
@@ -310,22 +353,8 @@ export default function AdminServicesPage() {
       )}
 
       {error ? (
-        <div className="mb-6 rounded-2xl bg-error/10 border border-error/50 px-4 py-3 text-error">{error}</div>
+        <div className="mt-4 rounded-2xl bg-error/10 border border-error/50 px-4 py-3 text-error">{error}</div>
       ) : null}
-
-      <ServiceFilterBar search={search} onSearch={setSearch} category={categoryFilter} onCategoryChange={(c) => setCategoryFilter(c)} total={total} />
-      <div className="flex flex-col">
-        <ServiceTable services={services} loading={loading} onEdit={openEditForm} onDelete={async (service) => {
-          if (!confirm(`Xóa dịch vụ "${service.name}"?`)) return;
-          try {
-            await serviceService.deleteService(service._id || service.id);
-            setServices((prev) => prev.filter((s) => !(s._id === (service._id || service.id) || s.id === (service._id || service.id))));
-          } catch (err) {
-            alert(err.message || 'Lỗi khi xóa dịch vụ');
-          }
-        }} />
-        <ServicePagination page={page} pages={pages} total={total} onPageChange={handlePageChange} />
-      </div>
     </div>
   );
 }

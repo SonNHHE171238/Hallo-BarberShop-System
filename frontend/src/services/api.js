@@ -8,10 +8,12 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
   const url = `${getBaseUrl()}${endpoint}`;
   
   const defaultOptions = {
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: {},
   };
+  
+  if (!(options.body instanceof FormData)) {
+    defaultOptions.headers['Content-Type'] = 'application/json';
+  }
   
   const fetchOptions = {
     ...defaultOptions,
@@ -23,7 +25,12 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
     credentials: 'include', // Important to send cookies
   };
 
-  const response = await fetch(url, fetchOptions);
+  let response;
+  try {
+    response = await fetch(url, fetchOptions);
+  } catch (error) {
+    throw new Error('Lỗi kết nối máy chủ. Vui lòng kiểm tra lại đường truyền hoặc xem backend đã chạy chưa.');
+  }
   
   // Try to parse json response
   let data;
