@@ -155,7 +155,7 @@ export default function Navbar() {
           )}
           <Link 
             href="/booking" 
-            className="bg-primary text-on-primary px-6 py-2 rounded-lg font-headline-sm text-headline-sm transition-all active:scale-95 duration-150 hover:bg-primary-container whitespace-nowrap"
+            className="hidden md:inline-flex bg-primary text-on-primary px-6 py-2 rounded-lg font-headline-sm text-headline-sm transition-all active:scale-95 duration-150 hover:bg-primary-container whitespace-nowrap"
           >
             Đặt Lịch Hẹn
           </Link>

@@ -100,18 +100,7 @@ export default function CartPage() {
           {/* Left Column: Product List */}
           <div className="lg:col-span-8 space-y-6">
             
-            {/* Membership Incentive Banner */}
-            <div className="bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 flex items-center gap-4 group hover:border-primary transition-colors duration-500">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-              </div>
-              <div>
-                <p className="font-body-md text-on-surface font-medium">Bạn có muốn tích thêm 1,250 điểm không?</p>
-                <p className="font-body-md text-on-surface-variant text-sm">
-                  <Link href="/login" className="text-primary underline decoration-primary/30 hover:text-primary">Đăng nhập</Link> để tích điểm cho đơn hàng này và nhận ưu đãi độc quyền.
-                </p>
-              </div>
-            </div>
+
 
             {/* Product List */}
             <div className="space-y-4">

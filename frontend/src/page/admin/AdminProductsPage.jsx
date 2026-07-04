@@ -312,7 +312,7 @@ export default function AdminProductsPage() {
           ref={tableContainerRef}
           className="overflow-auto flex-1 min-h-[200px] border-t border-outline-variant custom-scrollbar relative"
         >
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[800px] text-left border-collapse">
             <thead className="sticky top-0 bg-surface-bright/95 backdrop-blur-sm z-10 shadow-sm">
               <tr>
                 <th className="px-6 py-4 font-headline-sm text-label-md text-primary tracking-wider uppercase">Ảnh</th>

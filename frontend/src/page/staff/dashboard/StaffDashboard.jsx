@@ -287,75 +287,7 @@ export default function StaffDashboard() {
               </div>
             </div>
 
-            {/* Lịch hẹn ngày mai */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
-                  <span className="material-symbols-outlined mr-3 text-secondary">event_upcoming</span>
-                  Lịch hẹn ngày mai
-                </h3>
-              </div>
-              <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-outline-variant bg-surface-container-high">
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Thời gian</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Khách hàng</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Dịch vụ</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Barber</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Trạng thái</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant/30">
-                      {tomorrowBookings.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="px-6 py-10 text-center text-on-surface-variant">Không có lịch hẹn nào ngày mai</td>
-                        </tr>
-                      ) : (
-                        tomorrowBookings.map((booking) => (
-                          <tr key={booking._id} className="hover:bg-primary/5 transition-colors group opacity-80 hover:opacity-100">
-                            <td className="px-6 py-5 font-label-md text-primary font-bold">{booking.time}</td>
-                            <td className="px-6 py-5">
-                              <p className="font-bold text-sm">{booking.customerName}</p>
-                              <p className="text-[10px] text-on-surface-variant">{booking.customerPhone}</p>
-                            </td>
-                            <td className="px-6 py-5 text-sm text-on-surface-variant italic">{booking.serviceName}</td>
-                            <td className="px-6 py-5 text-sm font-medium">{booking.barberName}</td>
-                            <td className="px-6 py-5">
-                              <button
-                                onClick={() => {
-                                  if (booking.status === 'completed' || booking.status === 'no_show') {
-                                    toast('Lịch đã hoàn thành hoặc khách không đến, không thể thay đổi');
-                                    return;
-                                  }
-                                  setCheckInModal({ isOpen: true, booking: booking, isPayment: false });
-                                }}
-                                className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
-                                  booking.status === 'completed'
-                                    ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant'
-                                    : booking.status === 'confirmed'
-                                    ? 'bg-green-800/20 text-green-700 border border-green-700/50 hover:bg-green-800/30'
-                                    : booking.status === 'no_show'
-                                    ? 'bg-error/20 text-error border border-error/50 hover:bg-error/30'
-                                    : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
-                                }`}
-                                title="Đổi trạng thái"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">
-                                  {booking.status === 'completed' ? 'check_circle' : booking.status === 'confirmed' ? 'how_to_reg' : booking.status === 'no_show' ? 'block' : 'pending_actions'}
-                                </span>
-                                {booking.status === 'completed' ? 'Đã xong' : booking.status === 'confirmed' ? 'Khách đã đến' : booking.status === 'no_show' ? 'Không đến' : 'Chưa tới'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+
             
           </div>
 

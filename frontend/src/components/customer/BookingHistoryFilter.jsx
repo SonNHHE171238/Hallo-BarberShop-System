@@ -162,7 +162,7 @@ export default function BookingHistoryFilter({
               }
             `}} />
             <h3 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mb-4">KHOẢNG THỜI GIAN</h3>
-            <div className="grid grid-cols-2 gap-4 relative z-20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-20">
               <div>
                 <label className="block text-xs text-on-surface-variant mb-2">Từ ngày</label>
                 <div className="relative">

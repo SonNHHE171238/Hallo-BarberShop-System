@@ -10,6 +10,7 @@ export default function AdminHeader({ onMenuClick }) {
   const getPageTitle = () => {
     if (pathname.includes('/pos')) return 'POS & Thu Ngân';
     if (pathname.includes('/admin/employee')) return 'Quản Lý Nhân Viên';
+    if (pathname.includes('/admin/accounts')) return 'Quản Lý Tài Khoản';
     if (pathname.includes('/admin/bookings')) return 'Quản Lý Lịch Hẹn';
     if (pathname.includes('/admin/services')) return 'Dịch Vụ';
     if (pathname.includes('/admin/inventory')) return 'Kho Hàng';
@@ -25,7 +26,7 @@ export default function AdminHeader({ onMenuClick }) {
         <button className="md:hidden text-on-surface-variant hover:text-primary" onClick={onMenuClick}>
           <span className="material-symbols-outlined">menu</span>
         </button>
-        <h1 className="font-headline-md text-headline-sm md:text-headline-md text-on-surface uppercase tracking-[0.05em] truncate">
+        <h1 className="font-headline-md text-[18px] md:text-[22px] text-on-surface uppercase tracking-[0.05em] truncate">
           {getPageTitle()}
         </h1>
       </div>
