@@ -46,6 +46,18 @@ exports.updateCategory = async (req, res, next) => {
 exports.deleteCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
+    
+    // Kiểm tra xem có sản phẩm nào đang dùng danh mục này không
+    const Product = require('../models/product.model');
+    const productsUsingCategory = await Product.findOne({ categoryId: id });
+    
+    if (productsUsingCategory) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Không thể xóa danh mục vì đang có sản phẩm thuộc danh mục này. Vui lòng chuyển sản phẩm sang danh mục khác hoặc xóa sản phẩm trước.' 
+        });
+    }
+
     const category = await Category.findByIdAndDelete(id);
     if (!category) return res.status(404).json({ success: false, message: 'Không tìm thấy danh mục' });
     

@@ -1,4 +1,5 @@
 const Product = require('../models/product.model');
+const Brand = require('../models/brand.model');
 
 // Lấy danh sách sản phẩm (có filter và phân trang)
 exports.getProducts = async (req, res, next) => {
@@ -92,11 +93,11 @@ exports.deleteProduct = async (req, res, next) => {
   }
 };
 
-// Lấy danh sách thương hiệu (Brand)
+// Lấy danh sách thương hiệu (Brand) dạng chữ (cho Frontend cũ)
 exports.getBrands = async (req, res, next) => {
   try {
-    const brands = await Product.distinct('brand', { isActive: true });
-    const validBrands = brands.filter(b => b && b.trim() !== '');
+    const brands = await Brand.find({ isActive: true }).sort({ name: 1 });
+    const validBrands = brands.map(b => b.name).filter(b => b && b.trim() !== '');
     res.json({ success: true, data: validBrands });
   } catch (error) {
     next(error);

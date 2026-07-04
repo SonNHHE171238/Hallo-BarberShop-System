@@ -466,7 +466,7 @@ export default function ChatbotWidget() {
                 onClick={() => {
                   if (selectedServices.length > 0) {
                     setIsMenuOpen(false);
-                    const userMsg = `Tôi muốn đặt các dịch vụ: ${selectedServices.join(', ')}`;
+                    const userMsg = `Tôi đã chọn các dịch vụ: ${selectedServices.join(', ')}`;
 
                     const history = messages.filter(m => m.role === 'user' || m.role === 'ai').map(m => ({ role: m.role, content: m.content }));
                     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
@@ -542,7 +542,9 @@ export default function ChatbotWidget() {
                   />
                   <div className="flex-1">
                     <p className="font-bold text-sm text-on-surface">{barber.name}</p>
-                    <p className="text-xs text-secondary mt-0.5">Kinh nghiệm: {barber.experienceYears} năm</p>
+                    {barber.experienceYears !== null && (
+                      <p className="text-xs text-secondary mt-0.5">Kinh nghiệm: {barber.experienceYears} năm</p>
+                    )}
                     {barber.specialties && barber.specialties.length > 0 && (
                       <p className="text-[11px] text-on-surface-variant mt-0.5">Chuyên môn: {barber.specialties.join(', ')}</p>
                     )}
@@ -555,7 +557,7 @@ export default function ChatbotWidget() {
                 onClick={() => {
                   if (selectedBarber) {
                     setIsBarberMenuOpen(false);
-                    const userMsg = selectedBarber === 'Any' ? `Tôi không yêu cầu thợ cụ thể, tiệm tự sắp xếp nhé` : `Tôi muốn đặt thợ: ${selectedBarber}`;
+                    const userMsg = selectedBarber === 'Any' ? `Tôi không yêu cầu thợ cụ thể, tiệm tự sắp xếp nhé` : `Tôi đã chọn thợ: ${selectedBarber}`;
 
                     const history = messages.filter(m => m.role === 'user' || m.role === 'ai').map(m => ({ role: m.role, content: m.content }));
                     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);

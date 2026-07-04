@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Service = require('../models/service.model');
 const Barber = require('../models/barber.model');
+const User = require('../models/user.model');
 const Booking = require('../models/booking.model');
 const bookingAvailabilityService = require('./bookingAvailability.service');
 const { systemPrompt: aiAdvicePrompt, responseSchema: adviceSchema } = require('../utils/geminiSchema');
@@ -18,18 +19,22 @@ const getShopServices = async () => {
 
 const getAvailableBarbers = async () => {
   try {
-    const barbers = await Barber.find({ isAvailable: true })
-      .populate('userId', 'name')
-      .select('bio specialties experienceYears averageRating -_id');
+    // Lấy danh sách thợ trực tiếp từ User
+    const barberUsers = await User.find({ role: 'barber', status: 'active' });
+    const formatted = [];
+    
+    for (const user of barberUsers) {
+      const existingBarber = await Barber.findOne({ userId: user._id });
+      
+      formatted.push({
+        name: user.name || "Thợ cắt tóc",
+        bio: existingBarber ? existingBarber.bio : null,
+        specialties: existingBarber && existingBarber.specialties ? existingBarber.specialties : [],
+        experienceYears: existingBarber ? existingBarber.experienceYears : null,
+        rating: existingBarber ? existingBarber.averageRating : null
+      });
+    }
 
-    // Format cho dễ đọc
-    const formatted = barbers.map(b => ({
-      name: b.userId?.name || "Thợ cắt tóc",
-      bio: b.bio,
-      specialties: b.specialties,
-      experienceYears: b.experienceYears,
-      rating: b.averageRating
-    }));
     return JSON.stringify(formatted);
   } catch (error) {
     return JSON.stringify({ error: "Failed to fetch barbers." });
@@ -106,6 +111,7 @@ const bookAppointment = async (args) => {
     }
 
     // 5. Tạo Booking
+    const totalPrice = services.reduce((acc, curr) => acc + (curr.price || 0), 0);
     const newBooking = new Booking({
       bookingType: "guest",
       customerName: customerName,
@@ -114,6 +120,7 @@ const bookAppointment = async (args) => {
       services: serviceIds,
       bookingDate: requestedDateTime,
       durationMinutes: totalDuration,
+      totalPrice: totalPrice,
       status: "pending",
     });
 
@@ -128,7 +135,8 @@ const bookAppointment = async (args) => {
         customerPhone,
         serviceNames: services.map(s => s.name),
         barberName: assignedBarberName,
-        time: `${startTime} ngày ${bookingDate}`
+        time: `${startTime} ngày ${bookingDate}`,
+        totalPrice: totalPrice
       }
     });
 
@@ -183,12 +191,14 @@ const updateAppointment = async (args) => {
     }
 
     // 4. Cập nhật DB
+    const totalPrice = services.reduce((acc, curr) => acc + (curr.price || 0), 0);
     existingBooking.customerName = customerName;
     existingBooking.customerPhone = customerPhone;
     existingBooking.barberId = barberId;
     existingBooking.services = serviceIds;
     existingBooking.bookingDate = requestedDateTime;
     existingBooking.durationMinutes = totalDuration;
+    existingBooking.totalPrice = totalPrice;
     
     await existingBooking.save();
 
@@ -201,7 +211,8 @@ const updateAppointment = async (args) => {
         customerPhone,
         serviceNames: services.map(s => s.name),
         barberName: assignedBarberName,
-        time: `${startTime} ngày ${bookingDate}`
+        time: `${startTime} ngày ${bookingDate}`,
+        totalPrice: totalPrice
       }
     });
 
@@ -282,7 +293,8 @@ Quy trình hoạt động:
 4. CHỈ KHI thu thập đủ thông tin: Gọi tool 'bookAppointment' để lưu vào hệ thống. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ BỊA SỐ ĐIỆN THOẠI HAY BẤT CỨ THÔNG TIN NÀO. Nếu khách chưa cung cấp số điện thoại, BẮT BUỘC PHẢI HỎI LẠI khách hàng.
 5. Nếu khách hàng muốn ĐẶT LỊCH CHO NHIỀU NGƯỜI CÙNG LÚC (ví dụ: cho bản thân và bạn bè), bạn PHẢI gọi công cụ 'bookAppointment' NHIỀU LẦN (mỗi người 1 lần gọi riêng biệt).
 6. Nếu khách hàng muốn THAY ĐỔI thông tin lịch hẹn ĐÃ ĐẶT (đổi giờ, đổi ngày, đổi sđt...), hãy dùng công cụ 'updateAppointment' thay vì tạo mới.
-7. Sau khi gọi tool 'bookAppointment' hoặc 'updateAppointment', HÃY báo kết quả thành công và NHẮC LẠI ĐẦY ĐỦ họ tên thợ sẽ phục vụ (hoặc thông báo tiệm tự sắp xếp thợ nếu khách chọn Bất kỳ), hoặc gợi ý đổi giờ nếu trùng lịch.
+7. Sau khi gọi tool 'bookAppointment' hoặc 'updateAppointment' thành công, HÃY báo kết quả và TRÌNH BÀY RÕ RÀNG danh sách thông tin chi tiết bao gồm BẮT BUỘC các trường: Mã đặt lịch (Booking ID), Dịch vụ, Tổng chi phí, Thời gian, Thợ phụ trách.
+8. TUYỆT ĐỐI KHÔNG liệt kê danh sách dịch vụ hay thợ bằng văn bản dài dòng. Bạn chỉ được phép dùng function calling để lấy dữ liệu, sau đó trả lời ngắn gọn: "Đây là danh sách thợ/dịch vụ, mời bạn bấm nút chọn ở Menu bên dưới nhé." (Hệ thống sẽ tự động vẽ UI dựa vào dữ liệu bạn đã gọi).
 Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
 
 exports.handleChat = async (message, history, imageBase64, mimeType) => {
@@ -342,29 +354,7 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
     functionCalls = response.response.functionCalls();
   }
 
-  const messageLower = message ? message.toLowerCase() : "";
-  
-  // Fallback cho Dịch vụ
-  if (!menuServices && (messageLower.includes("dịch vụ") || messageLower.includes("menu") || messageLower.includes("bảng giá") || messageLower.includes("làm tóc") || messageLower.includes("cắt tóc") || messageLower.includes("uốn") || messageLower.includes("nhuộm"))) {
-    try {
-      const rawServices = await tools.getShopServices();
-      menuServices = JSON.parse(rawServices);
-    } catch (e) {
-      console.error("Fallback getShopServices failed:", e);
-    }
-  }
-
-  // Fallback cho Thợ
-  if (!menuBarbers && (messageLower.includes("thợ") || messageLower.includes("barber") || messageLower.includes("người cắt") || messageLower.includes("ai cắt"))) {
-    try {
-      const rawBarbers = await tools.getAvailableBarbers();
-      menuBarbers = JSON.parse(rawBarbers);
-    } catch (e) {
-      console.error("Fallback getAvailableBarbers failed:", e);
-    }
-  }
-  
-  // Ưu tiên trả về Menu Barber nếu có thông tin thợ, ngược lại nếu có dịch vụ thì trả về Menu Dịch vụ
+  // Ưu tiên trả về Menu Barber nếu có thông tin thợ (do AI gọi tool), ngược lại nếu có dịch vụ thì trả về Menu Dịch vụ
   if (menuBarbers && menuBarbers.length > 0 && !menuBarbers.error) {
     return {
       isBarberMenu: true,

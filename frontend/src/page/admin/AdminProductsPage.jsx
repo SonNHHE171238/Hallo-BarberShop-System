@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import AdminProductModal from '@/components/admin/AdminProductModal';
+import AdminConfigModal from '@/components/admin/AdminConfigModal';
 import { useRef } from 'react';
 
 const CustomDropdown = ({ options, value, onChange, placeholder }) => {
@@ -75,6 +76,7 @@ export default function AdminProductsPage() {
   const [error, setError] = useState('');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
 
   // Search State
@@ -287,7 +289,13 @@ export default function AdminProductsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Xóa select Sắp xếp ở đây */}
+              <button 
+                onClick={() => setIsConfigModalOpen(true)}
+                className="flex items-center gap-1 border border-outline-variant text-on-surface-variant px-4 py-2 rounded hover:bg-surface-bright/10 hover:text-primary transition-all font-bold uppercase tracking-wider text-[13px]"
+              >
+                <span className="material-symbols-outlined text-[18px]">settings_applications</span>
+                Quản lý Danh mục & Hãng
+              </button>
             </div>
             
             <button 
@@ -453,6 +461,12 @@ export default function AdminProductsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         productId={editingProductId}
+        onSuccess={loadData}
+      />
+
+      <AdminConfigModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
         onSuccess={loadData}
       />
     </div>
