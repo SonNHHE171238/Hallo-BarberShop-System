@@ -33,9 +33,29 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/30">
-            {renderedServices.map(({ raw, formatted }) => (
-              <tr key={formatted.id} className="hover:bg-surface-bright/5 transition-all duration-300 ease-in-out group hover:-translate-y-[2px]">
-                <td className="px-8 py-6">
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="px-8 py-12 text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                    <p className="text-body-md font-medium">Đang tải dữ liệu...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : renderedServices.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="px-8 py-12 text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-outline-variant">search_off</span>
+                    <p className="text-body-md font-medium">Không tìm thấy kết quả phù hợp</p>
+                    <p className="text-body-sm text-on-surface-variant">Vui lòng thử lại với từ khóa khác</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              renderedServices.map(({ raw, formatted }) => (
+                <tr key={formatted.id} className="hover:bg-surface-bright/5 transition-all duration-300 ease-in-out group hover:-translate-y-[2px]">
+                  <td className="px-8 py-6">
                   <div className="flex items-center gap-4">
                     <div className="h-16 w-16 bg-surface-container overflow-hidden border border-outline-variant rounded-md">
                       <img 
