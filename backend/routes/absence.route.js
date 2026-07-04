@@ -10,10 +10,10 @@ router.post('/request', authenticate, authorizeRoles('admin', 'staff', 'barber')
 router.get('/', authenticate, authorizeRoles('admin', 'staff', 'barber'), absenceController.getAbsenceRequests);
 
 // Routes for Admin/Staff to resolve affected bookings
-router.put('/:absenceId/resolve/:affectedBookingId', authenticate, authorizeRoles('admin', 'staff'), absenceController.resolveAffectedBooking);
+router.put('/:absenceId/resolve/:affectedBookingId', authenticate, authorizeRoles('admin'), absenceController.resolveAffectedBooking);
 
 // Routes for Admin/Staff to approve or reject requests
-router.put('/:absenceId/approve', authenticate, authorizeRoles('admin', 'staff'), absenceController.approveAbsence);
-router.put('/:absenceId/reject', authenticate, authorizeRoles('admin', 'staff'), absenceController.rejectAbsence);
+router.put('/:absenceId/approve', authenticate, authorizeRoles('admin'), absenceController.approveAbsence);
+router.put('/:absenceId/reject', authenticate, authorizeRoles('admin'), absenceController.rejectAbsence);
 
 module.exports = router;

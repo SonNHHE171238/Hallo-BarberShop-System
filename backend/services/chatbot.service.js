@@ -222,11 +222,60 @@ const updateAppointment = async (args) => {
   }
 };
 
+const checkBarberSchedule = async (args) => {
+  try {
+    const { barberName, date } = args;
+    if (!date) {
+      return JSON.stringify({ success: false, reason: "Ngày kiểm tra lịch là bắt buộc (định dạng YYYY-MM-DD)." });
+    }
+
+    let barberId = null;
+    let foundBarberName = "Bất kỳ";
+
+    if (barberName && barberName !== "Any" && barberName.toLowerCase() !== "bất kỳ") {
+      const barbers = await Barber.find({ isAvailable: true }).populate('userId');
+      const foundBarber = barbers.find(b => b.userId && b.userId.name && b.userId.name.toLowerCase().includes(barberName.toLowerCase()));
+      
+      if (foundBarber) {
+        barberId = foundBarber._id;
+        foundBarberName = foundBarber.userId.name;
+      } else {
+        return JSON.stringify({ success: false, reason: `Không tìm thấy thợ tên ${barberName}.` });
+      }
+    } else {
+      return JSON.stringify({ success: false, reason: "Vui lòng cung cấp tên thợ cụ thể để kiểm tra lịch." });
+    }
+
+    const BarberSchedule = require('../models/barber-schedule.model');
+    const schedule = await BarberSchedule.getRealTimeAvailability(barberId, date);
+
+    if (!schedule.available) {
+      return JSON.stringify({ success: true, message: `Thợ ${foundBarberName} không làm việc vào ngày ${date}. Lý do: ${schedule.reason}` });
+    }
+
+    const availableTimeSlots = schedule.slots.map(s => s.time);
+
+    return JSON.stringify({
+      success: true,
+      barberName: foundBarberName,
+      date: date,
+      availableTimeSlots: availableTimeSlots.length > 0 ? availableTimeSlots : ["Kín lịch"],
+      message: availableTimeSlots.length > 0 
+        ? `Thợ ${foundBarberName} có lịch trống vào các khung giờ: ${availableTimeSlots.join(', ')}`
+        : `Thợ ${foundBarberName} đã kín lịch vào ngày ${date}.`
+    });
+  } catch (error) {
+    console.error("Error in checkBarberSchedule tool:", error);
+    return JSON.stringify({ success: false, reason: "Lỗi hệ thống khi kiểm tra lịch: " + error.message });
+  }
+};
+
 const tools = {
   getShopServices,
   getAvailableBarbers,
   bookAppointment,
-  updateAppointment
+  updateAppointment,
+  checkBarberSchedule
 };
 
 // Define tool specifications for Gemini
@@ -247,6 +296,18 @@ const geminiTools = [{
         type: "OBJECT",
         properties: {},
       },
+    },
+    {
+      name: "checkBarberSchedule",
+      description: "Kiểm tra lịch làm việc và các khung giờ trống của một thợ cụ thể vào một ngày cụ thể. Dùng khi khách hỏi 'Thợ A có rảnh vào thứ X không?' hoặc 'Thợ B ngày mai mấy giờ trống?'",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          barberName: { type: "STRING", description: "Tên thợ cần kiểm tra lịch (bắt buộc)" },
+          date: { type: "STRING", description: "Ngày cần kiểm tra định dạng YYYY-MM-DD (bắt buộc)" }
+        },
+        required: ["barberName", "date"]
+      }
     },
     {
       name: "bookAppointment",
@@ -285,7 +346,7 @@ const geminiTools = [{
 }];
 
 const systemInstruction = `Bạn là một trợ lý ảo tư vấn khách hàng và Booking Agent cho Hallo BarberShop.
-Nhiệm vụ của bạn là tư vấn nhiệt tình, thân thiện, và giúp khách hàng CHỐT ĐẶT LỊCH.
+Nhiệm vụ của bạn là tư vấn nhiệt tình, thân thiện, và giúp khách hàng CHỐT ĐẶT LỊCH. BẠN PHẢI TRẢ LỜI CỰC KỲ NGẮN GỌN, SÚC TÍCH, ĐÚNG TRỌNG TÂM.
 Quy trình hoạt động:
 1. Mỗi khi người dùng hỏi về dịch vụ hoặc thợ, HÃY SỬ DỤNG FUNCTION CALLING (getShopServices hoặc getAvailableBarbers) ĐỂ LẤY THÔNG TIN. KHÔNG tự bịa data. Hệ thống sẽ tự động hiển thị Menu tương tác cho khách hàng dựa trên kết quả.
 2. Sau khi khách hàng chọn xong từ Menu và gửi lại danh sách dịch vụ, hãy tính TỔNG TIỀN dựa vào bảng giá và báo cho khách.
@@ -294,7 +355,7 @@ Quy trình hoạt động:
 5. Nếu khách hàng muốn ĐẶT LỊCH CHO NHIỀU NGƯỜI CÙNG LÚC (ví dụ: cho bản thân và bạn bè), bạn PHẢI gọi công cụ 'bookAppointment' NHIỀU LẦN (mỗi người 1 lần gọi riêng biệt).
 6. Nếu khách hàng muốn THAY ĐỔI thông tin lịch hẹn ĐÃ ĐẶT (đổi giờ, đổi ngày, đổi sđt...), hãy dùng công cụ 'updateAppointment' thay vì tạo mới.
 7. Sau khi gọi tool 'bookAppointment' hoặc 'updateAppointment' thành công, HÃY báo kết quả và TRÌNH BÀY RÕ RÀNG danh sách thông tin chi tiết bao gồm BẮT BUỘC các trường: Mã đặt lịch (Booking ID), Dịch vụ, Tổng chi phí, Thời gian, Thợ phụ trách.
-8. TUYỆT ĐỐI KHÔNG liệt kê danh sách dịch vụ hay thợ bằng văn bản dài dòng. Bạn chỉ được phép dùng function calling để lấy dữ liệu, sau đó trả lời ngắn gọn: "Đây là danh sách thợ/dịch vụ, mời bạn bấm nút chọn ở Menu bên dưới nhé." (Hệ thống sẽ tự động vẽ UI dựa vào dữ liệu bạn đã gọi).
+8. TUYỆT ĐỐI KHÔNG liệt kê danh sách dịch vụ, danh sách thợ, hoặc KỂ LỂ CHI TIẾT thông tin của thợ (như số năm kinh nghiệm, chuyên môn) bằng văn bản. Trả lời cực kỳ ngắn gọn, đi thẳng vào câu hỏi của khách. Đối với danh sách, chỉ cần nói: "Mời bạn chọn thợ/dịch vụ ở Menu bên dưới nhé."
 Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
 
 exports.handleChat = async (message, history, imageBase64, mimeType) => {
@@ -340,6 +401,22 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
         functionResult = await tools.bookAppointment(call.args);
       } else if (call.name === "updateAppointment") {
         functionResult = await tools.updateAppointment(call.args);
+      } else if (call.name === "checkBarberSchedule") {
+        functionResult = await tools.checkBarberSchedule(call.args);
+      }
+
+      // Tự động load Menu Thợ nếu các tool trên báo lỗi không tìm thấy thợ, hoặc thợ kín lịch/nghỉ
+      try {
+        const parsedResult = JSON.parse(functionResult);
+        const notFound = parsedResult.success === false && parsedResult.reason && parsedResult.reason.includes("Không tìm thấy thợ");
+        const notAvailable = parsedResult.success === true && parsedResult.message && (parsedResult.message.includes("không làm việc") || parsedResult.message.includes("đã kín lịch"));
+        
+        if (notFound || notAvailable) {
+          const barbersRaw = await tools.getAvailableBarbers();
+          menuBarbers = JSON.parse(barbersRaw);
+        }
+      } catch(e) {
+        // Bỏ qua nếu parse lỗi
       }
 
       return {

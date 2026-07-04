@@ -10,8 +10,17 @@ const normalizeDateStr = (date) => {
 
 exports.createAbsenceRequest = async (req, res) => {
     try {
-        const { barberId, startDate, endDate, reason, description } = req.body;
+        let { barberId, startDate, endDate, reason, description } = req.body;
         
+        // If the user is a barber, override barberId with their actual Barber document ID
+        if (req.role === 'barber') {
+            const barber = await Barber.findOne({ userId: req.userId });
+            if (!barber) {
+                return res.status(400).json({ success: false, message: 'Hồ sơ Barber của bạn chưa được thiết lập. Vui lòng liên hệ quản lý.' });
+            }
+            barberId = barber._id;
+        }
+
         // Validate dates
         if (endDate < startDate) {
             return res.status(400).json({ success: false, message: 'End date must be on or after start date.' });
@@ -106,7 +115,9 @@ exports.getAbsenceRequests = async (req, res) => {
         if (req.role === 'barber') {
             const barber = await Barber.findOne({ userId: req.userId });
             if (!barber) {
-                return res.status(404).json({ success: false, message: 'Barber profile not found' });
+                // If the user doesn't have a Barber profile, they can't have any requests.
+                // Return an empty array instead of 404 to avoid breaking the frontend.
+                return res.json({ success: true, absences: [] });
             }
             query.barberId = barber._id;
         }
