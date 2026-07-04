@@ -116,6 +116,7 @@ export default function ChatbotWidget() {
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         toast.error("Kích thước ảnh quá lớn, vui lòng chọn ảnh < 5MB.");
+        e.target.value = "";
         return;
       }
       const reader = new FileReader();
@@ -126,6 +127,9 @@ export default function ChatbotWidget() {
           base64: base64String,
           mimeType: file.type
         });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       };
       reader.readAsDataURL(file);
     }

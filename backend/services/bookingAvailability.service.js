@@ -25,6 +25,33 @@ class BookingAvailabilityService {
       return { available: false, reason: "Barber is absent on this date" };
     }
 
+    // Check working hours
+    const barber = await Barber.findById(barberId);
+    if (!barber) {
+      return { available: false, reason: "Barber not found" };
+    }
+    
+    const workingStart = barber.preferredWorkingHours?.start || "08:00";
+    const workingEnd = barber.preferredWorkingHours?.end || "20:00";
+    const startHour = parseInt(workingStart.split(':')[0], 10);
+    const startMinute = parseInt(workingStart.split(':')[1], 10);
+    const endHour = parseInt(workingEnd.split(':')[0], 10);
+    const endMinute = parseInt(workingEnd.split(':')[1], 10);
+    
+    // convert requested time to local HH:MM (assuming VN time or UTC, here we use UTC since requestedDateTime is UTC but we should use getHours)
+    // Actually, requestedDateTime is UTC but shop is usually +07:00, let's just use getHours for the date object 
+    // or convert it to a timezone-safe approach:
+    const timeString = requestedDateTime.toLocaleTimeString('en-US', { hour12: false, timeZone: 'Asia/Ho_Chi_Minh' }); // "HH:MM:SS"
+    const reqHour = parseInt(timeString.split(':')[0], 10);
+    const reqMinute = parseInt(timeString.split(':')[1], 10);
+    const reqTimeInMins = reqHour * 60 + reqMinute;
+    const workingStartInMins = startHour * 60 + startMinute;
+    const workingEndInMins = endHour * 60 + endMinute;
+
+    if (reqTimeInMins < workingStartInMins || (reqTimeInMins + durationMinutes) > workingEndInMins) {
+      return { available: false, reason: `Khung giờ này nằm ngoài thời gian làm việc của cửa hàng (${workingStart} - ${workingEnd}).` };
+    }
+
     // Check for conflicts
     const dateStr = requestedDateTime.toISOString().split("T")[0];
     const conflictingBookings = await Booking.find({
@@ -59,7 +86,6 @@ class BookingAvailabilityService {
     }
 
     // Check daily booking limit
-    const barber = await Barber.findById(barberId);
     if (conflictingBookings.length >= barber.maxDailyBookings) {
       return {
         available: false,
