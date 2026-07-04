@@ -42,6 +42,15 @@ const staffController = {
         return res.status(404).json({ success: false, message: 'Booking not found' });
       }
 
+      // Check if booking is in the future (allow 30 minutes early)
+      const now = new Date();
+      const allowedTime = new Date(now.getTime() + 30 * 60000);
+      if (new Date(booking.bookingDate) > allowedTime) {
+        if (status !== 'cancelled' && status !== 'rejected') {
+          return res.status(400).json({ success: false, message: 'Không thể thay đổi trạng thái của lịch hẹn trong tương lai' });
+        }
+      }
+
       booking.status = status;
       if (status === 'completed') {
         booking.completedAt = new Date();

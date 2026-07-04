@@ -21,6 +21,7 @@ const brandRoute = require("../routes/brand.route");
 const analyticsRoute = require("../routes/analytics.route");
 const errorHandler = require("../middlewares/error.middleware");
 const rosterRoute = require("../routes/roster.route");
+const voucherRoute = require("../routes/voucher.routes");
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use("/api/brands", brandRoute);
 app.use("/api/analytics", analyticsRoute);
 app.use("/api/rosters", rosterRoute);
 app.use("/api/absences", require("../routes/absence.route"));
+app.use("/api/vouchers", voucherRoute);
 
 app.get("/", (req, res) => {
   res.send("Hallo BarberShop API is running");

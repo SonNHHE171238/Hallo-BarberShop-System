@@ -43,6 +43,20 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    voucherCode: {
+      type: String,
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    voucherLockId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'VoucherLock',
+      default: null,
+    },
     status: {
       type: String,
       enum: ['pending', 'processing', 'shipped', 'completed', 'cancelled'],

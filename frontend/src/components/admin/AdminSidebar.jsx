@@ -14,6 +14,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { name: 'Lịch hẹn', href: '/admin/bookings', icon: 'calendar_month' },
     { name: 'Dịch vụ', href: '/admin/services', icon: 'cut' },
     { name: 'Kho hàng', href: '/admin/products', icon: 'inventory_2' },
+    { name: 'Mã giảm giá', href: '/admin/vouchers', icon: 'local_offer' },
     { name: 'Nhân viên', href: '/admin/employee', icon: 'group' },
     { name: 'Phân tích', href: '/admin/analytics', icon: 'analytics' },
   ];
