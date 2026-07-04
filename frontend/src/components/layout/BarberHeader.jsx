@@ -66,6 +66,10 @@ export default function BarberHeader() {
                     <span className="material-symbols-outlined text-[20px]">person</span>
                     Hồ sơ cá nhân
                   </Link>
+                  <Link href="/barber/absence" className="flex items-center gap-3 px-4 py-2 font-label-md text-sm text-on-surface hover:bg-surface-variant transition-colors">
+                    <span className="material-symbols-outlined text-[20px]">event_busy</span>
+                    Xin nghỉ phép
+                  </Link>
                   <Link href="/barber/settings" className="flex items-center gap-3 px-4 py-2 font-label-md text-sm text-on-surface hover:bg-surface-variant transition-colors">
                     <span className="material-symbols-outlined text-[20px]">settings</span>
                     Cài đặt

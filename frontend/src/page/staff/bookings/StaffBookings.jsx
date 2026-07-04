@@ -17,6 +17,19 @@ export default function StaffBookings() {
   const [dateFilter, setDateFilter] = useState(''); // Default: Tất cả thời gian
   const [barberFilter, setBarberFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'waiting', 'serving'
+  const [quickActionModal, setQuickActionModal] = useState({ isOpen: false, bookingId: null });
+
+  const handleQuickStatusUpdate = async (id, status) => {
+    try {
+      await staffDashboardService.updateStatus(id, { status });
+      toast.success('Cập nhật trạng thái thành công');
+      fetchData(false);
+      if (quickActionModal.isOpen) setQuickActionModal({ isOpen: false, bookingId: null });
+    } catch (err) {
+      console.error(err);
+      toast.error('Có lỗi xảy ra khi cập nhật');
+    }
+  };
 
   const fetchData = async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
@@ -133,7 +146,7 @@ export default function StaffBookings() {
             <div className="col-span-2">Thời gian</div>
             <div className="col-span-3">Dịch vụ</div>
             <div className="col-span-2">Barber phụ trách</div>
-            <div className="col-span-2 text-right">Trạng thái</div>
+            <div className="col-span-2 text-right">Trạng thái / Thao tác</div>
           </div>
 
           <div className="space-y-3">
@@ -208,7 +221,7 @@ export default function StaffBookings() {
                         </>
                       )}
                     </div>
-                    <div className="col-span-2 text-right">
+                    <div className="col-span-2 flex flex-col items-end gap-2">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter ${booking.statusClass}`}>
                         {booking.uiStatus === 'Đang làm' && (
                           <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
@@ -218,6 +231,23 @@ export default function StaffBookings() {
                         )}
                         {booking.uiStatus}
                       </span>
+                      {/* Quick Actions */}
+                      {booking.rawStatus === 'pending' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setQuickActionModal({ isOpen: true, bookingId: booking._id }); }}
+                          className="px-3 py-1 bg-primary text-on-primary text-[10px] font-bold uppercase rounded hover:brightness-110 shadow-sm"
+                        >
+                          Check-in
+                        </button>
+                      )}
+                      {booking.rawStatus === 'confirmed' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleQuickStatusUpdate(booking._id, 'in_progress'); }}
+                          className="px-3 py-1 bg-secondary text-on-secondary text-[10px] font-bold uppercase rounded hover:brightness-110 shadow-sm"
+                        >
+                          Lên ghế
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -277,6 +307,41 @@ export default function StaffBookings() {
           </div>
         </section>
       </div>
+
+      {quickActionModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="glass-panel w-full max-w-sm rounded-2xl border border-outline-variant/50 shadow-2xl bg-surface-container overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-primary/10">
+                <span className="material-symbols-outlined text-3xl text-primary">how_to_reg</span>
+              </div>
+              <h3 className="font-headline-sm text-on-surface mb-2">Check-in Khách Hàng</h3>
+              <p className="font-body-md text-on-surface-variant mb-6">Khách hàng đã có mặt tại cửa hàng chưa?</p>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => handleQuickStatusUpdate(quickActionModal.bookingId, 'no_show')}
+                  className="flex-1 px-4 py-3 bg-error/10 hover:bg-error/20 border border-error/30 rounded text-error font-bold text-xs uppercase tracking-wider transition-colors"
+                >
+                  Không Đến
+                </button>
+                <button 
+                  onClick={() => handleQuickStatusUpdate(quickActionModal.bookingId, 'confirmed')}
+                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-bold text-xs uppercase tracking-wider transition-colors shadow-sm"
+                >
+                  Khách Đã Đến
+                </button>
+              </div>
+              <button 
+                onClick={() => setQuickActionModal({ isOpen: false, bookingId: null })}
+                className="mt-4 w-full py-2 text-on-surface-variant hover:text-on-surface font-label-md text-xs uppercase tracking-wider"
+              >
+                Hủy bỏ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

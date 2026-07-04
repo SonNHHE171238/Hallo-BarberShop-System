@@ -71,6 +71,7 @@ const bookingSchema = new Schema(
       enum: [
         "pending",
         "confirmed",
+        "in_progress",
         "cancelled",
         "completed",
         "no_show",
@@ -154,7 +155,7 @@ bookingSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      status: { $in: ["pending", "confirmed", "completed"] },
+      status: { $in: ["pending", "confirmed", "in_progress", "completed"] },
     },
   }
 );

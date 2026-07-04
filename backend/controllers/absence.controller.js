@@ -17,6 +17,34 @@ exports.createAbsenceRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'End date must be on or after start date.' });
         }
 
+        // Calculate requested days
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const requestedDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+        // Check the 2 days per month limit
+        const startMonth = startDate.substring(0, 7); // YYYY-MM
+        const monthAbsences = await BarberAbsence.find({
+            barberId,
+            isApproved: { $ne: false }, // Include pending and approved
+            startDate: { $regex: `^${startMonth}` } // Matches YYYY-MM
+        });
+
+        let totalDaysThisMonth = 0;
+        monthAbsences.forEach(absence => {
+            const aStart = new Date(absence.startDate);
+            const aEnd = new Date(absence.endDate);
+            const aDays = Math.round((aEnd - aStart) / (1000 * 60 * 60 * 24)) + 1;
+            totalDaysThisMonth += aDays;
+        });
+
+        if (totalDaysThisMonth + requestedDays > 2) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Quy định: Tối đa 2 ngày nghỉ/tháng. Bạn đã sử dụng ${totalDaysThisMonth} ngày trong tháng này.` 
+            });
+        }
+
         // Check if there is already an overlapping absence
         const overlappingAbsence = await BarberAbsence.findOne({
             barberId,

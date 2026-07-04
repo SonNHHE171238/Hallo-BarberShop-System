@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
+const uploadCloud = require('../config/cloudinary.config');
 
 router.post('/register', authController.register);
 router.post('/verify-otp', authController.verifyOtp);
@@ -15,5 +16,6 @@ router.post('/reset-password', authController.resetPassword);
 router.get('/me', authenticate, authController.getMe);
 router.put('/change-password', authenticate, authController.changePassword);
 router.put('/profile', authenticate, authController.updateProfile);
+router.post('/avatar', authenticate, uploadCloud.single('image'), authController.uploadAvatar);
 
 module.exports = router;

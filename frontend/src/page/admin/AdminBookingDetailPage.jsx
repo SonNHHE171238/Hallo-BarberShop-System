@@ -89,25 +89,7 @@ export default function AdminBookingDetailPage() {
   const amountPaid = booking.amountPaid || 0;
   const remaining = Math.max(0, booking.totalPrice - amountPaid);
 
-  return (
-    <div className="w-full bg-[#121212] text-gray-200 font-sans antialiased p-4 h-[calc(100vh-100px)] flex flex-col overflow-hidden rounded-xl">
-      <div className="w-full max-w-6xl mx-auto flex flex-col h-full">
-        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div>
-              <button onClick={() => router.back()} className="text-xs uppercase tracking-wider text-gray-400 hover:text-white flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-lg">arrow_back</span>
-                Quay lại bảng điều khiển
-              </button>
-              <div className="flex items-center gap-3 mb-2">
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 ${isCompleted ? 'bg-green-900/50 text-green-400' : isCancelledOrNoShow ? 'bg-red-900/50 text-red-400' : 'bg-[#1e293b] text-[#38bdf8]'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${isCompleted ? 'bg-green-400' : isCancelledOrNoShow ? 'bg-red-400' : 'bg-[#38bdf8]'}`}></span>
-                  {isCompleted ? 'Hoàn thành' : isCancelledOrNoShow ? 'Khách không đến quán' : 'Đang phục vụ'}
-                </span>
-                <span className="text-gray-500 font-mono text-sm">#{booking._id.slice(-6).toUpperCase()}</span>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Phiên Dịch Vụ Của {(booking.customerName || 'Khách').split(' ').pop()}</h1>
-            </div>
+
   const getStatusDisplay = (status) => {
     switch(status) {
       case 'completed': return { text: 'Hoàn thành', icon: 'check_circle', color: 'text-success border-success/30 bg-success/10' };
@@ -121,9 +103,9 @@ export default function AdminBookingDetailPage() {
   const statusInfo = getStatusDisplay(booking.status);
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex-1 w-full max-w-[1200px] mx-auto flex flex-col min-h-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header Section */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6 pt-6">
+      <header className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-6">
         <div>
           <button 
             onClick={() => router.push('/admin/bookings')} 
@@ -153,16 +135,18 @@ export default function AdminBookingDetailPage() {
           </div>
           <div className="flex flex-col">
             <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Giờ hẹn</span>
-            <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">{booking.time}</span>
+            <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">
+              {booking.date ? new Date(booking.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : (booking.time || 'N/A')}
+            </span>
           </div>
         </div>
       </header>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 min-h-0">
         
         {/* Left Column - Info Cards */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
+        <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-1">
           {/* Customer Card */}
           <div className="glass-panel relative overflow-hidden bg-surface-container-low/60 border border-outline-variant/40 hover:border-outline-gold/50 rounded-2xl p-6 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(212,175,55,0.05)] group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-all duration-500 group-hover:bg-primary/10"></div>
@@ -175,33 +159,6 @@ export default function AdminBookingDetailPage() {
                 {(booking.customerName || 'K').charAt(0).toUpperCase()}
               </div>
               <div>
-                <div className="flex justify-between items-center mb-5 pb-3 border-b border-[#2a2a2a]">
-                  <h2 className="text-xs font-semibold tracking-wider text-gray-400 uppercase flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base">list_alt</span>
-                    Danh Sách Dịch Vụ
-                  </h2>
-                  {!isCompleted && !isCancelledOrNoShow && (
-                    <button className="text-[11px] font-bold text-[#e2e8f0] hover:text-white uppercase tracking-wider flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">add</span>
-                      Thêm dịch vụ
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-3 mb-4">
-                  {booking.services?.map(service => (
-                    <div key={service._id} className="bg-[#121212] border border-[#232323] rounded-lg p-3.5 flex justify-between items-center gap-4">
-                      <div>
-                        <h4 className="font-bold text-white text-sm">{service.name}</h4>
-                        <p className="text-[11px] text-gray-400 mt-1">Thời gian: {service.durationMinutes} phút</p>
-                      </div>
-                      <span className="text-sm font-bold text-white font-mono shrink-0">{(service.price || 0).toLocaleString('vi-VN')} đ</span>
-                    </div>
-                  ))}
-                  {!booking.services?.length && (
-                    <div className="text-center text-gray-500 py-3 text-sm">Chưa có dịch vụ nào được chọn</div>
-                  )}
-                </div>
                 <h3 className="font-headline-sm text-on-surface text-lg mb-1">{booking.customerName || 'Khách Vãng Lai'}</h3>
                 <p className="font-body-md text-sm text-on-surface-variant mb-2 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[14px]">call</span>
@@ -213,45 +170,6 @@ export default function AdminBookingDetailPage() {
               </div>
             </div>
           </div>
-
-              {!isCancelledOrNoShow && (
-                <div className="border-t border-[#2a2a2a] pt-4 mt-auto">
-                  <div className="flex justify-between text-xs text-gray-400 mb-3">
-                    <span>Tổng tiền dịch vụ</span>
-                    <span className="font-mono text-gray-300">{(booking.totalPrice || 0).toLocaleString('vi-VN')} đ</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-[#f87171] mb-5">
-                    <span>Đã đặt cọc / Thanh toán</span>
-                    <span className="font-mono">- {(amountPaid || 0).toLocaleString('vi-VN')} đ</span>
-                  </div>
-                  <div className="flex justify-between items-end pt-3 border-t border-[#2a2a2a]/50 mb-4">
-                    <div>
-                      <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Cần thanh toán thêm</span>
-                    </div>
-                    <span className="text-2xl font-extrabold text-[#fef08a] font-mono tracking-tight">{(remaining || 0).toLocaleString('vi-VN')} đ</span>
-                  </div>
-
-                  {!isCompleted && booking.status !== 'cancelled' && (
-                    <button 
-                      onClick={handleConfirmCompletion}
-                      disabled={isConfirming}
-                      className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-on-primary font-bold uppercase tracking-widest text-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                    >
-                      {isConfirming ? (
-                        <>
-                          <span className="material-symbols-outlined animate-spin text-[20px]">autorenew</span>
-                          Đang xử lý...
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined text-[20px]">task_alt</span>
-                          Xác nhận đã chuyển khoản & Hoàn thành
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              )}
           {/* Barber Card */}
           <div className="glass-panel relative overflow-hidden bg-surface-container-low/60 border border-outline-variant/40 hover:border-outline-gold/50 rounded-2xl p-6 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(212,175,55,0.05)] group">
             <h2 className="font-label-md text-xs font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2 mb-5 pb-3 border-b border-outline-variant/30">
@@ -273,50 +191,30 @@ export default function AdminBookingDetailPage() {
           </div>
         </div>
 
-        <footer className="flex justify-end gap-3 border-t border-[#2a2a2a] pt-4 mt-2 shrink-0">
-          <button 
-            onClick={() => router.back()}
-            className="px-5 py-2.5 border border-[#3a3a3a] text-gray-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#222] hover:text-white transition-all"
-          >
-            Đóng
-          </button>
-          {!isCancelledOrNoShow && (
-            !isCompleted && remaining > 0 ? (
-              <button
-                onClick={handleCompleteService}
-                className="px-5 py-2.5 bg-[#fef08a] text-black font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 shadow-lg shadow-yellow-500/10 hover:bg-[#fde047] transition-all"
-              >
-                <span className="material-symbols-outlined text-[16px]">payments</span>
-                Thanh toán {remaining.toLocaleString('vi-VN')} đ
-              </button>
-            ) : (
-              <button
-                disabled
-                className="px-5 py-2.5 bg-green-800 text-white font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 opacity-80 cursor-not-allowed"
-              >
-                <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                {remaining === 0 && !isCompleted ? 'Chờ hoàn thành' : 'Đã hoàn thành'}
-              </button>
-            )
-          )}
-        </footer>
+
         {/* Right Column - Services & Total */}
-        <div className="lg:col-span-8 flex flex-col h-full">
+        <div className="lg:col-span-8 flex flex-col min-h-0">
           <div className="glass-panel bg-surface-container-low/60 border border-outline-gold/30 hover:border-outline-gold/60 rounded-2xl p-6 md:p-8 flex flex-col h-full transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_32px_rgba(212,175,55,0.08)] relative overflow-hidden group">
             
             {/* Decorative background elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-all duration-700 group-hover:bg-primary/10"></div>
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-surface-variant/20 rounded-full blur-[50px] -ml-10 -mb-10 pointer-events-none"></div>
 
-            <div className="relative z-10 flex flex-col h-full">
+            <div className="relative z-10 flex flex-col h-full min-h-0">
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-outline-variant/30">
                 <h2 className="font-label-md text-sm font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2">
                   <span className="material-symbols-outlined text-[20px] text-primary">receipt_long</span>
                   Chi Tiết Dịch Vụ
                 </h2>
+                {booking.status === 'in_progress' && (
+                  <button className="text-[11px] font-bold text-primary hover:text-primary-container uppercase tracking-wider flex items-center gap-1 bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant/50 transition-colors">
+                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    Thêm dịch vụ
+                  </button>
+                )}
               </div>
 
-              <div className="flex-1 space-y-4 mb-8">
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-6 pr-2">
                 {booking.services?.map((service, index) => (
                   <div 
                     key={service._id} 
@@ -344,16 +242,49 @@ export default function AdminBookingDetailPage() {
                 )}
               </div>
 
-              <div className="border-t border-outline-variant/50 pt-6 mt-auto">
+              <div className="shrink-0 border-t border-outline-variant/50 pt-6 mt-auto flex flex-col gap-4">
                 <div className="flex justify-between items-end bg-surface-container p-6 rounded-xl border border-outline-gold/20 shadow-inner">
                   <div className="flex flex-col gap-1">
-                    <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Thanh Toán</span>
+                    <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Dịch Vụ</span>
                     <span className="font-body-md text-xs text-on-surface-variant opacity-70">Đã bao gồm VAT</span>
                   </div>
                   <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
                     {(booking.totalPrice || 0).toLocaleString('vi-VN')} <span className="text-xl text-primary/70 font-normal">đ</span>
                   </span>
                 </div>
+
+                {!isCancelledOrNoShow && (
+                  <div className="bg-surface-container-low p-6 rounded-xl border border-outline-variant/30 flex flex-col gap-4 shadow-sm">
+                    <div className="flex justify-between text-sm text-on-surface-variant">
+                      <span>Đã đặt cọc / Thanh toán</span>
+                      <span className="font-mono text-error">- {(amountPaid || 0).toLocaleString('vi-VN')} đ</span>
+                    </div>
+                    <div className="flex justify-between items-end pt-4 border-t border-outline-variant/30">
+                      <span className="font-label-md text-xs font-bold text-on-surface uppercase tracking-wider">Cần thanh toán thêm</span>
+                      <span className="text-2xl font-extrabold text-primary font-mono tracking-tight">{(remaining || 0).toLocaleString('vi-VN')} đ</span>
+                    </div>
+
+                    {!isCompleted && (
+                      <button 
+                        onClick={handleConfirmCompletion}
+                        disabled={isConfirming}
+                        className="w-full mt-2 flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-on-primary font-bold uppercase tracking-widest text-sm shadow-lg hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      >
+                        {isConfirming ? (
+                          <>
+                            <span className="material-symbols-outlined animate-spin text-[20px]">autorenew</span>
+                            Đang xử lý...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-symbols-outlined text-[20px]">task_alt</span>
+                            Xác nhận thanh toán & Hoàn thành
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

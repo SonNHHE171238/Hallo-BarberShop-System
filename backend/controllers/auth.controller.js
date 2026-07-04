@@ -286,3 +286,30 @@ exports.updateProfile = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      const error = new Error('Không tìm thấy file ảnh');
+      error.statusCode = 400;
+      throw error;
+    }
+    const avatarUrl = req.file.path;
+    const authService = require('../services/auth.service');
+    const updatedUser = await authService.updateUserProfile(req.userId, { avatarUrl });
+    const { sendSuccess } = require('../utils/response.helper');
+    return sendSuccess(res, 200, 'Tải ảnh lên thành công', { 
+      user: {
+        id: updatedUser._id.toString(),
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        avatarUrl: updatedUser.avatarUrl || '',
+        status: updatedUser.status,
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

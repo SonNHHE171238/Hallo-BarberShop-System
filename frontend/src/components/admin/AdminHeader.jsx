@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal';
+import Link from 'next/link';
 
 export default function AdminHeader({ onMenuClick }) {
   const pathname = usePathname();
@@ -51,6 +52,14 @@ export default function AdminHeader({ onMenuClick }) {
 
           {/* Profile Menu Popup */}
           <div className={`absolute top-full right-0 mt-2 w-48 bg-surface-container-high border border-outline-gold rounded-lg shadow-xl overflow-hidden transition-all duration-200 origin-top-right ${isProfileMenuOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
+            <Link 
+              href="/admin/profile"
+              onClick={() => setIsProfileMenuOpen(false)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-on-surface hover:bg-surface-container-highest hover:text-primary transition-colors border-b border-outline-variant/30"
+            >
+              <span className="material-symbols-outlined text-[20px]">person</span>
+              <span className="font-label-md text-sm uppercase tracking-widest">Hồ Sơ</span>
+            </Link>
             <button 
               onClick={() => { setIsProfileMenuOpen(false); setIsLogoutModalOpen(true); }}
               className="w-full flex items-center gap-3 px-4 py-3 text-error hover:bg-error/10 transition-colors"
