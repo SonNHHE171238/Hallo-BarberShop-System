@@ -5,6 +5,7 @@ const bookingController = require('../controllers/bookingCore.controller');
 const bookingAdminController = require('../controllers/bookingAdmin.controller');
 const bookingStatsController = require('../controllers/bookingStats.controller');
 const bookingAvailabilityController = require('../controllers/bookingAvailability.controller');
+const customerBookingController = require('../controllers/customerChangeTime.controller');
 
 const { authenticate, authorizeRoles, optionalAuthenticate } = require('../middlewares/auth.middleware');
 const {
@@ -41,11 +42,12 @@ router.get('/:id', authenticate, bookingController.getBookingDetail);
 router.get('/pending/list', authenticate, authorizeRoles('admin'), bookingAdminController.getPendingBookings);
 router.put('/:bookingId/confirm', authenticate, requireAdminForBookingConfirmation, bookingAdminController.confirmBooking);
 router.post('/bulk-confirm', authenticate, requireAdminForBookingConfirmation, bookingAdminController.bulkConfirmBookings);
-router.put('/:bookingId/assign-barber', authenticate, authorizeRoles('admin'), bookingController.assignBarberToBooking);
+router.put('/:bookingId/assign-barber', authenticate, authorizeRoles('admin', 'staff'), bookingController.assignBarberToBooking);
 
 // Booking status management
 router.put('/:bookingId/status', authenticate, checkBookingUpdatePermission, bookingController.updateBookingStatus);
 router.put('/:bookingId/cancel', authenticate, bookingController.cancelBooking);
+router.put('/:bookingId/reschedule', authenticate, customerBookingController.rescheduleBooking);
 router.put('/:bookingId', authenticate, checkBookingUpdatePermission, bookingController.updateBookingDetails);
 
 // Admin booking rejection

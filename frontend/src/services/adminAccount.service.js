@@ -26,4 +26,11 @@ export const adminAccountService = {
             method: 'DELETE',
         });
     },
+
+    updateAccountStatus: async (accountId, status) => {
+        return fetchWithAuth(`/admin/accounts/${accountId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status }),
+        });
+    },
 };

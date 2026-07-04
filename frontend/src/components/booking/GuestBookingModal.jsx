@@ -1,18 +1,47 @@
 import React, { useState } from 'react';
 
+const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedServices = [], selectedBarber, selectedDate, selectedTime, isLoading }) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [note, setNote] = useState('');
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   if (!isOpen) return null;
 
+  const validate = () => {
+    const newErrors = {};
+    if (!customerName || customerName.trim() === "") {
+      newErrors.name = "Vui lòng nhập họ và tên.";
+    }
+    if (!customerPhone || customerPhone.trim() === "") {
+      newErrors.phone = "Vui lòng nhập số điện thoại.";
+    } else if (!PHONE_REGEX.test(customerPhone.replace(/\s/g, ""))) {
+      newErrors.phone = "Số điện thoại không hợp lệ (VD: 0912345678).";
+    }
+    
+    if (customerEmail && customerEmail.trim() !== "") {
+      if (!EMAIL_REGEX.test(customerEmail.trim())) {
+        newErrors.email = "Email không hợp lệ (VD: example@email.com).";
+      }
+    }
+    return newErrors;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!customerName || !customerPhone) {
-      return; // Basic validation handled by 'required' attributes
+    setTouched({ name: true, phone: true, email: true });
+    const validationErrors = validate();
+    setErrors(validationErrors);
+    
+    if (Object.keys(validationErrors).length > 0) {
+      return;
     }
+    
     onSubmit({
       customerName,
       customerPhone,
@@ -53,11 +82,21 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
                 <input 
                   required
                   value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all" 
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9+\s]/g, "");
+                    setCustomerPhone(val);
+                  }}
+                  onBlur={() => setTouched(prev => ({ ...prev, phone: true }))}
+                  className={`w-full bg-surface-container border rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all ${errors.phone && touched.phone ? 'border-error focus:border-error focus:ring-1 focus:ring-error' : 'border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary'}`} 
                   placeholder="090 123 4567" 
                   type="tel" 
                 />
+                {errors.phone && touched.phone && (
+                  <p className="text-error text-sm flex items-center gap-1 mt-1">
+                    <span className="material-symbols-outlined text-sm">error</span>
+                    {errors.phone}
+                  </p>
+                )}
               </div>
             </div>
             <div className="space-y-2 group">
@@ -65,10 +104,17 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
               <input 
                 value={customerEmail}
                 onChange={(e) => setCustomerEmail(e.target.value)}
-                className="w-full bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all" 
+                onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
+                className={`w-full bg-surface-container border rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all ${errors.email && touched.email ? 'border-error focus:border-error focus:ring-1 focus:ring-error' : 'border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary'}`} 
                 placeholder="example@email.com" 
                 type="email" 
               />
+              {errors.email && touched.email && (
+                <p className="text-error text-sm flex items-center gap-1 mt-1">
+                  <span className="material-symbols-outlined text-sm">error</span>
+                  {errors.email}
+                </p>
+              )}
             </div>
             <div className="space-y-2 group">
               <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Ghi chú cho Barber</label>

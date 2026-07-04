@@ -19,7 +19,13 @@ export default function AddAccountModal({ isOpen, onClose }) {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'phone') {
+            // Chỉ cho phép nhập số
+            const numericValue = value.replace(/\D/g, '');
+            setFormData(prev => ({ ...prev, [name]: numericValue }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -28,6 +34,14 @@ export default function AddAccountModal({ isOpen, onClose }) {
         if (!formData.name || !formData.email || !formData.password || !formData.role) {
             toast.error('Vui lòng điền đầy đủ các trường bắt buộc');
             return;
+        }
+
+        if (formData.phone) {
+            const phoneRegex = /^(03|05|07|08|09)\d{8}$/;
+            if (!phoneRegex.test(formData.phone)) {
+                toast.error('Số điện thoại không hợp lệ. Vui lòng nhập 10 số bắt đầu bằng 03, 05, 07, 08 hoặc 09');
+                return;
+            }
         }
 
         setIsLoading(true);
@@ -112,6 +126,7 @@ export default function AddAccountModal({ isOpen, onClose }) {
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleChange}
+                                maxLength="10"
                                 className="w-full bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all" 
                                 placeholder="Vd: 090 123 4567" 
                                 type="tel" 

@@ -493,20 +493,27 @@ exports.updateBookingStatus = async (req, res) => {
 
     // Handle no-show status
     if (status === "no_show") {
-      if (!isBarber && !isAdmin) {
+      if (!["barber", "admin", "manager"].includes(userRole)) {
         return res
           .status(403)
           .json({ message: "Only barbers or admins can mark no-shows" });
       }
 
-      // Record the no-show
-      const noShow = new NoShow({
-        customerId: booking.customerId,
-        bookingId: booking._id,
-        markedBy: userId,
-        reason: reason || "Customer did not show up",
-      });
-      await noShow.save();
+      // Record the no-show only if the customer is a registered user
+      if (booking.customerId) {
+        const noShow = new NoShow({
+          customerId: booking.customerId,
+          bookingId: booking._id,
+          barberId: booking.barberId,
+          serviceId: booking.services && booking.services.length > 0 
+            ? (booking.services[0]._id || booking.services[0]) 
+            : null,
+          originalBookingDate: booking.bookingDate,
+          markedBy: userId,
+          reason: "no_show",
+        });
+        await noShow.save();
+      }
     }
 
     // Handle completion
@@ -615,7 +622,7 @@ exports.cancelBooking = async (req, res) => {
     }
 
     // Check if user can cancel this booking
-    if (booking.customerId.toString() !== userId) {
+    if (!booking.customerId || booking.customerId.toString() !== userId) {
       return res
         .status(403)
         .json({ message: "Not authorized to cancel this booking" });
@@ -690,19 +697,22 @@ exports.cancelBooking = async (req, res) => {
     const isLateCancellation = hoursDifference < 2;
 
     try {
-      await NoShow.create({
-        customerId: booking.customerId,
-        bookingId: booking._id,
-        barberId: booking.barberId,
-        serviceId: booking.services && booking.services.length > 0 ? booking.services[0]._id : null,
-        originalBookingDate: booking.bookingDate,
-        markedBy: userId,
-        reason: isLateCancellation ? "late_cancellation" : "customer_cancelled",
-        description: reason,
-        isWithinPolicy: !isLateCancellation,
-      });
-
-          } catch (noShowError) {
+      if (booking.customerId) {
+        await NoShow.create({
+          customerId: booking.customerId,
+          bookingId: booking._id,
+          barberId: booking.barberId,
+          serviceId: booking.services && booking.services.length > 0 
+            ? (booking.services[0]._id || booking.services[0]) 
+            : null,
+          originalBookingDate: booking.bookingDate,
+          markedBy: userId,
+          reason: isLateCancellation ? "late_cancellation" : "customer_cancelled",
+          description: reason,
+          isWithinPolicy: !isLateCancellation,
+        });
+      }
+    } catch (noShowError) {
       console.error("Error creating no-show record:", noShowError);
       // Don't fail the cancellation if no-show tracking fails
     }
@@ -803,9 +813,21 @@ exports.getBarberHistoryBookings = async (req, res, next) => {
     const { date, page = 1, limit = 20 } = req.query;
 
     const Barber = require('../models/barber.model');
-    const barber = await Barber.findOne({ userId: req.userId });
+    let barber = await Barber.findOne({ userId: req.userId });
     if (!barber) {
-      return res.status(404).json({ message: 'Barber not found' });
+      const User = require('../models/user.model');
+      const user = await User.findById(req.userId);
+      if (user && user.role === 'barber') {
+          barber = await Barber.create({
+              userId: user._id,
+              bio: 'Thợ cắt tóc mới tại Hallo Barber',
+              experienceYears: 0,
+              specialties: ['Cắt tóc nam'],
+              workingSince: new Date()
+          });
+      } else {
+          return res.status(404).json({ message: 'Barber not found' });
+      }
     }
 
     const filter = {
@@ -814,7 +836,14 @@ exports.getBarberHistoryBookings = async (req, res, next) => {
     };
 
     if (date) {
-      filter.bookingDate = new Date(date);
+      const dateObj = new Date(date);
+      const tzOffset = dateObj.getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(dateObj.getTime() - tzOffset)).toISOString().split('T')[0];
+
+      filter.bookingDate = {
+        $gte: new Date(`${localISOTime}T00:00:00.000Z`),
+        $lte: new Date(`${localISOTime}T23:59:59.999Z`)
+      };
     }
 
     const skip = (page - 1) * limit;
@@ -837,7 +866,7 @@ exports.getBarberHistoryBookings = async (req, res, next) => {
           _id: b._id,
           customerName: b.customerId?.name || b.customerName || "Khách vãng lai",
           customerType: b.customerId ? "Thành viên" : "Vãng lai",
-          time: b.timeSlot,
+          time: b.timeSlot || (b.bookingDate ? new Date(b.bookingDate).toLocaleTimeString("vi-VN", {hour:"2-digit", minute:"2-digit", hour12:false}) : "N/A"),
           date: b.bookingDate,
           serviceName: b.services?.map(s => s.name).join(", ") || "Dịch vụ",
           uiStatus: "Hoàn thành",
@@ -861,22 +890,40 @@ exports.getBarberHistoryBookings = async (req, res, next) => {
 exports.getBarberTodayBookings = async (req, res, next) => {
   try {
     const Barber = require('../models/barber.model');
-    const barber = await Barber.findOne({ userId: req.userId });
+    let barber = await Barber.findOne({ userId: req.userId });
     if (!barber) {
-      return res.status(404).json({ message: 'Barber not found' });
+      const User = require('../models/user.model');
+      const user = await User.findById(req.userId);
+      if (user && user.role === 'barber') {
+          barber = await Barber.create({
+              userId: user._id,
+              bio: 'Thợ cắt tóc mới tại Hallo Barber',
+              experienceYears: 0,
+              specialties: ['Cắt tóc nam'],
+              workingSince: new Date()
+          });
+      } else {
+          return res.status(404).json({ message: 'Barber not found' });
+      }
     }
 
-    // Get today's start and end date string "YYYY-MM-DD"
-    const today = new Date();
-    // Use local time for Vietnam if needed, or just let DB string match if bookingDate is YYYY-MM-DD
-    // Assuming bookingDate is stored as "YYYY-MM-DD"
-    // To be safe, just get the local YYYY-MM-DD
-    const tzOffset = today.getTimezoneOffset() * 60000;
-    const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+    const { date } = req.query;
+    
+    // Get requested date's start and end string "YYYY-MM-DD"
+    const targetDate = date ? new Date(date) : new Date();
+    const tzOffset = targetDate.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(targetDate.getTime() - tzOffset)).toISOString().split('T')[0];
+
+    // Search between start of day and end of day
+    const startOfDay = new Date(`${localISOTime}T00:00:00.000Z`);
+    const endOfDay = new Date(`${localISOTime}T23:59:59.999Z`);
 
     const bookings = await Booking.find({
       barberId: barber._id,
-      bookingDate: localISOTime
+      bookingDate: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
     })
       .populate('customerId', 'name email phone')
       .populate("services", 'name price durationMinutes type')
@@ -1623,3 +1670,4 @@ exports.createWalkInBooking = async (req, res) => {
     });
   }
 };
+

@@ -18,6 +18,17 @@ export const bookingService = {
   },
 
   /**
+   * Lấy thông tin chi tiết một booking theo ID
+   */
+  getBookingById: async (bookingId) => {
+    try {
+      return await fetchWithAuth(`/bookings/${bookingId}`, { method: 'GET' });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
    * Lấy danh sách dịch vụ
    */
   getServices: async () => {
@@ -90,9 +101,10 @@ export const bookingService = {
   /**
    * API for Barber Dashboard
    */
-  getBarberTodayBookings: async () => {
+  getBarberTodayBookings: async (dateStr) => {
     try {
-      return await fetchWithAuth('/bookings/barber/today', { method: 'GET' });
+      const url = dateStr ? `/bookings/barber/today?date=${dateStr}` : '/bookings/barber/today';
+      return await fetchWithAuth(url, { method: 'GET' });
     } catch (error) {
       throw error;
     }
@@ -133,6 +145,40 @@ export const bookingService = {
       return await fetchWithAuth(`/bookings/${bookingId}/cancel`, {
         method: 'PUT'
       });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Đổi lịch hẹn cho customer
+   * @param {string} bookingId - ID của booking cần đổi
+   * @param {Object} data - { newDate: "YYYY-MM-DD", newTimeSlot: "HH:MM", note: string }
+   */
+  rescheduleBooking: async (bookingId, data) => {
+    try {
+      return await fetchWithAuth(`/bookings/${bookingId}/reschedule`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Lấy danh sách khung giờ trống cho một barber vào một ngày cụ thể (dùng cho đổi lịch)
+   * @param {string} barberId
+   * @param {string} date - "YYYY-MM-DD"
+   * @param {number} durationMinutes
+   */
+  getAvailableSlotsForReschedule: async (barberId, date, durationMinutes) => {
+    try {
+      const response = await fetchWithAuth('/bookings/available-slots', {
+        method: 'POST',
+        body: JSON.stringify({ barberId, date, durationMinutes })
+      });
+      return response;
     } catch (error) {
       throw error;
     }

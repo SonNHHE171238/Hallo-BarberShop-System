@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { bookingService } from '@/services/booking.service';
+import toast from 'react-hot-toast';
 
-export default function ScheduleTimeline({ bookings = [], onRefresh }) {
+export default function ScheduleTimeline({ bookings = [], onRefresh, selectedDate }) {
   const [updatingId, setUpdatingId] = useState(null);
 
   const handleUpdateStatus = async (bookingId, newStatus) => {
     try {
       setUpdatingId(bookingId);
       await bookingService.updateBookingStatus(bookingId, newStatus);
+      toast.success('Cập nhật trạng thái thành công');
       if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Lỗi cập nhật trạng thái:", error);
+      toast.error(error.message || 'Có lỗi xảy ra khi cập nhật trạng thái');
     } finally {
       setUpdatingId(null);
     }
@@ -31,18 +34,29 @@ export default function ScheduleTimeline({ bookings = [], onRefresh }) {
       <div className="flex flex-col border border-outline-gold rounded overflow-hidden bg-surface-container-lowest">
         {bookings.length === 0 ? (
           <div className="p-8 text-center text-on-surface-variant font-body-md">
-            Không có lịch hẹn nào trong hôm nay.
+            Không có lịch hẹn nào vào ngày này.
           </div>
         ) : (
           bookings.map((booking, index) => {
             const isCompleted = booking.status === 'completed';
-            const isCheckedIn = booking.status === 'checked_in' || booking.status === 'in_progress';
-            const isPending = booking.status === 'pending' || booking.status === 'confirmed';
+            const isCheckedIn = booking.status === 'confirmed';
+            const isPending = booking.status === 'pending';
             
             // Format time slot
-            const timeDisplay = booking.timeSlot; 
+            let timeDisplay = booking.timeSlot;
+            if (!timeDisplay && booking.bookingDate) {
+              const bDate = new Date(booking.bookingDate);
+              timeDisplay = bDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+            }
+            if (!timeDisplay) timeDisplay = 'N/A';
+            
             const customerName = booking.customerName || booking.customerId?.name || 'Khách Vãng Lai';
             const serviceName = booking.serviceId?.name || (booking.services && booking.services.length > 0 ? booking.services.map(s => s.name).join(', ') : 'Dịch vụ');
+
+            // Check if booking has started
+            const now = new Date();
+            const bookingStart = new Date(booking.bookingDate);
+            const hasStarted = now >= bookingStart;
 
             return (
               <div 
@@ -81,7 +95,7 @@ export default function ScheduleTimeline({ bookings = [], onRefresh }) {
 
                 {isPending && (
                   <button 
-                    onClick={() => handleUpdateStatus(booking._id, 'checked_in')}
+                    onClick={() => handleUpdateStatus(booking._id, 'confirmed')}
                     disabled={updatingId === booking._id}
                     className="w-[calc(100%-112px)] sm:w-auto ml-[112px] sm:ml-0 bg-surface-container-high border border-outline-variant text-on-surface font-label-md text-label-md uppercase px-8 py-3 rounded hover:border-primary transition-all shadow-sm"
                   >
@@ -90,13 +104,28 @@ export default function ScheduleTimeline({ bookings = [], onRefresh }) {
                 )}
 
                 {isCheckedIn && (
-                  <button 
-                    onClick={() => handleUpdateStatus(booking._id, 'completed')}
-                    disabled={updatingId === booking._id}
-                    className="w-[calc(100%-112px)] sm:w-auto ml-[112px] sm:ml-0 bg-primary text-on-primary font-label-md text-label-md uppercase px-8 py-3 rounded hover:bg-gold-dim transition-all shadow-lg"
-                  >
-                    Hoàn Thành
-                  </button>
+                  <div className="flex items-center gap-2 w-[calc(100%-112px)] sm:w-auto ml-[112px] sm:ml-0">
+                    <button 
+                      onClick={() => handleUpdateStatus(booking._id, 'pending')}
+                      disabled={updatingId === booking._id}
+                      title="Hoàn tác Check-in"
+                      className="bg-surface-container-high border border-outline-variant text-on-surface font-label-md text-label-md uppercase px-4 py-3 rounded hover:border-error hover:text-error transition-all shadow-sm flex items-center justify-center"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">undo</span>
+                    </button>
+                    <button 
+                      onClick={() => handleUpdateStatus(booking._id, 'completed')}
+                      disabled={updatingId === booking._id || !hasStarted}
+                      title={!hasStarted ? "Chưa đến giờ bắt đầu lịch hẹn" : "Đánh dấu hoàn thành"}
+                      className={`flex-1 sm:flex-none font-label-md text-label-md uppercase px-8 py-3 rounded transition-all shadow-lg ${
+                        hasStarted 
+                          ? "bg-primary text-on-primary hover:bg-gold-dim" 
+                          : "bg-surface-container-highest text-outline cursor-not-allowed opacity-50"
+                      }`}
+                    >
+                      Hoàn Thành
+                    </button>
+                  </div>
                 )}
               </div>
             );

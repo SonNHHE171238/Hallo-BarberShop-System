@@ -51,7 +51,7 @@ exports.getBarberAbsences = async (req, res, next) => {
 
 exports.getMeBarber = async (req, res, next) => {
   try {
-    const barber = await Barber.findOne({ userId: req.userId })
+    let barber = await Barber.findOne({ userId: req.userId })
       .populate('userId', 'name email phone avatarUrl')
       .lean();
     

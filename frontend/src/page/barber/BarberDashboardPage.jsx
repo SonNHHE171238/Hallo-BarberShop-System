@@ -10,13 +10,18 @@ export default function BarberDashboardPage() {
   const [barberProfile, setBarberProfile] = useState(null);
   const [todayBookings, setTodayBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    const tzOffset = today.getTimezoneOffset() * 60000;
+    return new Date(today.getTime() - tzOffset).toISOString().split('T')[0];
+  });
 
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
       const [profileRes, bookingsRes] = await Promise.all([
         barberService.getMeBarber(),
-        bookingService.getBarberTodayBookings()
+        bookingService.getBarberTodayBookings(selectedDate)
       ]);
 
       if (profileRes && profileRes.barber) {
@@ -34,7 +39,7 @@ export default function BarberDashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [selectedDate]);
 
   const handleToggleAvailability = async (isAvailable) => {
     try {
@@ -45,7 +50,7 @@ export default function BarberDashboardPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !barberProfile) {
     return <div className="h-full flex items-center justify-center">Đang tải...</div>;
   }
 
@@ -57,6 +62,17 @@ export default function BarberDashboardPage() {
           profile={barberProfile} 
           onToggleAvailability={handleToggleAvailability} 
         />
+        
+        <div className="flex items-center gap-4 bg-surface-container border border-outline-variant px-4 py-2 rounded-lg w-fit">
+          <label className="font-label-md text-sm text-outline uppercase tracking-wider">Ngày xem lịch:</label>
+          <input 
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="bg-transparent outline-none font-body-md text-sm text-primary font-bold [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert cursor-pointer"
+          />
+        </div>
+
         <BarberStatsGrid 
           profile={barberProfile} 
           bookings={todayBookings} 
@@ -64,6 +80,7 @@ export default function BarberDashboardPage() {
         <ScheduleTimeline 
           bookings={todayBookings} 
           onRefresh={fetchDashboardData}
+          selectedDate={selectedDate}
         />
       </main>
     </div>
