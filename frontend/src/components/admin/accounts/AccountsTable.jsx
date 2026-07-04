@@ -18,7 +18,7 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
 
     // Filter accounts based on search term and role filter
     const filteredAccounts = useMemo(() => {
-        let result = [...accounts]; 
+        let result = accounts.filter(account => !account.isDeleted); // Ensure soft-deleted aren't shown if API returns them
 
         if (roleFilter) {
             result = result.filter(account => account.role === roleFilter);
@@ -71,16 +71,6 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
             mutate(); // Refresh the data
         } catch (error) {
             toast.error(error.message || 'Có lỗi xảy ra khi xóa tài khoản');
-        }
-    };
-
-    const handleStatusChange = async (accountId, newStatus) => {
-        try {
-            await adminAccountService.updateAccountStatus(accountId, newStatus);
-            toast.success('Cập nhật trạng thái thành công');
-            mutate();
-        } catch (error) {
-            toast.error(error.message || 'Có lỗi xảy ra khi cập nhật trạng thái');
         }
     };
 
@@ -142,7 +132,7 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
                                 <td colSpan="6" className="px-4 py-6 text-center text-on-surface-variant animate-pulse">Đang tải dữ liệu...</td>
                             </tr>
                         ) : filteredAccounts.length === 0 ? (
-                            <tr key="empty">
+                            <tr>
                                 <td colSpan="6" className="px-4 py-6 text-center text-on-surface-variant">Không tìm thấy tài khoản nào.</td>
                             </tr>
                         ) : (
@@ -171,21 +161,7 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
                                     <td className="px-4 py-2.5 text-on-surface-variant">{account.email}</td>
                                     <td className="px-4 py-2.5 text-on-surface-variant">{account.phone || 'N/A'}</td>
                                     <td className="px-4 py-2.5">
-                                        <select
-                                            value={account.status || 'active'}
-                                            onChange={(e) => handleStatusChange(account.id || account._id, e.target.value)}
-                                            disabled={account.role === 'admin' || account.role === 'barber'}
-                                            title={account.role === 'barber' ? 'Vui lòng sang trang Quản lý Thợ để khóa tài khoản' : ''}
-                                            className={`bg-transparent border rounded px-2 py-1 text-sm outline-none cursor-pointer transition-colors ${
-                                                account.status === 'active' ? 'border-[#4ADE80] text-[#4ADE80] focus:border-[#4ADE80]' : 
-                                                account.status === 'suspended' ? 'border-[#FBBF24] text-[#FBBF24] focus:border-[#FBBF24]' : 
-                                                'border-error text-error focus:border-error'
-                                            }`}
-                                        >
-                                            <option value="active" className="text-on-surface">Active</option>
-                                            <option value="suspended" className="text-on-surface">Suspended</option>
-                                            <option value="banned" className="text-on-surface">Banned</option>
-                                        </select>
+                                        {getStatusIndicator(account.status)}
                                     </td>
                                     <td className="px-4 py-2.5 text-right">
                                         <div className="flex items-center justify-end gap-2">
@@ -203,9 +179,6 @@ export default function AccountsTable({ searchTerm, roleFilter, onTotalCountChan
                                             )}
                                             {account.role === 'admin' && (
                                                 <span className="text-outline text-[10px] uppercase tracking-wider">Không thể xóa</span>
-                                            )}
-                                            {account.role === 'barber' && (
-                                                <span className="text-outline text-[10px] uppercase tracking-wider" title="Sang trang Quản lý Thợ">Khóa ở trang Thợ</span>
                                             )}
                                         </div>
                                     </td>

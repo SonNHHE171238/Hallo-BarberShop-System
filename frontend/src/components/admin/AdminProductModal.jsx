@@ -477,7 +477,7 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
                           className="w-full h-full object-contain absolute inset-0 p-2"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = "https://via.placeholder.com/400x400?text=L%E1%BB%97i+%E1%BA%A3nh";
+                            e.target.src = "https://placehold.co/400x400?text=Loi+Anh";
                           }}
                         />
                       ) : (

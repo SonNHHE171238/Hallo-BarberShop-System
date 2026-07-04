@@ -10,12 +10,13 @@ export default function AdminHeader({ onMenuClick }) {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const getPageTitle = () => {
+    if (pathname.includes('/pos')) return 'POS & Thu Ngân';
     if (pathname.includes('/admin/employee')) return 'Quản Lý Nhân Viên';
-    if (pathname.includes('/admin/bookings')) return 'Lịch Hẹn';
+    if (pathname.includes('/admin/bookings')) return 'Quản Lý Lịch Hẹn';
     if (pathname.includes('/admin/services')) return 'Dịch Vụ';
     if (pathname.includes('/admin/inventory')) return 'Kho Hàng';
     if (pathname.includes('/admin/products')) return 'Quản Lý Sản Phẩm';
-    if (pathname.includes('/admin/analytics')) return 'Phân Tích';
+    if (pathname.includes('/admin/analytics')) return 'Phân Tích Kinh Doanh';
     if (pathname === '/admin' || pathname === '/admin/') return 'Bảng Điều Khiển - Admin';
     return '';
   };

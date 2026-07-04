@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { adminBarberService } from "@/services/adminBarber.service";
-import AdminBarberManagement from "@/components/admin/AdminBarberManagement";
 
 // MOCK DATA
 const mockStaff = [
@@ -95,16 +94,6 @@ const mockStaff = [
 
 export default function AdminStaffPage() {
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'barber', 'staff'
-
-  // Pagination state (for All and Staff tabs)
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
-
-  // Cuộn lên đầu trang khi chuyển tab để tránh việc giữ nguyên vị trí cuộn cũ gây cảm giác "tự động lăn xuống"
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [activeTab]);
-
   const [staffList, setStaffList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -223,12 +212,10 @@ export default function AdminStaffPage() {
             </button>
           </div>
 
-          {activeTab !== 'barber' && (
-            <button className="bg-primary text-on-primary px-6 py-2.5 rounded font-bold flex items-center shadow-lg hover:bg-primary-fixed transition-colors active:scale-95">
-              <span className="material-symbols-outlined mr-2">person_add</span>
-              Thêm Nhân Viên
-            </button>
-          )}
+          <button className="bg-primary text-on-primary px-6 py-2.5 rounded font-bold flex items-center shadow-lg hover:bg-primary-fixed transition-colors active:scale-95">
+            <span className="material-symbols-outlined mr-2">person_add</span>
+            Thêm Nhân Viên
+          </button>
         </div>
 
         {/* Staff Table List */}

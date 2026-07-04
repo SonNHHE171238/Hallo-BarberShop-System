@@ -56,6 +56,7 @@ exports.getMeBarber = async (req, res, next) => {
       .lean();
     
     if (!barber) {
+<<<<<<<<< Temporary merge branch 1
       // Tự động khởi tạo profile nếu bị thiếu
       const User = require('../models/user.model');
       const user = await User.findById(req.userId);
@@ -75,6 +76,9 @@ exports.getMeBarber = async (req, res, next) => {
           error.statusCode = 404;
           throw error;
       }
+=========
+      return res.status(404).json({ success: false, message: 'Barber profile not found' });
+>>>>>>>>> Temporary merge branch 2
     }
 
     return sendSuccess(res, 200, 'Barber profile retrieved', { barber });

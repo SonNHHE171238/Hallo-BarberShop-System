@@ -308,12 +308,7 @@ export default function POSBookingPage() {
     <div className="w-full flex-1 flex flex-col lg:flex-row max-w-[1600px] mx-auto overflow-hidden h-full">
       {/* Left Side: Selection */}
       <section className="flex-1 p-4 md:p-8 lg:p-12 border-r border-outline-variant overflow-y-auto custom-scrollbar pb-32">
-        <header className="mb-10">
-          <h1 className="font-headline-lg text-3xl md:text-headline-lg text-primary mb-3">POS & Thu Ngân</h1>
-          <p className="text-on-surface-variant font-body-md max-w-2xl">
-            Tạo lịch cắt hoặc thanh toán mua sản phẩm trực tiếp tại quầy một cách nhanh chóng.
-          </p>
-        </header>
+
 
         {/* Customer Info Section */}
         <div className="bg-surface-container/60 backdrop-blur-xl border border-outline-variant p-6 md:p-8 rounded-xl mb-12 shadow-inner">

@@ -2,28 +2,37 @@ const WeeklyRoster = require('../models/weekly-roster.model');
 const ShiftRegistration = require('../models/shift-registration.model');
 const BarberSchedule = require('../models/barber-schedule.model');
 const Barber = require('../models/barber.model');
+const User = require('../models/user.model');
 
 exports.createRoster = async (req, res) => {
   try {
-    const { weekStartDate, weekEndDate, registrationDeadline, shiftRequirements } = req.body;
+    const { weekStartDate, weekEndDate, registrationDeadline, closedDays } = req.body;
     
-    // Auto-fill requirements if not provided
-    const defaultRequirements = [];
+    // Auto-fill requirements for staff only
+    const shiftRequirements = [];
     for (let i = 0; i < 7; i++) {
-      const isWeekend = (i === 0 || i >= 3); // Wed-Sun (0=Sun, 3=Wed, 4=Thu, 5=Fri, 6=Sat)
-      const barbersNeeded = isWeekend ? 6 : 5; // Mon=1, Tue=2 -> 5 barbers
-      defaultRequirements.push({
+      shiftRequirements.push({
         dayOfWeek: i,
-        morning: { barbers: barbersNeeded, staff: 1 },
-        afternoon: { barbers: barbersNeeded, staff: 1 }
+        morning: { staff: 1 },
+        afternoon: { staff: 1 }
       });
     }
+
+    const staffCount = await User.countDocuments({ role: 'staff' });
+    const activeStaffCount = staffCount > 0 ? staffCount : 1; // Prevent division by zero
+    const numClosedDays = closedDays ? closedDays.length : 0;
+    
+    // 7 days * 2 shifts/day = 14 shifts max. Subtract closedDays shifts.
+    const totalShiftsNeeded = (7 - numClosedDays) * 2;
+    const minShiftsPerStaff = Math.ceil(totalShiftsNeeded / activeStaffCount);
 
     const roster = new WeeklyRoster({
       weekStartDate,
       weekEndDate,
       registrationDeadline,
-      shiftRequirements: shiftRequirements || defaultRequirements,
+      shiftRequirements,
+      closedDays: closedDays || [],
+      minShiftsPerStaff,
       status: 'open_for_registration',
       createdBy: req.userId
     });
@@ -80,59 +89,61 @@ exports.publishRoster = async (req, res) => {
     const roster = await WeeklyRoster.findById(req.params.id);
     if (!roster) return res.status(404).json({ message: 'Roster not found' });
     
-    // Get all approved/pending registrations
-    const registrations = await ShiftRegistration.find({ rosterId: roster._id }).populate('userId');
+    // Find all active barbers to generate 7-day schedule
+    const barbers = await Barber.find({});
     
-    // Sync to BarberSchedule
-    for (const reg of registrations) {
-      if (reg.role !== 'barber') continue; // Staff scheduling is outside BarberSchedule scope
-      
-      const barber = await Barber.findOne({ userId: reg.userId._id });
-      if (!barber) continue;
-
-      // Create BarberSchedules for the 7 days
+    for (const barber of barbers) {
       let currentDate = new Date(roster.weekStartDate);
       for (let i = 0; i < 7; i++) {
         const dateStr = currentDate.toISOString().split('T')[0];
         
-        // Find if barber registered for this day
-        const dayReg = reg.registeredShifts.find(s => {
-          const sDate = new Date(s.date);
-          return sDate.toISOString().split('T')[0] === dateStr;
+        // 1. Check if this day is a closedDay
+        const closedDay = roster.closedDays.find(d => {
+            if (!d.date) return false;
+            return new Date(d.date).toISOString().split('T')[0] === dateStr;
         });
 
-        if (dayReg && dayReg.shifts.length > 0) {
-          // Working day
-          let schedule = await BarberSchedule.findOne({ barberId: barber._id, date: dateStr });
-          if (!schedule) {
-            schedule = new BarberSchedule({
-              barberId: barber._id,
-              date: dateStr,
-              workingHours: { start: "09:00", end: "19:00" }, // Option B: Full Day
-              isOffDay: false
-            });
-            schedule.generateDefaultSlots();
+        if (closedDay) {
+            let schedule = await BarberSchedule.findOne({ barberId: barber._id, date: dateStr });
+            if (!schedule) {
+                schedule = new BarberSchedule({
+                    barberId: barber._id,
+                    date: dateStr,
+                    isOffDay: true,
+                    offReason: closedDay.reason || 'closed'
+                });
+            } else {
+                schedule.isOffDay = true;
+                schedule.offReason = closedDay.reason || 'closed';
+            }
             await schedule.save();
-          } else {
-            schedule.isOffDay = false;
-            schedule.workingHours = { start: "09:00", end: "19:00" };
-            await schedule.save();
-          }
         } else {
-          // Off day
-          let schedule = await BarberSchedule.findOne({ barberId: barber._id, date: dateStr });
-          if (!schedule) {
-            schedule = new BarberSchedule({
-              barberId: barber._id,
-              date: dateStr,
-              isOffDay: true,
-              offReason: 'weekend'
-            });
-            await schedule.save();
-          } else {
-            schedule.isOffDay = true;
-            await schedule.save();
-          }
+            // 2. Not closed, check if Barber has an absence request
+            let schedule = await BarberSchedule.findOne({ barberId: barber._id, date: dateStr });
+            
+            // If schedule exists and is off due to absence, DO NOT overwrite it
+            if (schedule && schedule.isOffDay && schedule.absenceId) {
+                // Skip overwriting, preserve absence
+            } else {
+                // 3. Generate normal working schedule
+                if (!schedule) {
+                    schedule = new BarberSchedule({
+                        barberId: barber._id,
+                        date: dateStr,
+                        workingHours: { start: "09:00", end: "19:00" },
+                        isOffDay: false
+                    });
+                    schedule.generateDefaultSlots();
+                    await schedule.save();
+                } else {
+                    schedule.isOffDay = false;
+                    schedule.workingHours = { start: "09:00", end: "19:00" };
+                    if (!schedule.availableSlots || schedule.availableSlots.length === 0) {
+                        schedule.generateDefaultSlots();
+                    }
+                    await schedule.save();
+                }
+            }
         }
         currentDate.setDate(currentDate.getDate() + 1);
       }
@@ -151,10 +162,35 @@ exports.publishRoster = async (req, res) => {
 exports.adminAdjustShift = async (req, res) => {
   try {
     const { registeredShifts, adjustmentNote } = req.body;
+    
+    // Check if user is staff
+    const user = await User.findById(req.params.userId);
+    if (!user || user.role !== 'staff') {
+        return res.status(400).json({ success: false, message: 'Can only adjust shifts for staff' });
+    }
+
+    const roster = await WeeklyRoster.findById(req.params.id);
+    if (!roster) return res.status(404).json({ success: false, message: 'Roster not found' });
+
+    // Validate closedDays
+    for (const day of registeredShifts) {
+        if (day.shifts.length > 0) {
+            const dateStr = new Date(day.date).toISOString().split('T')[0];
+            const isClosed = roster.closedDays.some(cd => new Date(cd.date).toISOString().split('T')[0] === dateStr);
+            if (isClosed) {
+                return res.status(400).json({ success: false, message: `Cannot assign shift on closed day: ${dateStr}` });
+            }
+        }
+    }
+
+    // Calculate total shifts
+    let totalShifts = 0;
+    registeredShifts.forEach(day => totalShifts += day.shifts.length);
+
     const registration = await ShiftRegistration.findOneAndUpdate(
       { rosterId: req.params.id, userId: req.params.userId },
-      { registeredShifts, adminAdjusted: true, adjustmentNote, status: 'adjusted' },
-      { new: true, upsert: true } // Upsert in case admin is creating it for them
+      { registeredShifts, adminAdjusted: true, adjustmentNote, status: 'adjusted', totalShifts, role: 'staff' },
+      { new: true, upsert: true }
     );
     res.json({ success: true, registration });
   } catch (err) {
@@ -184,10 +220,10 @@ exports.getMyRegistration = async (req, res) => {
 
 exports.registerShifts = async (req, res) => {
   try {
-    const { registeredShifts } = req.body; // Array of { date, shifts: ['morning', 'afternoon'] }
+    const { registeredShifts } = req.body;
     
-    if (!registeredShifts || registeredShifts.length !== 5) {
-      return res.status(400).json({ success: false, message: 'You must select exactly 5 days' });
+    if (req.role === 'barber') {
+        return res.status(403).json({ success: false, message: 'Barbers do not need to register shifts' });
     }
 
     const roster = await WeeklyRoster.findById(req.params.id);
@@ -195,18 +231,22 @@ exports.registerShifts = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Roster is not open for registration' });
     }
 
-    const userRole = req.role; // 'barber' or 'staff'
-    
-    // Enforce Option B for Barber: If they select a day, they must work both shifts (Full Day)
-    if (userRole === 'barber') {
-      registeredShifts.forEach(day => {
-        day.shifts = ['morning', 'afternoon'];
-      });
+    // Calculate total shifts and check closedDays
+    let totalShifts = 0;
+    for (const day of registeredShifts) {
+        totalShifts += day.shifts.length;
+        if (day.shifts.length > 0) {
+            const dateStr = new Date(day.date).toISOString().split('T')[0];
+            const isClosed = roster.closedDays.some(cd => new Date(cd.date).toISOString().split('T')[0] === dateStr);
+            if (isClosed) {
+                return res.status(400).json({ success: false, message: `Cannot register on closed day: ${dateStr}` });
+            }
+        }
     }
 
-    // Calculate total shifts
-    let totalShifts = 0;
-    registeredShifts.forEach(day => totalShifts += day.shifts.length);
+    if (totalShifts < roster.minShiftsPerStaff) {
+        return res.status(400).json({ success: false, message: `You must register for at least ${roster.minShiftsPerStaff} shifts this week.` });
+    }
 
     let registration = await ShiftRegistration.findOne({ rosterId: roster._id, userId: req.userId });
     if (registration) {
@@ -218,7 +258,7 @@ exports.registerShifts = async (req, res) => {
       registration = new ShiftRegistration({
         rosterId: roster._id,
         userId: req.userId,
-        role: userRole,
+        role: req.role,
         registeredShifts,
         totalShifts
       });

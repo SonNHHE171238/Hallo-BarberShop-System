@@ -8,10 +8,12 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
   const url = `${getBaseUrl()}${endpoint}`;
   
   const defaultOptions = {
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: {},
   };
+  
+  if (!(options.body instanceof FormData)) {
+    defaultOptions.headers['Content-Type'] = 'application/json';
+  }
   
   const fetchOptions = {
     ...defaultOptions,

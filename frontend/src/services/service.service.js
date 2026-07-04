@@ -1,4 +1,7 @@
+import axios from 'axios';
 import { fetchWithAuth } from './api';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export const customerServiceApi = {
     getAllServices: async () => {
@@ -21,12 +24,20 @@ export const serviceService = {
         });
     },
     createService: async (payload) => {
+        if (payload instanceof FormData) {
+            const res = await axios.post(`${API_URL}/services`, payload, { withCredentials: true });
+            return res.data;
+        }
         return fetchWithAuth('/services', {
             method: 'POST',
             body: JSON.stringify(payload),
         });
     },
     updateService: async (id, payload) => {
+        if (payload instanceof FormData) {
+            const res = await axios.put(`${API_URL}/services/${id}`, payload, { withCredentials: true });
+            return res.data;
+        }
         return fetchWithAuth(`/services/${id}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
