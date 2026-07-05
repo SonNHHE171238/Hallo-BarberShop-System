@@ -45,7 +45,7 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
   }
 
   // Tự động bóc vỏ data nếu Backend trả về định dạng { success, message, data }
-  if (data && data.success && data.data !== undefined) {
+  if (data && data.success && data.data !== undefined && !options.fullResponse) {
     return data.data;
   }
 

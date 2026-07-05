@@ -4,6 +4,7 @@ const Service = require("../models/service.model");
 const NoShow = require("../models/no-show.model");
 const BarberAbsence = require("../models/barber-absence.model");
 const BarberSchedule = require("../models/barber-schedule.model");
+const voucherController = require("../controllers/voucher.controller");
 
 /**
  * Handle business logic for creating a new booking
@@ -21,6 +22,7 @@ exports.processCreateBooking = async ({
   customerName,
   customerEmail,
   customerPhone,
+  voucherCode,
 }) => {
   // Normalize Date to prevent race conditions
   const requestedDateTime = new Date(bookingDate);
@@ -173,6 +175,31 @@ exports.processCreateBooking = async ({
     throw error;
   }
 
+  // Voucher Validation and Lock
+  let discountAmount = 0;
+  let voucherLockId = null;
+  let appliedVoucherCode = null;
+
+  if (voucherCode) {
+    try {
+      const lockInfo = await voucherController.validateAndLockVoucher(
+        voucherCode,
+        totalPrice,
+        customerId,
+        customerPhone
+      );
+      if (lockInfo) {
+        discountAmount = lockInfo.discountAmount;
+        voucherLockId = lockInfo.lockId;
+        appliedVoucherCode = voucherCode.toUpperCase();
+      }
+    } catch (err) {
+      const error = new Error('Lỗi mã giảm giá: ' + err.message);
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   // Save Booking
   const bookingData = {
     bookingType,
@@ -181,13 +208,16 @@ exports.processCreateBooking = async ({
     services,
     bookingDate: requestedDateTime,
     durationMinutes,
-    totalPrice,
+    totalPrice: Math.max(0, totalPrice - discountAmount),
     note,
     notificationMethods,
     autoAssignedBarber,
     customerName,
     customerEmail,
     customerPhone,
+    voucherCode: appliedVoucherCode,
+    discountAmount,
+    voucherLockId,
   };
 
   // If created via POS or auto-assigned by staff, it might be auto-confirmed
@@ -408,6 +438,7 @@ exports.processCreateSinglePageBooking = async (data) => {
     bookingType,
     customerId,
     autoAssignBarber,
+    voucherCode,
   } = data;
 
   const foundServices = await Service.find({ _id: { $in: services } });
@@ -445,6 +476,7 @@ exports.processCreateSinglePageBooking = async (data) => {
     customerName,
     customerEmail,
     customerPhone,
+    voucherCode,
   });
 
   return { populatedBooking, shouldAutoAssign };

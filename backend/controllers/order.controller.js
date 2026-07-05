@@ -2,6 +2,7 @@ const Order = require('../models/order.model');
 const Product = require('../models/product.model');
 const Cart = require('../models/cart.model');
 const User = require('../models/user.model');
+const voucherController = require('./voucher.controller');
 const { PayOS } = require("@payos/node");
 
 const payos = new PayOS({
@@ -13,7 +14,7 @@ const payos = new PayOS({
 // Tạo đơn hàng mới
 exports.createOrder = async (req, res, next) => {
   try {
-    const { items, customerName, customerPhone, shippingAddress, paymentMethod } = req.body;
+    const { items, customerName, customerPhone, shippingAddress, paymentMethod, voucherCode } = req.body;
     const userId = req.user ? req.user.id : null; // Hỗ trợ cả guest
 
     if (!items || items.length === 0) {
@@ -48,13 +49,33 @@ exports.createOrder = async (req, res, next) => {
     // Generate unique order code (Number) for PayOS
     const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
 
+    // Process Voucher Lock
+    let discountAmount = 0;
+    let voucherLockId = null;
+    let appliedVoucherCode = null;
+
+    if (voucherCode) {
+      try {
+        const lockInfo = await voucherController.validateAndLockVoucher(voucherCode, totalAmount, userId, customerPhone);
+        if (lockInfo) {
+          discountAmount = lockInfo.discountAmount;
+          voucherLockId = lockInfo.lockId;
+          appliedVoucherCode = voucherCode.toUpperCase();
+        }
+      } catch (err) {
+        return res.status(400).json({ success: false, message: 'Lỗi mã giảm giá: ' + err.message });
+      }
+    }
+
+    const finalAmount = Math.max(0, totalAmount - discountAmount);
+
     const newOrder = new Order({
       userId,
       customerName,
       customerPhone,
       shippingAddress,
       items: orderItems,
-      totalAmount,
+      totalAmount: finalAmount, // Save the final amount to be paid
       paymentMethod,
       orderCode,
       historyLog: [{
@@ -62,6 +83,9 @@ exports.createOrder = async (req, res, next) => {
         actor: userId ? customerName : 'Khách vãng lai (Guest)',
         note: 'Đơn hàng được tạo thành công trên hệ thống.',
       }]
+      voucherCode: appliedVoucherCode,
+      discountAmount,
+      voucherLockId
     });
 
     await newOrder.save();
@@ -78,7 +102,7 @@ exports.createOrder = async (req, res, next) => {
     if (paymentMethod === 'payos') {
       const body = {
         orderCode: orderCode,
-        amount: totalAmount,
+        amount: finalAmount,
         description: `Thanh toan don hang`,
         items: orderItems.map(item => ({
           name: `SP ${item.productId}`, // You can pass real name if needed

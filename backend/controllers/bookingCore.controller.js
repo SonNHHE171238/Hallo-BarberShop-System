@@ -70,6 +70,7 @@ exports.createBooking = async (req, res, next) => {
       customerName,
       customerEmail,
       customerPhone,
+      voucherCode: req.body.voucherCode,
     });
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
@@ -177,7 +178,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
       customerPhone,
       bookingType,
       customerId,
-      autoAssignBarber: shouldAutoAssign
+      autoAssignBarber: shouldAutoAssign,
+      voucherCode: req.body.voucherCode,
     });
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;

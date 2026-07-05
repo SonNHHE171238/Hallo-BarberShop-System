@@ -11,6 +11,7 @@ import BookingSummarySidebar from "@/components/booking/BookingSummarySidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { bookingService } from "@/services/booking.service";
+import { voucherService } from "@/services/voucher.service";
 import toast from 'react-hot-toast';
 import GuestBookingModal from "@/components/booking/GuestBookingModal";
 import { QRCodeSVG } from 'qrcode.react';
@@ -24,12 +25,14 @@ export default function BookingPage() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
-  const [showQR, setShowQR] = useState(false);
-  const [qrData, setQrData] = useState("");
-  const [orderCode, setOrderCode] = useState("");
-  const [amountToPay, setAmountToPay] = useState(0);
-  const [successQueryString, setSuccessQueryString] = useState("");
-  const [currentBookingId, setCurrentBookingId] = useState(null);
+  
+  // Voucher State
+  const [voucherCodeInput, setVoucherCodeInput] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [voucherError, setVoucherError] = useState("");
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
+
   const { user } = useAuth();
   const router = useRouter();
 
@@ -84,6 +87,8 @@ export default function BookingPage() {
         date: selectedDate, 
         timeSlot: selectedTime, 
         durationMinutes: selectedServices.reduce((total, s) => total + (s.durationMinutes || s.duration || 30), 0),
+        voucherCode: appliedVoucher,
+        discountAmount: discountAmount,
         ...additionalPayload
       };
 
@@ -190,6 +195,16 @@ export default function BookingPage() {
                 onConfirm={handleConfirm}
                 isLoading={isLoading}
                 isGuest={!user}
+                voucherCodeInput={voucherCodeInput}
+                setVoucherCodeInput={setVoucherCodeInput}
+                appliedVoucher={appliedVoucher}
+                setAppliedVoucher={setAppliedVoucher}
+                discountAmount={discountAmount}
+                setDiscountAmount={setDiscountAmount}
+                voucherError={voucherError}
+                setVoucherError={setVoucherError}
+                applyingVoucher={applyingVoucher}
+                setApplyingVoucher={setApplyingVoucher}
               />
             )}
           </div>

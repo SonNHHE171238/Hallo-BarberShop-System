@@ -1,6 +1,7 @@
 const { PayOS } = require("@payos/node");
 const Booking = require("../models/booking.model");
 const { sendSuccess } = require("../utils/response.helper");
+const voucherController = require("./voucher.controller");
 
 const payos = new PayOS({
   clientId: process.env.PAYOS_CLIENT_ID,
@@ -107,6 +108,11 @@ exports.payosWebhook = async (req, res, next) => {
           transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
         });
 
+        // Redeem voucher if applies
+        if (booking.voucherLockId) {
+          await voucherController.redeemVoucherLock(booking.voucherLockId);
+        }
+
       } else {
         const Order = require("../models/order.model");
         const order = await Order.findOne({ orderCode: webhookData.orderCode });
@@ -125,6 +131,11 @@ exports.payosWebhook = async (req, res, next) => {
             status: 'success',
             transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
           });
+
+          // Redeem voucher if applies
+          if (order.voucherLockId) {
+            await voucherController.redeemVoucherLock(order.voucherLockId);
+          }
         } else {
           console.warn("Webhook valid but no Booking or Order found for orderCode:", webhookData.orderCode);
         }

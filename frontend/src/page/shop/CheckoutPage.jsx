@@ -7,6 +7,7 @@ import axios from "axios";
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from "@/context/AuthContext";
 import Footer from "@/components/layout/Footer";
+import { voucherService } from "@/services/voucher.service";
 
 export default function CheckoutPage() {
   const { user } = useAuth();
@@ -22,6 +23,13 @@ export default function CheckoutPage() {
     address: "",
     paymentMethod: "bank_transfer"
   });
+
+  // Voucher State
+  const [voucherCodeInput, setVoucherCodeInput] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [voucherError, setVoucherError] = useState("");
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
 
   // QR Modal State
   const [showQR, setShowQR] = useState(false);
@@ -53,8 +61,34 @@ export default function CheckoutPage() {
 
   const subTotal = cartItems.reduce((total, item) => total + (item.productId.price * item.quantity), 0);
   const shippingFee = subTotal > 2000000 ? 0 : 35000;
-  const discount = 0; 
-  const totalAmount = subTotal + shippingFee - discount;
+  const totalAmount = Math.max(0, subTotal + shippingFee - discountAmount);
+
+  const handleApplyVoucher = async () => {
+    if (!voucherCodeInput.trim()) return;
+    setApplyingVoucher(true);
+    setVoucherError("");
+    try {
+      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal + shippingFee, formData.phone);
+      if (res.success) {
+        setAppliedVoucher(res.data.code);
+        setDiscountAmount(res.data.discountAmount);
+        setVoucherError("");
+      }
+    } catch (err) {
+      setVoucherError(err.message || "Mã giảm giá không hợp lệ");
+      setAppliedVoucher(null);
+      setDiscountAmount(0);
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
+  const removeVoucher = () => {
+    setAppliedVoucher(null);
+    setDiscountAmount(0);
+    setVoucherCodeInput("");
+    setVoucherError("");
+  };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -81,6 +115,9 @@ export default function CheckoutPage() {
         customerPhone: formData.phone,
         shippingAddress: formData.address,
         paymentMethod: formData.paymentMethod === 'bank_transfer' ? 'payos' : 'cod',
+        paymentMethod: formData.paymentMethod,
+        voucherCode: appliedVoucher,
+        discountAmount: discountAmount,
         returnUrl: "http://localhost:3000/shop/checkout/success",
         cancelUrl: "http://localhost:3000/shop/checkout"
       }, { withCredentials: true });
@@ -258,6 +295,28 @@ export default function CheckoutPage() {
 
               {/* Totals */}
               <div className="space-y-3 pt-6 border-t border-outline-variant">
+                
+                {/* Voucher input */}
+                <div className="pb-4 mb-4 border-b border-outline-variant">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="Mã giảm giá" 
+                      value={voucherCodeInput}
+                      onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                      disabled={appliedVoucher || applyingVoucher}
+                      className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm uppercase focus:border-primary outline-none disabled:opacity-50"
+                    />
+                    {appliedVoucher ? (
+                      <button onClick={removeVoucher} className="px-4 bg-error text-white font-bold rounded text-sm hover:bg-error/90">Hủy</button>
+                    ) : (
+                      <button onClick={handleApplyVoucher} disabled={applyingVoucher || !voucherCodeInput} className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary disabled:opacity-50">Áp dụng</button>
+                    )}
+                  </div>
+                  {voucherError && <p className="text-error text-xs mt-1">{voucherError}</p>}
+                  {appliedVoucher && <p className="text-success text-xs mt-1">Đã áp dụng mã {appliedVoucher}</p>}
+                </div>
+
                 <div className="flex justify-between text-on-surface-variant">
                   <span className="font-body-md">Tạm tính</span>
                   <span className="font-body-md">{formatPrice(subTotal)}</span>
@@ -266,6 +325,12 @@ export default function CheckoutPage() {
                   <span className="font-body-md">Phí vận chuyển</span>
                   <span className="font-body-md">{formatPrice(shippingFee)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-success">
+                    <span className="font-body-md">Giảm giá</span>
+                    <span className="font-body-md">-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-4 mt-2 border-t border-outline-variant">
                   <span className="font-headline-sm text-on-surface font-bold">TỔNG CỘNG</span>
                   <span className="font-headline-sm text-primary font-bold">{formatPrice(totalAmount)}</span>
