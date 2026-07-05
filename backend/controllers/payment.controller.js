@@ -54,7 +54,9 @@ exports.createPaymentLink = async (req, res, next) => {
     return sendSuccess(res, 200, "Tạo link thanh toán thành công", {
       checkoutUrl: paymentLinkRes.checkoutUrl,
       paymentLinkId: paymentLinkRes.paymentLinkId,
-      qrCode: paymentLinkRes.qrCode // Chuỗi text QR để gen ảnh tại client
+      qrCode: paymentLinkRes.qrCode, // Chuỗi text QR để gen ảnh tại client
+      orderCode: orderCode,
+      amount: amountToPay
     });
   } catch (error) {
     console.error("Error creating payment link:", error);
@@ -111,6 +113,7 @@ exports.payosWebhook = async (req, res, next) => {
         
         if (order) {
           order.status = 'processing';
+          order.paymentStatus = 'paid';
           await order.save();
 
           const Payment = require("../models/payment.model");

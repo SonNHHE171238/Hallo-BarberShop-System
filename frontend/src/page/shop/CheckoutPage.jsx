@@ -68,7 +68,7 @@ export default function CheckoutPage() {
 
     try {
       const items = cartItems.map(item => ({
-        product: item.productId._id,
+        productId: item.productId._id,
         quantity: item.quantity,
         price: item.productId.price
       }));
@@ -77,8 +77,10 @@ export default function CheckoutPage() {
       const res = await axios.post("http://localhost:5000/api/orders", {
         items,
         totalAmount,
+        customerName: formData.customerName,
+        customerPhone: formData.phone,
         shippingAddress: formData.address,
-        paymentMethod: formData.paymentMethod,
+        paymentMethod: formData.paymentMethod === 'bank_transfer' ? 'payos' : 'cod',
         returnUrl: "http://localhost:3000/shop/checkout/success",
         cancelUrl: "http://localhost:3000/shop/checkout"
       }, { withCredentials: true });
@@ -86,21 +88,27 @@ export default function CheckoutPage() {
       if (res.data.success) {
         const orderData = res.data.data;
         
-        if (formData.paymentMethod === 'bank_transfer') {
-          // Hiện QR Code
-          setQrData(orderData.qrCode);
-          setCurrentOrder(orderData.order);
-          setShowQR(true);
+        if (formData.paymentMethod === 'payos') {
+          if (res.data.qrCode) {
+            setCurrentOrder(orderData);
+            setQrData(res.data.qrCode);
+            setShowQR(true);
+          } else {
+            alert("Lỗi: Không nhận được mã QR thanh toán PayOS");
+          }
         } else {
           // COD - Thành công luôn
           alert("Đặt hàng thành công!");
+          sessionStorage.removeItem('hallo_cart');
           localStorage.removeItem('hallo_cart');
-          router.push(`/shop/checkout/success?orderCode=${orderData.order.orderCode}&total=${totalAmount}`);
+          router.push(`/shop/checkout/success?orderCode=${orderData.orderCode}&total=${totalAmount}`);
         }
       }
     } catch (error) {
       console.error(error);
-      alert("Có lỗi xảy ra khi tạo đơn hàng.");
+      const detailError = error.response?.data?.error;
+      const baseMsg = error.response?.data?.message || "Có lỗi xảy ra khi tạo đơn hàng.";
+      alert(detailError ? `${baseMsg}\nChi tiết lỗi PayOS: ${detailError}` : baseMsg);
     }
   };
 
@@ -115,6 +123,7 @@ export default function CheckoutPage() {
             // Đã thanh toán thành công
             clearInterval(interval);
             setShowQR(false);
+            sessionStorage.removeItem('hallo_cart');
             localStorage.removeItem('hallo_cart');
             router.push(`/shop/checkout/success?orderCode=${currentOrder.orderCode}&total=${totalAmount}`);
           }

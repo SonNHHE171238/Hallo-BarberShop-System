@@ -1,6 +1,7 @@
 const Order = require('../models/order.model');
 const Product = require('../models/product.model');
 const Cart = require('../models/cart.model');
+const User = require('../models/user.model');
 const { PayOS } = require("@payos/node");
 
 const payos = new PayOS({
@@ -55,7 +56,12 @@ exports.createOrder = async (req, res, next) => {
       items: orderItems,
       totalAmount,
       paymentMethod,
-      orderCode
+      orderCode,
+      historyLog: [{
+        action: 'Khởi tạo đơn hàng',
+        actor: userId ? customerName : 'Khách vãng lai (Guest)',
+        note: 'Đơn hàng được tạo thành công trên hệ thống.',
+      }]
     });
 
     await newOrder.save();
@@ -84,11 +90,23 @@ exports.createOrder = async (req, res, next) => {
       };
 
       try {
-        const paymentLinkResponse = await payos.createPaymentLink(body);
+        const paymentLinkResponse = await payos.paymentRequests.create(body);
         paymentUrl = paymentLinkResponse.checkoutUrl;
+        
+        return res.status(201).json({
+          success: true,
+          message: 'Đặt hàng thành công',
+          data: newOrder,
+          paymentUrl,
+          qrCode: paymentLinkResponse.qrCode
+        });
       } catch (payosError) {
         console.error("Lỗi tạo PayOS link:", payosError);
-        return res.status(500).json({ success: false, message: 'Đã tạo đơn hàng nhưng lỗi tạo link thanh toán' });
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Đã tạo đơn hàng nhưng lỗi tạo link thanh toán PayOS',
+          error: payosError.message || payosError.toString()
+        });
       }
     }
 
@@ -96,7 +114,7 @@ exports.createOrder = async (req, res, next) => {
       success: true,
       message: 'Đặt hàng thành công',
       data: newOrder,
-      paymentUrl
+      paymentUrl: null
     });
 
   } catch (error) {
@@ -129,13 +147,108 @@ exports.getAllOrders = async (req, res, next) => {
   }
 };
 
+// Admin: Lấy chi tiết 1 đơn hàng
+exports.getOrderById = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('userId', 'name email')
+      .populate('items.productId', 'name image');
+    if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    res.json({ success: true, data: order });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Admin: Cập nhật trạng thái
 exports.updateOrderStatus = async (req, res, next) => {
   try {
-    const { status } = req.body;
-    const order = await Order.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const { status, note } = req.body;
+    let actor = 'System';
+    if (req.userId) {
+      const adminUser = await User.findById(req.userId);
+      if (adminUser) actor = adminUser.name;
+    }
+    
+    const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+
+    // Chỉ log khi thực sự có thay đổi trạng thái
+    if (order.status !== status) {
+      const actionLabels = {
+        pending: 'Đưa về chờ xác nhận',
+        processing: 'Xác nhận & Bắt đầu chuẩn bị',
+        shipped: 'Giao cho đơn vị vận chuyển',
+        completed: 'Giao hàng thành công',
+        cancelled: 'Hủy đơn hàng'
+      };
+      
+      order.status = status;
+      order.historyLog.push({
+        action: actionLabels[status] || `Đổi trạng thái: ${status}`,
+        actor: actor,
+        note: note || '',
+      });
+
+      // Nếu trạng thái là completed và đã thanh toán
+      if (status === 'completed' && order.paymentStatus === 'paid') {
+        order.historyLog.push({
+          action: 'Đơn hàng giao dịch thành công',
+          actor: 'System',
+          note: 'Đơn hàng đã hoàn tất giao hàng và thanh toán đầy đủ.',
+        });
+      }
+    }
+
+    await order.save();
     res.json({ success: true, message: 'Cập nhật trạng thái thành công', data: order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Cập nhật ghi chú nội bộ
+exports.updateInternalNote = async (req, res, next) => {
+  try {
+    const { internalNote } = req.body;
+    const order = await Order.findByIdAndUpdate(req.params.id, { internalNote }, { new: true });
+    if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    res.json({ success: true, message: 'Cập nhật ghi chú thành công', data: order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Xác nhận đã thu tiền COD
+exports.confirmCODPayment = async (req, res, next) => {
+  try {
+    let actor = 'System';
+    if (req.userId) {
+      const adminUser = await User.findById(req.userId);
+      if (adminUser) actor = adminUser.name;
+    }
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    
+    if (order.paymentStatus !== 'paid') {
+      order.paymentStatus = 'paid';
+      order.historyLog.push({
+        action: 'Xác nhận đã thu tiền COD',
+        actor: actor,
+        note: 'Admin xác nhận đã nhận được tiền mặt từ khách hàng/shipper.',
+      });
+
+      if (order.status === 'completed') {
+        order.historyLog.push({
+          action: 'Đơn hàng giao dịch thành công',
+          actor: 'System',
+          note: 'Đơn hàng đã hoàn tất giao hàng và thanh toán đầy đủ.',
+        });
+      }
+      await order.save();
+    }
+    
+    res.json({ success: true, message: 'Xác nhận thu tiền thành công', data: order });
   } catch (error) {
     next(error);
   }

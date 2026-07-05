@@ -11,6 +11,9 @@ router.get('/my-orders', authenticate, orderController.getMyOrders);
 
 // Admin routes
 router.get('/', authenticate, authorizeRoles('admin'), orderController.getAllOrders);
-router.put('/:id/status', authenticate, authorizeRoles('admin'), orderController.updateOrderStatus);
+router.get('/:id', authenticate, authorizeRoles('admin', 'staff'), orderController.getOrderById);
+router.put('/:id/status', authenticate, authorizeRoles('admin', 'staff'), orderController.updateOrderStatus);
+router.put('/:id/note', authenticate, authorizeRoles('admin', 'staff'), orderController.updateInternalNote);
+router.put('/:id/pay-cod', authenticate, authorizeRoles('admin', 'staff'), orderController.confirmCODPayment);
 
 module.exports = router;

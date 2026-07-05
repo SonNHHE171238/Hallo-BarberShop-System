@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
@@ -51,9 +53,7 @@ export default function CheckoutSuccessPage() {
       `}} />
 
       {/* Top Navigation */}
-      <header className="fixed top-0 w-full z-50 bg-surface-obsidian/80 backdrop-blur-md border-b border-outline-variant h-20 flex items-center justify-center px-margin-mobile md:px-margin-desktop">
-        <h1 className="font-headline-md text-headline-md font-bold text-primary tracking-tight">HALLO BARBER</h1>
-      </header>
+      <Navbar />
 
       <main className="flex-grow pt-32 pb-section-padding flex flex-col items-center px-margin-mobile">
         {/* Hero Success Section */}
@@ -148,37 +148,7 @@ export default function CheckoutSuccessPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-surface-container-lowest border-t border-outline-variant mt-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter px-margin-desktop py-section-padding max-w-container-max mx-auto">
-          <div className="flex flex-col gap-4">
-            <span className="font-headline-sm text-headline-sm text-primary">HALLO BARBER</span>
-            <p className="font-body-md text-body-md text-on-surface-variant max-w-xs">
-              Di sản của sự chính xác. Chúng tôi mang đến trải nghiệm cắt tóc và chăm sóc diện mạo đẳng cấp nhất cho quý ông hiện đại.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4">
-            <span className="font-label-md text-label-md text-primary uppercase">Quick Links</span>
-            <div className="flex flex-col gap-2">
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Operating Hours</a>
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Contact Us</a>
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Privacy Policy</a>
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Terms of Service</a>
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Locations</a>
-            </div>
-          </div>
-          <div className="flex flex-col gap-4">
-            <span className="font-label-md text-label-md text-primary uppercase">Connect</span>
-            <div className="flex gap-4">
-              <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">brand_awareness</span>
-              <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">public</span>
-              <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">mail</span>
-            </div>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-4">
-              © 2024 HALLO BARBER. ALL RIGHTS RESERVED.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import LogoutConfirmModal from "../ui/LogoutConfirmModal";
+import axios from "axios";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,12 +13,35 @@ export default function Navbar() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      if (user) {
+        try {
+          const res = await axios.get("http://localhost:5000/api/cart", { withCredentials: true });
+          if (res.data.success && res.data.data && res.data.data.items) {
+            setCartCount(res.data.data.items.length);
+          }
+        } catch (error) {
+          // Ignore error silently to not spam console
+        }
+      } else {
+        const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
+        setCartCount(localCart.length);
+      }
+    };
+
+    fetchCartCount();
+    const interval = setInterval(fetchCartCount, 2000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     setActiveHash(window.location.hash);
@@ -117,6 +141,11 @@ export default function Navbar() {
         <div className="flex items-center space-x-2 md:space-x-4">
           <Link href="/shop/cart" className="relative text-on-surface hover:text-primary transition-colors p-2 hidden md:flex items-center">
             <span className="material-symbols-outlined">shopping_bag</span>
+            {mounted && cartCount > 0 && (
+              <span className="absolute top-0 right-0 bg-error text-on-error text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center translate-x-1 -translate-y-1">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
           </Link>
           
           {(mounted && user) ? (
@@ -164,8 +193,13 @@ export default function Navbar() {
           </Link>
           
           {/* Mobile Cart Icon */}
-          <Link href="/shop/cart" className="md:hidden text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors mr-1">
+          <Link href="/shop/cart" className="relative md:hidden text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors mr-1">
             <span className="material-symbols-outlined">shopping_bag</span>
+            {mounted && cartCount > 0 && (
+              <span className="absolute top-0 right-0 bg-error text-on-error text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center translate-x-1 -translate-y-1">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
           </Link>
           
           {/* Mobile Menu Toggle */}
