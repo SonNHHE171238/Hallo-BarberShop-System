@@ -36,6 +36,7 @@ router.get('/walk-in/available-slots', authenticate, authorizeRoles('admin'), bo
 router.post('/walk-in', authenticate, authorizeRoles('admin'), bookingController.createWalkInBooking);
 
 // Parameterized routes must come last
+router.get('/lookup/:phone', bookingController.lookupBookingsByPhone);
 router.get('/:id', authenticate, bookingController.getBookingDetail);
 
 // Admin-only booking management

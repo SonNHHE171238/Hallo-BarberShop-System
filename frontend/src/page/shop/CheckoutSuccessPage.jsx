@@ -134,9 +134,9 @@ export default function CheckoutSuccessPage() {
               <Link href="/shop" className="bg-primary text-on-primary font-headline-sm text-headline-sm px-12 py-4 rounded-lg hover:brightness-110 active:scale-95 transition-all duration-300 uppercase tracking-widest shadow-lg shadow-primary/20 text-center">
                 TIẾP TỤC MUA SẮM
               </Link>
-              <button className="border-2 border-primary text-primary font-headline-sm text-headline-sm px-12 py-4 rounded-lg hover:bg-primary/5 active:scale-95 transition-all duration-300 uppercase tracking-widest">
+              <Link href={`/shop/orders/${orderCode}`} className="border-2 border-primary text-primary font-headline-sm text-headline-sm px-12 py-4 rounded-lg hover:bg-primary/5 active:scale-95 transition-all duration-300 uppercase tracking-widest text-center">
                 THEO DÕI ĐƠN HÀNG
-              </button>
+              </Link>
             </div>
           </div>
         </div>

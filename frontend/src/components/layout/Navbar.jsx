@@ -115,10 +115,9 @@ export default function Navbar() {
             Cửa hàng
           </Link>
           <Link 
-            href={(mounted && user) ? "/customer/history" : "/review"} 
-            onClick={() => setActiveHash("")}
+            href={(mounted && user) ? "/customer/history" : "/lookup/bookings"} 
             className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/customer/history" || pathname === "/review"
+              pathname === "/customer/history" || pathname === "/lookup/bookings"
                 ? "text-primary font-bold border-b-2 border-primary pb-1" 
                 : "text-on-surface-variant hover:text-primary transition-colors duration-200"
             }`}
@@ -134,6 +133,16 @@ export default function Navbar() {
             }`}
           >
             Blog & Tin tức
+          </Link>
+          <Link 
+            href="/lookup" 
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/lookup" 
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
+          >
+            Đơn hàng
           </Link>
         </div>
 
@@ -227,8 +236,9 @@ export default function Navbar() {
             <Link href="/#team" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Đội ngũ</Link>
           </div>
           <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
-          <Link href={(mounted && user) ? "/customer/history" : "/review"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/review" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
+          <Link href={(mounted && user) ? "/customer/history" : "/lookup/bookings"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/lookup/bookings" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
           <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/blog" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Blog & Tin tức</Link>
+          <Link href="/lookup" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/lookup" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Đơn hàng</Link>
           <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
             {(mounted && user) ? (
               <>

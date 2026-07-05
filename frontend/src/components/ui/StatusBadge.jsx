@@ -25,7 +25,7 @@ const StatusBadge = ({ status, className = "" }) => {
       case "rejected":
         return {
           text: "ĐÃ HỦY",
-          classes: "bg-error/10 text-error-container border border-error/20"
+          classes: "bg-error/20 text-error border border-error/50 font-bold"
         };
       default:
         return {

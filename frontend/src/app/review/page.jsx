@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -20,15 +20,9 @@ export default function ReviewSearchPage() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!phone.trim()) {
-      alert("Vui lòng nhập số điện thoại");
-      return;
-    }
-
+  const performSearch = async (phoneNumber) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/bookingfeedbacks/lookup/${phone}`);
+      const res = await axios.get(`http://localhost:5000/api/bookingfeedbacks/lookup/${phoneNumber}`);
       if (res.data.success) {
         setBookingData(res.data.data);
         setSearchState(false);
@@ -37,6 +31,24 @@ export default function ReviewSearchPage() {
       alert(error.response?.data?.message || "Không tìm thấy lịch sử chuyến cắt nào khả dụng.");
     }
   };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!phone.trim()) {
+      alert("Vui lòng nhập số điện thoại");
+      return;
+    }
+    await performSearch(phone);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const phoneParam = params.get("phone");
+    if (phoneParam) {
+      setPhone(phoneParam);
+      performSearch(phoneParam);
+    }
+  }, []);
 
   const handleBackToSearch = () => {
     setSearchState(true);

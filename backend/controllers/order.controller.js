@@ -40,7 +40,7 @@ exports.createOrder = async (req, res, next) => {
         priceAtPurchase: product.price
       });
       totalAmount += product.price * item.quantity;
-      
+
       // Reduce stock (Should ideally be in a transaction, but for simplicity here)
       product.stock -= item.quantity;
       await product.save();
@@ -82,7 +82,7 @@ exports.createOrder = async (req, res, next) => {
         action: 'Khởi tạo đơn hàng',
         actor: userId ? customerName : 'Khách vãng lai (Guest)',
         note: 'Đơn hàng được tạo thành công trên hệ thống.',
-      }]
+      }],
       voucherCode: appliedVoucherCode,
       discountAmount,
       voucherLockId
@@ -116,7 +116,7 @@ exports.createOrder = async (req, res, next) => {
       try {
         const paymentLinkResponse = await payos.paymentRequests.create(body);
         paymentUrl = paymentLinkResponse.checkoutUrl;
-        
+
         return res.status(201).json({
           success: true,
           message: 'Đặt hàng thành công',
@@ -126,8 +126,8 @@ exports.createOrder = async (req, res, next) => {
         });
       } catch (payosError) {
         console.error("Lỗi tạo PayOS link:", payosError);
-        return res.status(500).json({ 
-          success: false, 
+        return res.status(500).json({
+          success: false,
           message: 'Đã tạo đơn hàng nhưng lỗi tạo link thanh toán PayOS',
           error: payosError.message || payosError.toString()
         });
@@ -141,6 +141,40 @@ exports.createOrder = async (req, res, next) => {
       paymentUrl: null
     });
 
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Khách vãng lai: Theo dõi đơn hàng bằng OrderCode
+exports.trackOrderByCode = async (req, res, next) => {
+  try {
+    const orderCode = req.params.code;
+    const order = await Order.findOne({ orderCode })
+      .populate('items.productId', 'name image price brand');
+      
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng với mã này' });
+    }
+    
+    res.json({ success: true, data: order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.lookupOrdersByPhone = async (req, res, next) => {
+  try {
+    const { phone } = req.params;
+    // Tìm các đơn hàng có số điện thoại này
+    // Chỉ trả về các trường cơ bản để bảo vệ thông tin
+    const orders = await Order.find({ customerPhone: phone })
+      .select('orderCode status paymentStatus paymentMethod totalAmount createdAt items')
+      .populate('items.productId', 'name image') // Populate ảnh và tên sp để show preview
+      .sort({ createdAt: -1 })
+      .limit(20);
+      
+    res.json({ success: true, data: orders });
   } catch (error) {
     next(error);
   }
@@ -193,7 +227,7 @@ exports.updateOrderStatus = async (req, res, next) => {
       const adminUser = await User.findById(req.userId);
       if (adminUser) actor = adminUser.name;
     }
-    
+
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
 
@@ -206,7 +240,7 @@ exports.updateOrderStatus = async (req, res, next) => {
         completed: 'Giao hàng thành công',
         cancelled: 'Hủy đơn hàng'
       };
-      
+
       order.status = status;
       order.historyLog.push({
         action: actionLabels[status] || `Đổi trạng thái: ${status}`,
@@ -253,7 +287,7 @@ exports.confirmCODPayment = async (req, res, next) => {
     }
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
-    
+
     if (order.paymentStatus !== 'paid') {
       order.paymentStatus = 'paid';
       order.historyLog.push({
@@ -271,7 +305,7 @@ exports.confirmCODPayment = async (req, res, next) => {
       }
       await order.save();
     }
-    
+
     res.json({ success: true, message: 'Xác nhận thu tiền thành công', data: order });
   } catch (error) {
     next(error);

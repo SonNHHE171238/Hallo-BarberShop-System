@@ -5,6 +5,8 @@ const { authenticate, authorizeRoles, optionalAuthenticate } = require('../middl
 
 // Public/Guest route (Cho phép tạo đơn không cần đăng nhập)
 router.post('/', optionalAuthenticate, orderController.createOrder);
+router.get('/track/:code', orderController.trackOrderByCode);
+router.get('/lookup/:phone', orderController.lookupOrdersByPhone);
 
 // Customer routes
 router.get('/my-orders', authenticate, orderController.getMyOrders);

@@ -10,6 +10,7 @@ import Footer from "@/components/layout/Footer";
 import { bookingService } from "@/services/booking.service";
 import toast from "react-hot-toast";
 import BookingHistoryFilter from "@/components/customer/BookingHistoryFilter";
+import BookingHistoryCard from "@/components/customer/BookingHistoryCard";
 
 export default function CustomerHistoryPage() {
   const router = useRouter();
@@ -191,88 +192,15 @@ export default function CustomerHistoryPage() {
               <p className="text-on-surface-variant font-body-lg">Không tìm thấy lịch hẹn nào phù hợp.</p>
             </div>
           ) : (
-            filteredBookings.map((booking) => {
-              const isPending = booking.status === "pending" || booking.status === "confirmed";
-              const isCompleted = booking.status === "completed";
-              const isCancelled = booking.status === "cancelled" || booking.status === "no_show" || booking.status === "rejected";
-
-              // Services
-              const serviceName = booking.serviceId?.name || (booking.services && booking.services.length > 0 ? booking.services.map(s => s.name).join(", ") : "N/A");
-              const price = booking.serviceId?.price || booking.totalPrice || 0;
-              const barberName = booking.barberId?.userId?.name || "Khách Vãng Lai";
-
-              // Format Date & Time
-              const dateObj = new Date(booking.bookingDate);
-              const dateStr = dateObj.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric' });
-              const timeStr = booking.timeSlot;
-
-              return (
-                <div
-                  key={booking._id}
-                  className={`bg-surface-container border border-outline-gold hover:border-primary hover:-translate-y-1 p-6 md:p-8 rounded-2xl flex flex-col md:flex-row items-center gap-8 relative overflow-hidden transition-all duration-300 ease-out ${isCancelled ? 'opacity-75 grayscale' : ''}`}
-                >
-                  <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 w-full">
-                    <div>
-                      <p className="font-label-md text-label-md text-outline uppercase mb-1">Dịch vụ</p>
-                      <h3 className="font-headline-sm text-headline-sm text-primary">{serviceName}</h3>
-                    </div>
-                    <div>
-                      <p className="font-label-md text-label-md text-outline uppercase mb-1">Barber</p>
-                      <p className="font-body-lg text-body-lg text-on-surface">{barberName}</p>
-                    </div>
-                    <div>
-                      <p className="font-label-md text-label-md text-outline uppercase mb-1">Thời gian</p>
-                      <p className="font-body-lg text-body-lg text-on-surface">{timeStr}<br />{dateStr}</p>
-                    </div>
-                    <div>
-                      <p className="font-label-md text-label-md text-outline uppercase mb-1">Giá tiền</p>
-                      <p className="font-headline-sm text-headline-sm text-on-surface">{price.toLocaleString()}đ</p>
-                      <div className="mt-2">
-                        <StatusBadge status={booking.status} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3 w-full md:w-auto shrink-0">
-                    {isPending && (
-                      <>
-                        <button className="w-full md:w-32 py-3 rounded-lg border border-primary text-primary font-bold text-label-md hover:bg-primary/10 transition-colors uppercase tracking-widest">Chi tiết</button>
-                        <button
-                          onClick={() => handleCancelBooking(booking._id)}
-                          className="w-full md:w-32 py-3 rounded-lg border border-error/50 text-error font-bold text-label-md hover:bg-error/10 transition-colors uppercase tracking-widest"
-                        >
-                          Huỷ Lịch
-                        </button>
-                      </>
-                    )}
-                    {isCompleted && (
-                      <>
-                        <button
-                          onClick={handleRebook}
-                          className="w-full md:w-32 py-3 rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 active:scale-95 transition-all uppercase tracking-widest"
-                        >
-                          Đặt Lại
-                        </button>
-                        <button
-                          onClick={handleReview}
-                          className="w-full md:w-32 py-3 rounded-lg border border-outline-gold text-on-surface-variant font-bold text-label-md hover:bg-surface-container-high transition-colors uppercase tracking-widest"
-                        >
-                          Review
-                        </button>
-                      </>
-                    )}
-                    {isCancelled && (
-                      <button
-                        onClick={handleRebook}
-                        className="w-full md:w-32 py-3 rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 active:scale-95 transition-all uppercase tracking-widest"
-                      >
-                        Đặt Lại
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+            filteredBookings.map((booking) => (
+              <BookingHistoryCard 
+                key={booking._id} 
+                booking={booking}
+                onCancel={handleCancelBooking}
+                onRebook={handleRebook}
+                onReview={handleReview}
+              />
+            ))
           )}
         </div>
 

@@ -1673,3 +1673,34 @@ exports.createWalkInBooking = async (req, res) => {
   }
 };
 
+exports.lookupBookingsByPhone = async (req, res, next) => {
+  try {
+    const { phone } = req.params;
+    const User = require('../models/user.model');
+    const Booking = require('../models/booking.model');
+    
+    // Tìm các user có sđt này
+    const users = await User.find({ phone });
+    const userIds = users.map(u => u._id);
+
+    // Tìm booking qua sđt nhập trực tiếp hoặc qua user id
+    const bookings = await Booking.find({
+      $or: [
+        { customerPhone: phone },
+        { customerId: { $in: userIds } }
+      ]
+    })
+      .select('bookingDate durationMinutes status totalPrice services barberId')
+      .populate('services', 'name')
+      .populate({
+        path: 'barberId',
+        populate: { path: 'userId', select: 'name' }
+      })
+      .sort({ bookingDate: -1 })
+      .limit(20);
+
+    res.json({ success: true, data: bookings });
+  } catch (error) {
+    next(error);
+  }
+};

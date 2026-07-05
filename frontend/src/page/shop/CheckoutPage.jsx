@@ -115,7 +115,6 @@ export default function CheckoutPage() {
         customerPhone: formData.phone,
         shippingAddress: formData.address,
         paymentMethod: formData.paymentMethod === 'bank_transfer' ? 'payos' : 'cod',
-        paymentMethod: formData.paymentMethod,
         voucherCode: appliedVoucher,
         discountAmount: discountAmount,
         returnUrl: "http://localhost:3000/shop/checkout/success",
@@ -124,7 +123,7 @@ export default function CheckoutPage() {
 
       if (res.data.success) {
         const orderData = res.data.data;
-        
+
         if (formData.paymentMethod === 'payos') {
           if (res.data.qrCode) {
             setCurrentOrder(orderData);
@@ -196,7 +195,7 @@ export default function CheckoutPage() {
 
       <main className="pt-32 pb-section-padding px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto w-full flex-grow">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
-          
+
           {/* Left Column: Shipping & Payment */}
           <div className="lg:col-span-7 space-y-gutter">
             {/* Thông tin giao hàng */}
@@ -271,7 +270,7 @@ export default function CheckoutPage() {
               <div className="border-b border-outline-variant pb-4">
                 <h2 className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide">Đơn hàng của bạn</h2>
               </div>
-              
+
               {/* Products List */}
               <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {cartItems.map((item) => (
@@ -295,13 +294,13 @@ export default function CheckoutPage() {
 
               {/* Totals */}
               <div className="space-y-3 pt-6 border-t border-outline-variant">
-                
+
                 {/* Voucher input */}
                 <div className="pb-4 mb-4 border-b border-outline-variant">
                   <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      placeholder="Mã giảm giá" 
+                    <input
+                      type="text"
+                      placeholder="Mã giảm giá"
                       value={voucherCodeInput}
                       onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
                       disabled={appliedVoucher || applyingVoucher}
@@ -338,7 +337,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* CTA */}
-              <button 
+              <button
                 onClick={handleCheckout}
                 disabled={cartItems.length === 0}
                 className="w-full bg-primary text-on-primary py-5 rounded-lg font-headline-sm uppercase tracking-widest hover:bg-primary-fixed-dim active:scale-95 transition-all shadow-lg shadow-primary/10 disabled:opacity-50"
@@ -361,15 +360,15 @@ export default function CheckoutPage() {
       {showQR && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
           <div className="bg-surface-container border border-outline-variant rounded-xl p-8 max-w-md w-full shadow-2xl relative">
-            <button 
+            <button
               onClick={() => setShowQR(false)}
               className="absolute top-4 right-4 text-on-surface-variant hover:text-primary"
             >
               <span className="material-symbols-outlined">close</span>
             </button>
-            
+
             <h3 className="font-headline-md text-primary text-center mb-6 uppercase tracking-widest">Thanh Toán Đơn Hàng</h3>
-            
+
             <div className="flex justify-center mb-6 bg-white p-4 rounded-xl">
               <QRCodeSVG value={qrData} size={250} />
             </div>
