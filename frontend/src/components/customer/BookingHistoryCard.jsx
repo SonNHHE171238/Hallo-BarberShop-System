@@ -80,12 +80,18 @@ export default function BookingHistoryCard({
                 </button>
               )}
               {onReview && (
-                <button
-                  onClick={onReview}
-                  className="w-full md:w-32 py-3 rounded-lg border border-outline-gold text-on-surface-variant font-bold text-label-md hover:bg-surface-container-high transition-colors uppercase tracking-widest"
-                >
-                  Review
-                </button>
+                booking.isReviewed ? (
+                  <div className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-outline text-on-surface-variant font-bold text-label-md cursor-not-allowed uppercase tracking-widest opacity-70 bg-surface-container">
+                    Đã Đánh Giá
+                  </div>
+                ) : (
+                  <button
+                    onClick={onReview}
+                    className="w-full md:w-32 py-3 rounded-lg border border-outline-gold text-on-surface-variant font-bold text-label-md hover:bg-surface-container-high transition-colors uppercase tracking-widest"
+                  >
+                    Review
+                  </button>
+                )
               )}
             </>
           )}
@@ -99,12 +105,18 @@ export default function BookingHistoryCard({
           )}
           
           {hideActions && isGuest && isCompleted && (
-            <Link
-              href={guestPhone ? `/review?phone=${guestPhone}` : "/review"}
-              className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-primary text-primary font-bold text-label-md hover:bg-primary/10 transition-colors uppercase tracking-widest"
-            >
-              Đánh giá
-            </Link>
+            booking.isReviewed ? (
+              <div className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-outline text-on-surface-variant font-bold text-label-md cursor-not-allowed uppercase tracking-widest opacity-70 bg-surface-container">
+                Đã Đánh Giá
+              </div>
+            ) : (
+              <Link
+                href={guestPhone ? `/review?phone=${guestPhone}` : "/review"}
+                className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-primary text-primary font-bold text-label-md hover:bg-primary/10 transition-colors uppercase tracking-widest"
+              >
+                Đánh giá
+              </Link>
+            )
           )}
         </div>
       )}

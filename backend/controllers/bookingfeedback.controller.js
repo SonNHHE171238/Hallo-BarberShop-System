@@ -66,7 +66,7 @@ exports.lookupByPhone = async (req, res) => {
     // Lấy thông tin Barber và Service
     const barberUser = await User.findById(targetBooking.barberId.userId);
     const barberName = barberUser ? barberUser.name : "Thợ cắt";
-    const barberImage = barberUser ? barberUser.avatar : "https://via.placeholder.com/150";
+    const barberImage = barberUser ? barberUser.avatarUrl : "https://via.placeholder.com/150";
 
     const serviceName = targetBooking.services && targetBooking.services.length > 0 
       ? targetBooking.services[0].name 
