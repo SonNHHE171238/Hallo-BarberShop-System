@@ -128,6 +128,25 @@ exports.createFeedback = async (req, res) => {
       rating
     });
 
+    // Cập nhật lại số sao trung bình cho Barber
+    const mongoose = require("mongoose");
+    const stats = await FeedbackBarber.aggregate([
+      { $match: { barberId: new mongoose.Types.ObjectId(booking.barberId) } },
+      { $group: {
+          _id: "$barberId",
+          avgRating: { $avg: "$rating" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    if (stats.length > 0) {
+      await Barber.findByIdAndUpdate(booking.barberId, {
+        averageRating: Math.round(stats[0].avgRating * 10) / 10,
+        ratingCount: stats[0].count
+      });
+    }
+
     // 3. Xử lý cộng điểm Loyalty nếu là Customer
     let pointsEarned = 0;
     let totalPoints = 0;
