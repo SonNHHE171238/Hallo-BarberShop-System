@@ -74,5 +74,16 @@ export const authService = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  uploadAvatar: async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    // fetchWithAuth sẽ tự động gửi cookie và không set Content-Type (do nhận diện FormData)
+    return fetchWithAuth('/auth/avatar', {
+      method: 'POST',
+      body: formData
+    });
   }
 };

@@ -39,7 +39,7 @@ export default function AdminServicesPage() {
         search: opts.search !== undefined ? opts.search : search,
         category: opts.category !== undefined ? opts.category : (categoryFilter === 'all' ? '' : categoryFilter),
         page: opts.page || page,
-        limit: 5,
+        limit: 9,
       };
       const response = await serviceService.getAllServices(params);
       setServices(response.services || []);
@@ -171,18 +171,18 @@ export default function AdminServicesPage() {
 
   return (
     <div className="max-w-container-max mx-auto px-6 md:px-margin-desktop py-4 w-full h-[calc(100vh-80px)] flex flex-col overflow-hidden">
-      
+
 
 
       <div className="bg-surface-container-highest/60 backdrop-blur-md rounded-lg overflow-hidden border border-outline-variant flex-1 flex flex-col min-h-0">
-        
+
         {/* Filter Bar Integrated */}
         <div className="p-4 border-b border-outline-variant flex flex-wrap items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-on-surface-variant text-body-md hidden sm:inline whitespace-nowrap">Danh mục:</span>
-            <select 
-              value={categoryFilter} 
-              onChange={(e) => setCategoryFilter(e.target.value)} 
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
               className="bg-surface-container border border-outline-variant px-3 py-2 rounded focus:ring-1 focus:ring-primary text-body-md outline-none"
             >
               <option value="all">Tất cả</option>
@@ -194,11 +194,11 @@ export default function AdminServicesPage() {
               <option value="treatment">Chăm sóc</option>
             </select>
           </div>
-          
+
           <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end relative">
             <div className="relative">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Tìm kiếm..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -206,8 +206,8 @@ export default function AdminServicesPage() {
               />
               <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline-variant text-[18px] pointer-events-none">search</span>
             </div>
-            
-            <button 
+
+            <button
               onClick={openForm}
               className="flex items-center gap-1 bg-primary text-on-primary px-4 py-2 rounded hover:brightness-110 active:scale-95 transition-all font-bold uppercase tracking-wider text-[13px]"
             >

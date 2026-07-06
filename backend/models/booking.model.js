@@ -66,11 +66,26 @@ const bookingSchema = new Schema(
       type: String,
       trim: true,
     },
+    voucherCode: {
+      type: String,
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    voucherLockId: {
+      type: Schema.Types.ObjectId,
+      ref: 'VoucherLock',
+      default: null,
+    },
     status: {
       type: String,
       enum: [
         "pending",
         "confirmed",
+        "in_progress",
         "cancelled",
         "completed",
         "no_show",
@@ -154,7 +169,7 @@ bookingSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      status: { $in: ["pending", "confirmed", "completed"] },
+      status: { $in: ["pending", "confirmed", "in_progress", "completed"] },
     },
   }
 );

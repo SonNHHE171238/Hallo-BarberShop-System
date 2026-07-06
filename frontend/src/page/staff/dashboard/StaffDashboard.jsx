@@ -151,83 +151,23 @@ export default function StaffDashboard() {
   }
 
   return (
-    <div className="w-full">
-      <div className="p-12 space-y-12 max-w-[1400px] mx-auto animate-fade-in">
-        {/* Welcome Header & Quick Actions */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-          <div>
-            <h2 className="font-display-lg text-4xl text-on-surface mb-2">Trang Quản Lý Tại Quầy</h2>
-            <p className="text-on-surface-variant font-body-md flex items-center">
-              <span className="material-symbols-outlined mr-2 text-sm">calendar_today</span>
-              Hôm nay là {todayStr}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/staff/pos" className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-lg font-body-md text-sm font-bold hover:brightness-110 active:scale-95 transition-all">
-              <span className="material-symbols-outlined text-lg">point_of_sale</span>
-              Mở Hệ Thống POS
-            </Link>
-          </div>
-        </div>
-
-        {/* Metrics Row - Changed to 3 columns, removed Doanh thu dự kiến */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36 border-b-2 border-b-primary">
-            <div className="flex justify-between items-start">
-              <span className="text-on-surface-variant font-medium text-sm">Lịch hẹn hôm nay</span>
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <span className="material-symbols-outlined text-primary">event_available</span>
-              </div>
-            </div>
-            <div className="flex items-end justify-between">
-              <span className="text-3xl font-bold font-headline-md text-primary">{metrics.totalBookingsToday}</span>
-              <span className="text-xs text-on-surface-variant">Lượt khách</span>
-            </div>
-          </div>
-          <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36 border-b-2 border-b-secondary">
-            <div className="flex justify-between items-start">
-              <span className="text-on-surface-variant font-medium text-sm">Thợ đang hoạt động</span>
-              <div className="p-2 bg-secondary/10 rounded-lg">
-                <span className="material-symbols-outlined text-secondary">content_cut</span>
-              </div>
-            </div>
-            <div className="flex items-end justify-between">
-              <span className="text-3xl font-bold font-headline-md text-on-surface">
-                {metrics.activeBarbers}
-                <span className="text-on-surface-variant font-normal text-xl">/{metrics.totalBarbers}</span>
-              </span>
-              <span className="text-xs text-on-surface-variant">Sẵn sàng</span>
-            </div>
-          </div>
-          <div className="glass-card p-6 rounded-xl flex flex-col justify-between h-36 border-b-2 border-b-error">
-            <div className="flex justify-between items-start">
-              <span className="text-on-surface-variant font-medium text-sm">Khách chờ (Đã có mặt)</span>
-              <div className="p-2 bg-error/10 rounded-lg">
-                <span className="material-symbols-outlined text-error">hourglass_empty</span>
-              </div>
-            </div>
-            <div className="flex items-end justify-between">
-              <span className="text-3xl font-bold font-headline-md text-error">{metrics.waitingCustomers}</span>
-              <span className="text-xs text-on-surface-variant">Đang chờ phục vụ</span>
-            </div>
-          </div>
-        </div>
-
+    <div className="w-full h-[calc(100vh-80px)] overflow-hidden">
+      <div className="p-6 md:p-12 h-full max-w-[1400px] mx-auto animate-fade-in flex flex-col">
         {/* Main Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Appointments List (Today & Tomorrow) */}
-          <div className="lg:col-span-2 space-y-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 min-h-0">
+          {/* Left Column: Appointments List (Today) */}
+          <div className="lg:col-span-2 flex flex-col min-h-0">
             
             {/* Lịch hẹn hôm nay */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className="flex items-center justify-between mb-6 shrink-0">
                 <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
                   <span className="material-symbols-outlined mr-3 text-primary">today</span>
                   Lịch hẹn hôm nay
                 </h3>
               </div>
-              <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
+              <div className="glass-card rounded-2xl shadow-sm flex-1 flex flex-col min-h-0">
+                <div className="overflow-x-auto overflow-y-auto custom-scrollbar flex-1">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-outline-variant bg-surface-container-high">
@@ -288,85 +228,16 @@ export default function StaffDashboard() {
               </div>
             </div>
 
-            {/* Lịch hẹn ngày mai */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
-                  <span className="material-symbols-outlined mr-3 text-secondary">event_upcoming</span>
-                  Lịch hẹn ngày mai
-                </h3>
-              </div>
-              <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-outline-variant bg-surface-container-high">
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Thời gian</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Khách hàng</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Dịch vụ</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Barber</th>
-                        <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Trạng thái</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant/30">
-                      {tomorrowBookings.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="px-6 py-10 text-center text-on-surface-variant">Không có lịch hẹn nào ngày mai</td>
-                        </tr>
-                      ) : (
-                        tomorrowBookings.map((booking) => (
-                          <tr key={booking._id} className="hover:bg-primary/5 transition-colors group opacity-80 hover:opacity-100">
-                            <td className="px-6 py-5 font-label-md text-primary font-bold">{booking.time}</td>
-                            <td className="px-6 py-5">
-                              <p className="font-bold text-sm">{booking.customerName}</p>
-                              <p className="text-[10px] text-on-surface-variant">{booking.customerPhone}</p>
-                            </td>
-                            <td className="px-6 py-5 text-sm text-on-surface-variant italic">{booking.serviceName}</td>
-                            <td className="px-6 py-5 text-sm font-medium">{booking.barberName}</td>
-                            <td className="px-6 py-5">
-                              <button
-                                onClick={() => {
-                                  if (booking.status === 'completed' || booking.status === 'no_show' || booking.status === 'cancelled' || booking.status === 'rejected') {
-                                    toast('Lịch đã đóng, không thể thay đổi trạng thái');
-                                    return;
-                                  }
-                                  setCheckInModal({ isOpen: true, booking: booking, isPayment: false });
-                                }}
-                                className={`px-3 py-1 text-[10px] font-bold rounded uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 ${
-                                  booking.status === 'completed'
-                                    ? 'bg-green-500/20 text-green-500 hover:bg-surface-variant hover:text-on-surface-variant'
-                                    : booking.status === 'confirmed'
-                                    ? 'bg-green-800/20 text-green-700 border border-green-700/50 hover:bg-green-800/30'
-                                    : booking.status === 'no_show' || booking.status === 'cancelled' || booking.status === 'rejected'
-                                    ? 'bg-error/20 text-error border border-error/50 hover:bg-error/30'
-                                    : 'bg-surface-variant text-on-surface-variant border border-outline-variant hover:border-primary hover:text-primary'
-                                }`}
-                                title="Đổi trạng thái"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">
-                                  {booking.status === 'completed' ? 'check_circle' : booking.status === 'confirmed' ? 'how_to_reg' : booking.status === 'no_show' ? 'block' : booking.status === 'cancelled' || booking.status === 'rejected' ? 'cancel' : 'pending_actions'}
-                                </span>
-                                {booking.status === 'completed' ? 'Đã xong' : booking.status === 'confirmed' ? 'Khách đã đến' : booking.status === 'no_show' ? 'Không đến' : booking.status === 'cancelled' || booking.status === 'rejected' ? 'Đã Hủy' : 'Chưa tới'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-            
+
           </div>
 
           {/* Right Column: Barber Status */}
-          <div className="space-y-6">
-            <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center">
+          <div className="flex flex-col min-h-0">
+            <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center mb-6 shrink-0">
               <span className="material-symbols-outlined mr-3 text-primary">person_search</span>
               Trạng thái barber hôm nay
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1 min-h-0">
               {barbersStatus.length === 0 ? (
                 <div className="glass-card p-6 text-center text-on-surface-variant text-sm rounded-xl">Không có thợ nào hoạt động</div>
               ) : (

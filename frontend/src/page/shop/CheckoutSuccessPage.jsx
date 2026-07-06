@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
+  const [relatedProducts, setRelatedProducts] = useState([]);
+
   // Nếu có truyền param từ trang checkout sang, ta sẽ ưu tiên hiển thị
   const orderCode = searchParams.get('orderCode') || "HB-98231-VN";
   const totalAmount = searchParams.get('total') 
@@ -27,6 +31,21 @@ export default function CheckoutSuccessPage() {
         progressBar.style.width = '75%';
       }, 500);
     }
+
+    // Lấy danh sách sản phẩm gợi ý
+    const fetchRandomProducts = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/products?limit=20");
+        const data = await res.json();
+        if (data.success && data.data.products) {
+          const shuffled = data.data.products.sort(() => 0.5 - Math.random());
+          setRelatedProducts(shuffled.slice(0, 10));
+        }
+      } catch (err) {
+        console.error("Lỗi lấy sản phẩm gợi ý", err);
+      }
+    };
+    fetchRandomProducts();
   }, []);
 
   return (
@@ -51,9 +70,7 @@ export default function CheckoutSuccessPage() {
       `}} />
 
       {/* Top Navigation */}
-      <header className="fixed top-0 w-full z-50 bg-surface-obsidian/80 backdrop-blur-md border-b border-outline-variant h-20 flex items-center justify-center px-margin-mobile md:px-margin-desktop">
-        <h1 className="font-headline-md text-headline-md font-bold text-primary tracking-tight">HALLO BARBER</h1>
-      </header>
+      <Navbar />
 
       <main className="flex-grow pt-32 pb-section-padding flex flex-col items-center px-margin-mobile">
         {/* Hero Success Section */}
@@ -117,68 +134,50 @@ export default function CheckoutSuccessPage() {
               <Link href="/shop" className="bg-primary text-on-primary font-headline-sm text-headline-sm px-12 py-4 rounded-lg hover:brightness-110 active:scale-95 transition-all duration-300 uppercase tracking-widest shadow-lg shadow-primary/20 text-center">
                 TIẾP TỤC MUA SẮM
               </Link>
-              <button className="border-2 border-primary text-primary font-headline-sm text-headline-sm px-12 py-4 rounded-lg hover:bg-primary/5 active:scale-95 transition-all duration-300 uppercase tracking-widest">
+              <Link href={`/shop/orders/${orderCode}`} className="border-2 border-primary text-primary font-headline-sm text-headline-sm px-12 py-4 rounded-lg hover:bg-primary/5 active:scale-95 transition-all duration-300 uppercase tracking-widest text-center">
                 THEO DÕI ĐƠN HÀNG
-              </button>
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Atmospheric Image Section */}
-        <section className="mt-24 w-full max-w-container-max">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter h-64 md:h-96">
-            <div className="relative rounded-lg overflow-hidden group">
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-700 z-10"></div>
-              <div className="w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000 scale-105 group-hover:scale-100 bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCmw9K7ZLPYx7OlsEFY86cp6LeRzxAoHTddGkIor7-PQhj8ETTiYq8gBnlO8epyeO4qmwvAhdA3tbPCFVDKkwMdivwh27m2_KJr03eTcgonQ1qllA468DhiYKEjQHW0cU2XVxOPoFFKxwzTY4FWGSJpgsh6WrTJRSvV-h1skyN6utr-QLIg4pdVE91_6i6FOgAlQY1pParY83GF2sNJ1gN7FV_eenhbv7Qd8eSRsVc_8dCRWb1a4d5O4lrEZrjo5eXWYBXcasZFTTAE')" }}>
+        {/* Related Products Section */}
+        <section className="mt-24 w-full max-w-container-max overflow-hidden">
+          <div className="flex justify-between items-end mb-8">
+            <h3 className="font-headline-md text-2xl text-on-surface uppercase tracking-widest">Sản phẩm gợi ý cho bạn</h3>
+            <Link href="/shop" className="text-primary font-label-md text-[12px] uppercase tracking-widest hover:underline whitespace-nowrap ml-4">
+              Xem tất cả
+            </Link>
+          </div>
+          <div className="flex gap-6 overflow-x-auto custom-scrollbar pb-8 snap-x">
+            {relatedProducts.length > 0 ? relatedProducts.map(product => (
+              <div key={product._id} className="min-w-[260px] max-w-[260px] snap-start flex flex-col bg-surface-container-low border border-outline-variant/30 rounded-lg overflow-hidden group hover:border-outline-variant transition-all duration-500 shrink-0">
+                <Link href={`/shop/${product._id}`} className="block relative aspect-square overflow-hidden bg-background flex items-center justify-center p-4">
+                  <img 
+                    alt={product.name} 
+                    className="w-full h-full object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out" 
+                    src={product.image || "/placeholder.png"} 
+                  />
+                </Link>
+                <div className="p-5 flex flex-col flex-grow">
+                  <span className="font-label-md text-[10px] text-primary uppercase tracking-[0.2em] mb-2">{product.brand}</span>
+                  <Link href={`/shop/${product._id}`}>
+                    <h4 className="font-body-lg text-base font-bold mb-2 text-white group-hover:text-primary transition-colors line-clamp-2">{product.name}</h4>
+                  </Link>
+                  <p className="font-label-md text-base font-semibold text-on-surface-variant">
+                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                  </p>
+                </div>
               </div>
-              <div className="absolute bottom-8 left-8 z-20">
-                <p className="font-label-md text-label-md text-primary tracking-widest uppercase">Precision & Heritage</p>
-              </div>
-            </div>
-            <div className="relative rounded-lg overflow-hidden group">
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-700 z-10"></div>
-              <div className="w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000 scale-105 group-hover:scale-100 bg-cover bg-center" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuA4oOWERV-eMjDW0Kx_sUwb5PKW9tUySucmrc6Bok329cEz6x3jccuaR1wgQc_wYW97VT6vchmtsLQOF9FmYpqAkzPSVYw2_MXGAddmQHm9BSE8Y8Ikf3J6H-GLj6h8G8IB06ZBHOe4OkC8Q2Q_hnn22roW23EuNDiUW5cYav2X9W7av-F8TGgL36p8XrQuBDwCTnwB7AahkutdTvd0CD76VnnRuY20XdZmA13slcTxzoqsXB4RLYxIAOf6_D-eIxdPujeml3jjyuNl')" }}>
-              </div>
-              <div className="absolute bottom-8 left-8 z-20">
-                <p className="font-label-md text-label-md text-primary tracking-widest uppercase">Premium Grooming</p>
-              </div>
-            </div>
+            )) : (
+              <div className="w-full text-center text-outline py-8">Đang tải sản phẩm gợi ý...</div>
+            )}
           </div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-surface-container-lowest border-t border-outline-variant mt-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter px-margin-desktop py-section-padding max-w-container-max mx-auto">
-          <div className="flex flex-col gap-4">
-            <span className="font-headline-sm text-headline-sm text-primary">HALLO BARBER</span>
-            <p className="font-body-md text-body-md text-on-surface-variant max-w-xs">
-              Di sản của sự chính xác. Chúng tôi mang đến trải nghiệm cắt tóc và chăm sóc diện mạo đẳng cấp nhất cho quý ông hiện đại.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4">
-            <span className="font-label-md text-label-md text-primary uppercase">Quick Links</span>
-            <div className="flex flex-col gap-2">
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Operating Hours</a>
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Contact Us</a>
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Privacy Policy</a>
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Terms of Service</a>
-              <a className="text-on-surface-variant hover:text-gold-dim transition-colors" href="#">Locations</a>
-            </div>
-          </div>
-          <div className="flex flex-col gap-4">
-            <span className="font-label-md text-label-md text-primary uppercase">Connect</span>
-            <div className="flex gap-4">
-              <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">brand_awareness</span>
-              <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">public</span>
-              <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">mail</span>
-            </div>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-4">
-              © 2024 HALLO BARBER. ALL RIGHTS RESERVED.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -12,29 +12,46 @@ export default function StaffBookingDetail() {
   
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusConfirmModal, setStatusConfirmModal] = useState({ isOpen: false, status: null, title: '', message: '', icon: '', color: '' });
 
-  useEffect(() => {
+  const fetchBooking = async () => {
     if (!id || id === 'undefined') {
       setIsLoading(false);
       return;
     }
-    const fetchBooking = async () => {
-      try {
-        const res = await staffDashboardService.getBookingById(id);
-        if (res && res._id) {
-          setBooking(res);
-        }
-      } catch (error) {
-        toast.error("Không thể lấy thông tin lịch hẹn");
-      } finally {
-        setIsLoading(false);
+    try {
+      const res = await staffDashboardService.getBookingById(id);
+      if (res && res._id) {
+        setBooking(res);
       }
-    };
+    } catch (error) {
+      toast.error("Không thể lấy thông tin lịch hẹn");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchBooking();
   }, [id]);
 
   const handleCompleteService = () => {
     router.push(`/staff/payment?id=${id}`);
+  };
+
+  const handleStatusUpdate = async (status) => {
+    if (!booking) return;
+    try {
+      const payload = { status };
+      const res = await staffDashboardService.updateStatus(booking._id, payload);
+      if (res) {
+        toast.success('Đã cập nhật trạng thái');
+        fetchBooking();
+      }
+      setStatusConfirmModal({ isOpen: false, status: null, title: '', message: '', icon: '', color: '' });
+    } catch (error) {
+      toast.error(error.message || 'Lỗi cập nhật trạng thái');
+    }
   };
 
   if (isLoading) {
@@ -112,7 +129,9 @@ export default function StaffBookingDetail() {
           </div>
           <div className="flex flex-col">
             <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Giờ hẹn</span>
-            <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">{booking.time}</span>
+            <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">
+              {booking.date ? new Date(booking.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : (booking.time || 'N/A')}
+            </span>
           </div>
         </div>
       </header>
@@ -181,7 +200,7 @@ export default function StaffBookingDetail() {
                   <span className="material-symbols-outlined text-[20px] text-primary">receipt_long</span>
                   Danh Sách Dịch Vụ
                 </h2>
-                {!isCompleted && (
+                {booking.status === 'in_progress' && (
                   <button className="text-[11px] font-bold text-on-surface hover:text-primary uppercase tracking-wider flex items-center gap-1 transition-colors">
                     <span className="material-symbols-outlined text-[14px]">add</span>
                     Thêm dịch vụ
@@ -249,24 +268,192 @@ export default function StaffBookingDetail() {
         >
           Đóng
         </button>
-        {!isCompleted && remaining > 0 ? (
-          <button
-            onClick={handleCompleteService}
-            className="px-6 py-3 bg-primary text-on-primary font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.3)] hover:shadow-[0_0_25px_rgba(212,175,55,0.5)] hover:brightness-110 transition-all active:scale-95"
+
+        {booking.status === 'pending' && (
+          <button 
+            onClick={() => {
+              setStatusConfirmModal({
+                isOpen: true,
+                isCheckIn: true,
+                title: 'Check-in Khách Hàng',
+                message: 'Khách hàng đã có mặt tại cửa hàng chưa?',
+                icon: 'how_to_reg',
+                color: 'text-primary',
+                bg: 'bg-primary/10'
+              });
+            }}
+            className="px-6 py-3 bg-primary text-on-primary font-bold text-xs uppercase tracking-wider rounded-lg hover:brightness-110 transition-all active:scale-95 shadow-[0_0_15px_rgba(212,175,55,0.3)]"
           >
-            <span className="material-symbols-outlined text-[18px]">payments</span>
-            Thanh toán {remaining.toLocaleString('vi-VN')} đ
+            Check-in
           </button>
-        ) : (
+        )}
+
+        {booking.status === 'confirmed' && (
+          <>
+            <button 
+              onClick={() => {
+                setStatusConfirmModal({
+                  isOpen: true,
+                  status: 'cancelled',
+                  title: 'Hủy Lịch Hẹn',
+                  message: 'Bạn có chắc chắn muốn HỦY lịch hẹn này?',
+                  icon: 'cancel',
+                  color: 'text-error',
+                  bg: 'bg-error/10'
+                });
+              }}
+              className="px-6 py-3 bg-surface-danger text-error font-bold text-xs uppercase tracking-wider border border-error/50 rounded-lg hover:bg-error/10 transition-all active:scale-95"
+            >
+              Hủy Lịch
+            </button>
+            <button 
+              onClick={() => {
+                setStatusConfirmModal({
+                  isOpen: true,
+                  status: 'in_progress',
+                  title: 'Bắt Đầu Phục Vụ',
+                  message: 'Khách hàng đã lên ghế và bắt đầu cắt?',
+                  icon: 'content_cut',
+                  color: 'text-secondary',
+                  bg: 'bg-secondary/10'
+                });
+              }}
+              className="px-6 py-3 bg-secondary text-on-secondary font-bold text-xs uppercase tracking-wider rounded-lg hover:brightness-110 transition-all active:scale-95 shadow-md"
+            >
+              Lên Ghế Cắt
+            </button>
+          </>
+        )}
+
+        {booking.status === 'in_progress' && (
+          <>
+            <button 
+              onClick={() => {
+                setStatusConfirmModal({
+                  isOpen: true,
+                  status: 'cancelled',
+                  title: 'Hủy Ngang Dịch Vụ',
+                  message: 'Khách đã lên ghế nhưng bạn muốn hủy ngang lịch này?',
+                  icon: 'cancel',
+                  color: 'text-error',
+                  bg: 'bg-error/10'
+                });
+              }}
+              className="px-6 py-3 bg-surface-danger text-error font-bold text-xs uppercase tracking-wider border border-error/50 rounded-lg hover:bg-error/10 transition-all active:scale-95"
+            >
+              Hủy Ngang
+            </button>
+            {remaining > 0 ? (
+              <button
+                onClick={handleCompleteService}
+                className="px-6 py-3 bg-green-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 shadow-[0_0_15px_rgba(22,163,74,0.3)] hover:brightness-110 transition-all active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[18px]">payments</span>
+                Hoàn thành & Thu {remaining.toLocaleString('vi-VN')} đ
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setStatusConfirmModal({
+                    isOpen: true,
+                    status: 'completed',
+                    title: 'Hoàn Thành Dịch Vụ',
+                    message: 'Đơn hàng này đã thanh toán đủ. Xác nhận đóng đơn?',
+                    icon: 'check_circle',
+                    color: 'text-green-500',
+                    bg: 'bg-green-500/10'
+                  });
+                }}
+                className="px-6 py-3 bg-green-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 hover:brightness-110 transition-all active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                Xác Nhận Hoàn Thành
+              </button>
+            )}
+          </>
+        )}
+
+        {['completed', 'cancelled', 'no_show', 'rejected'].includes(booking.status) && (
           <button
             disabled
-            className="px-6 py-3 bg-success/20 border border-success/30 text-success font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 opacity-80 cursor-not-allowed"
+            className={`px-6 py-3 border font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 opacity-80 cursor-not-allowed ${
+              booking.status === 'completed' ? 'bg-success/20 border-success/30 text-success' : 'bg-surface-variant border-outline-variant text-on-surface-variant'
+            }`}
           >
-            <span className="material-symbols-outlined text-[18px]">check_circle</span>
-            {remaining === 0 && !isCompleted ? 'Chờ hoàn thành' : 'Đã hoàn thành'}
+            <span className="material-symbols-outlined text-[18px]">
+              {booking.status === 'completed' ? 'check_circle' : 'block'}
+            </span>
+            {booking.status === 'completed' ? 'Đã hoàn thành' : 'Đã đóng'}
           </button>
         )}
       </footer>
+
+      {/* Custom Status Confirm Modal */}
+      {statusConfirmModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="glass-panel w-full max-w-sm rounded-2xl border border-outline-variant/50 shadow-2xl bg-surface-container overflow-hidden">
+            <div className="p-6 text-center">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${statusConfirmModal.bg}`}>
+                <span className={`material-symbols-outlined text-3xl ${statusConfirmModal.color}`}>{statusConfirmModal.icon}</span>
+              </div>
+              <h3 className="font-headline-sm text-on-surface mb-2">{statusConfirmModal.title}</h3>
+              <p className="font-body-md text-on-surface-variant mb-6">
+                {statusConfirmModal.message}
+              </p>
+              
+              {statusConfirmModal.isCheckIn ? (
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => {
+                      handleStatusUpdate('no_show');
+                    }}
+                    className="flex-1 px-4 py-3 bg-error/10 hover:bg-error/20 border border-error/30 rounded text-error font-bold text-xs uppercase tracking-wider transition-colors"
+                  >
+                    Không Đến (No Show)
+                  </button>
+                  <button 
+                    onClick={() => {
+                      handleStatusUpdate('confirmed');
+                    }}
+                    className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-bold text-xs uppercase tracking-wider transition-colors shadow-sm"
+                  >
+                    Khách Đã Đến
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setStatusConfirmModal({ isOpen: false, status: null, title: '', message: '', icon: '', color: '' })}
+                    className="flex-1 px-4 py-2 bg-surface-container hover:bg-surface-container-highest border border-outline-variant rounded text-on-surface font-label-md transition-colors"
+                  >
+                    Đóng
+                  </button>
+                  <button 
+                    onClick={() => {
+                      handleStatusUpdate(statusConfirmModal.status);
+                    }}
+                    className={`flex-1 px-4 py-2 text-white rounded font-label-md transition-colors shadow-sm ${
+                      statusConfirmModal.status === 'cancelled' || statusConfirmModal.status === 'no_show' 
+                        ? 'bg-error hover:bg-error/90' 
+                        : 'bg-primary hover:brightness-110 text-on-primary'
+                    }`}
+                  >
+                    Xác nhận
+                  </button>
+                </div>
+              )}
+              {statusConfirmModal.isCheckIn && (
+                <button 
+                  onClick={() => setStatusConfirmModal({ isOpen: false, status: null, title: '', message: '', icon: '', color: '' })}
+                  className="mt-4 w-full py-2 text-on-surface-variant hover:text-on-surface font-label-md text-xs uppercase tracking-wider"
+                >
+                  Hủy bỏ
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

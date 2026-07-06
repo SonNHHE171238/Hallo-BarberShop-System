@@ -1,10 +1,48 @@
 import React from "react";
+import { voucherService } from "@/services/voucher.service";
 
-export default function BookingSummarySidebar({ selectedServices = [], selectedBarber, selectedDate, selectedTime, paymentMethod, setPaymentMethod, onConfirm, isLoading, isGuest }) {
+export default function BookingSummarySidebar({ 
+  selectedServices = [], selectedBarber, selectedDate, selectedTime, 
+  paymentMethod, setPaymentMethod, onConfirm, isLoading, isGuest,
+  voucherCodeInput, setVoucherCodeInput, appliedVoucher, setAppliedVoucher,
+  discountAmount, setDiscountAmount, voucherError, setVoucherError,
+  applyingVoucher, setApplyingVoucher
+}) {
   const isReady = selectedServices.length > 0 && selectedBarber && selectedDate && selectedTime;
   
-  const totalPrice = selectedServices.reduce((total, s) => total + (s.price || 0), 0);
+  const subTotal = selectedServices.reduce((total, s) => total + (s.price || 0), 0);
+  const totalPrice = Math.max(0, subTotal - discountAmount);
   const depositAmount = isGuest ? Math.round(totalPrice / 2) : totalPrice;
+
+  const handleApplyVoucher = async () => {
+    if (!voucherCodeInput.trim()) return;
+    setApplyingVoucher(true);
+    setVoucherError("");
+    try {
+      // In booking, customerPhone might not be known yet until guest modal, 
+      // but if user is logged in, token is sent. 
+      // If guest, usageLimitPerUser might be checked by phone later.
+      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal, null);
+      if (res.success) {
+        setAppliedVoucher(res.data.code);
+        setDiscountAmount(res.data.discountAmount);
+        setVoucherError("");
+      }
+    } catch (err) {
+      setVoucherError(err.message || "Mã giảm giá không hợp lệ");
+      setAppliedVoucher(null);
+      setDiscountAmount(0);
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
+  const removeVoucher = () => {
+    setAppliedVoucher(null);
+    setDiscountAmount(0);
+    setVoucherCodeInput("");
+    setVoucherError("");
+  };
 
   return (
     <aside className="lg:col-span-4">
@@ -110,7 +148,36 @@ export default function BookingSummarySidebar({ selectedServices = [], selectedB
               </div>
             </div>
 
+            {/* Voucher Section */}
+            <div className={`pt-4 border-t border-outline-variant/30 ${!isReady && 'opacity-50'}`}>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Mã giảm giá" 
+                  value={voucherCodeInput}
+                  onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                  disabled={!isReady || appliedVoucher || applyingVoucher}
+                  className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm uppercase focus:border-primary outline-none disabled:opacity-50"
+                />
+                {appliedVoucher ? (
+                  <button onClick={removeVoucher} disabled={!isReady} className="px-4 bg-error text-white font-bold rounded text-sm hover:bg-error/90 disabled:opacity-50">Hủy</button>
+                ) : (
+                  <button onClick={handleApplyVoucher} disabled={!isReady || applyingVoucher || !voucherCodeInput} className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary disabled:opacity-50">Áp dụng</button>
+                )}
+              </div>
+              {voucherError && <p className="text-error text-xs mt-1">{voucherError}</p>}
+              {appliedVoucher && <p className="text-success text-xs mt-1">Đã áp dụng mã {appliedVoucher}</p>}
+            </div>
+
             <div className="pt-6 border-t border-outline-variant">
+              {discountAmount > 0 && (
+                <div className="flex justify-between items-end mb-2">
+                  <span className="text-body-md font-bold text-on-surface-variant">Giảm giá</span>
+                  <span className="text-body-md font-bold text-success">
+                    -{discountAmount.toLocaleString('vi-VN')}đ
+                  </span>
+                </div>
+              )}
               {isGuest && paymentMethod === 'payos' ? (
                 <>
                   <div className="flex justify-between items-end mb-2">

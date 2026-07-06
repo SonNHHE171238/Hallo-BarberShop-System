@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -9,9 +9,9 @@ import axios from "axios";
 export default function ReviewSearchPage() {
   const router = useRouter();
   
-  // States
   const [searchState, setSearchState] = useState(true);
   const [phone, setPhone] = useState("");
+  const [isInitializing, setIsInitializing] = useState(true);
   
   // Mock Data for State 2
   const [bookingData, setBookingData] = useState(null);
@@ -20,15 +20,9 @@ export default function ReviewSearchPage() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!phone.trim()) {
-      alert("Vui lòng nhập số điện thoại");
-      return;
-    }
-
+  const performSearch = async (phoneNumber) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/bookingfeedbacks/lookup/${phone}`);
+      const res = await axios.get(`http://localhost:5000/api/bookingfeedbacks/lookup/${phoneNumber}`);
       if (res.data.success) {
         setBookingData(res.data.data);
         setSearchState(false);
@@ -38,12 +32,30 @@ export default function ReviewSearchPage() {
     }
   };
 
-  const handleBackToSearch = () => {
-    setSearchState(true);
-    setBookingData(null);
-    setPhone("");
-    setRating(0);
-    setComment("");
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!phone.trim()) {
+      alert("Vui lòng nhập số điện thoại");
+      return;
+    }
+    await performSearch(phone);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const phoneParam = params.get("phone");
+    if (phoneParam) {
+      setPhone(phoneParam);
+      performSearch(phoneParam).finally(() => setIsInitializing(false));
+    } else {
+      setIsInitializing(false);
+    }
+  }, []);
+
+  const getImageUrl = (url) => {
+    if (!url) return "https://ui-avatars.com/api/?name=Barber&background=random";
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    return `http://localhost:5000${url}`;
   };
 
   const handleSubmitReview = async () => {
@@ -66,6 +78,18 @@ export default function ReviewSearchPage() {
       alert(error.response?.data?.message || "Có lỗi xảy ra khi gửi đánh giá.");
     }
   };
+
+  if (isInitializing) {
+    return (
+      <div className="bg-background min-h-screen flex flex-col font-body-md selection:bg-primary selection:text-on-primary">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center pt-[120px] pb-24">
+          <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background min-h-screen text-on-surface flex flex-col font-body-md selection:bg-primary selection:text-on-primary">
@@ -132,8 +156,13 @@ export default function ReviewSearchPage() {
                   </h3>
                   
                   <div className="flex items-center gap-6 mb-8">
-                    <div className="w-20 h-20 rounded-full border-2 border-primary/30 overflow-hidden flex-shrink-0">
-                      <img src={bookingData.barberImage} alt="Barber" className="w-full h-full object-cover" />
+                    <div className="w-20 h-20 rounded-full border-2 border-primary/30 overflow-hidden flex-shrink-0 bg-surface-variant">
+                      <img 
+                        src={getImageUrl(bookingData.barberImage)} 
+                        alt="Barber" 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=Barber&background=random"; }}
+                      />
                     </div>
                     <div>
                       <p className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-1">Barber</p>
@@ -208,16 +237,6 @@ export default function ReviewSearchPage() {
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Back to search */}
-              <div className="text-center mt-8">
-                <button 
-                  onClick={handleBackToSearch}
-                  className="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md underline decoration-outline-variant underline-offset-4 hover:decoration-primary"
-                >
-                  Tra cứu số điện thoại khác
-                </button>
               </div>
             </div>
           )}

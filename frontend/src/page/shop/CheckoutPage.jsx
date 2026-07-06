@@ -7,6 +7,7 @@ import axios from "axios";
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from "@/context/AuthContext";
 import Footer from "@/components/layout/Footer";
+import { voucherService } from "@/services/voucher.service";
 
 export default function CheckoutPage() {
   const { user } = useAuth();
@@ -22,6 +23,13 @@ export default function CheckoutPage() {
     address: "",
     paymentMethod: "bank_transfer"
   });
+
+  // Voucher State
+  const [voucherCodeInput, setVoucherCodeInput] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [voucherError, setVoucherError] = useState("");
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
 
   // QR Modal State
   const [showQR, setShowQR] = useState(false);
@@ -53,8 +61,34 @@ export default function CheckoutPage() {
 
   const subTotal = cartItems.reduce((total, item) => total + (item.productId.price * item.quantity), 0);
   const shippingFee = subTotal > 2000000 ? 0 : 35000;
-  const discount = 0; 
-  const totalAmount = subTotal + shippingFee - discount;
+  const totalAmount = Math.max(0, subTotal + shippingFee - discountAmount);
+
+  const handleApplyVoucher = async () => {
+    if (!voucherCodeInput.trim()) return;
+    setApplyingVoucher(true);
+    setVoucherError("");
+    try {
+      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal + shippingFee, formData.phone);
+      if (res.success) {
+        setAppliedVoucher(res.data.code);
+        setDiscountAmount(res.data.discountAmount);
+        setVoucherError("");
+      }
+    } catch (err) {
+      setVoucherError(err.message || "Mã giảm giá không hợp lệ");
+      setAppliedVoucher(null);
+      setDiscountAmount(0);
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
+  const removeVoucher = () => {
+    setAppliedVoucher(null);
+    setDiscountAmount(0);
+    setVoucherCodeInput("");
+    setVoucherError("");
+  };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -68,7 +102,7 @@ export default function CheckoutPage() {
 
     try {
       const items = cartItems.map(item => ({
-        product: item.productId._id,
+        productId: item.productId._id,
         quantity: item.quantity,
         price: item.productId.price
       }));
@@ -77,30 +111,40 @@ export default function CheckoutPage() {
       const res = await axios.post("http://localhost:5000/api/orders", {
         items,
         totalAmount,
+        customerName: formData.customerName,
+        customerPhone: formData.phone,
         shippingAddress: formData.address,
-        paymentMethod: formData.paymentMethod,
+        paymentMethod: formData.paymentMethod === 'bank_transfer' ? 'payos' : 'cod',
+        voucherCode: appliedVoucher,
+        discountAmount: discountAmount,
         returnUrl: "http://localhost:3000/shop/checkout/success",
         cancelUrl: "http://localhost:3000/shop/checkout"
       }, { withCredentials: true });
 
       if (res.data.success) {
         const orderData = res.data.data;
-        
-        if (formData.paymentMethod === 'bank_transfer') {
-          // Hiện QR Code
-          setQrData(orderData.qrCode);
-          setCurrentOrder(orderData.order);
-          setShowQR(true);
+
+        if (formData.paymentMethod === 'payos') {
+          if (res.data.qrCode) {
+            setCurrentOrder(orderData);
+            setQrData(res.data.qrCode);
+            setShowQR(true);
+          } else {
+            alert("Lỗi: Không nhận được mã QR thanh toán PayOS");
+          }
         } else {
           // COD - Thành công luôn
           alert("Đặt hàng thành công!");
+          sessionStorage.removeItem('hallo_cart');
           localStorage.removeItem('hallo_cart');
-          router.push(`/shop/checkout/success?orderCode=${orderData.order.orderCode}&total=${totalAmount}`);
+          router.push(`/shop/checkout/success?orderCode=${orderData.orderCode}&total=${totalAmount}`);
         }
       }
     } catch (error) {
       console.error(error);
-      alert("Có lỗi xảy ra khi tạo đơn hàng.");
+      const detailError = error.response?.data?.error;
+      const baseMsg = error.response?.data?.message || "Có lỗi xảy ra khi tạo đơn hàng.";
+      alert(detailError ? `${baseMsg}\nChi tiết lỗi PayOS: ${detailError}` : baseMsg);
     }
   };
 
@@ -115,6 +159,7 @@ export default function CheckoutPage() {
             // Đã thanh toán thành công
             clearInterval(interval);
             setShowQR(false);
+            sessionStorage.removeItem('hallo_cart');
             localStorage.removeItem('hallo_cart');
             router.push(`/shop/checkout/success?orderCode=${currentOrder.orderCode}&total=${totalAmount}`);
           }
@@ -150,7 +195,7 @@ export default function CheckoutPage() {
 
       <main className="pt-32 pb-section-padding px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto w-full flex-grow">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
-          
+
           {/* Left Column: Shipping & Payment */}
           <div className="lg:col-span-7 space-y-gutter">
             {/* Thông tin giao hàng */}
@@ -225,7 +270,7 @@ export default function CheckoutPage() {
               <div className="border-b border-outline-variant pb-4">
                 <h2 className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide">Đơn hàng của bạn</h2>
               </div>
-              
+
               {/* Products List */}
               <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {cartItems.map((item) => (
@@ -249,6 +294,28 @@ export default function CheckoutPage() {
 
               {/* Totals */}
               <div className="space-y-3 pt-6 border-t border-outline-variant">
+
+                {/* Voucher input */}
+                <div className="pb-4 mb-4 border-b border-outline-variant">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Mã giảm giá"
+                      value={voucherCodeInput}
+                      onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                      disabled={appliedVoucher || applyingVoucher}
+                      className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm uppercase focus:border-primary outline-none disabled:opacity-50"
+                    />
+                    {appliedVoucher ? (
+                      <button onClick={removeVoucher} className="px-4 bg-error text-white font-bold rounded text-sm hover:bg-error/90">Hủy</button>
+                    ) : (
+                      <button onClick={handleApplyVoucher} disabled={applyingVoucher || !voucherCodeInput} className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary disabled:opacity-50">Áp dụng</button>
+                    )}
+                  </div>
+                  {voucherError && <p className="text-error text-xs mt-1">{voucherError}</p>}
+                  {appliedVoucher && <p className="text-success text-xs mt-1">Đã áp dụng mã {appliedVoucher}</p>}
+                </div>
+
                 <div className="flex justify-between text-on-surface-variant">
                   <span className="font-body-md">Tạm tính</span>
                   <span className="font-body-md">{formatPrice(subTotal)}</span>
@@ -257,6 +324,12 @@ export default function CheckoutPage() {
                   <span className="font-body-md">Phí vận chuyển</span>
                   <span className="font-body-md">{formatPrice(shippingFee)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-success">
+                    <span className="font-body-md">Giảm giá</span>
+                    <span className="font-body-md">-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-4 mt-2 border-t border-outline-variant">
                   <span className="font-headline-sm text-on-surface font-bold">TỔNG CỘNG</span>
                   <span className="font-headline-sm text-primary font-bold">{formatPrice(totalAmount)}</span>
@@ -264,7 +337,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* CTA */}
-              <button 
+              <button
                 onClick={handleCheckout}
                 disabled={cartItems.length === 0}
                 className="w-full bg-primary text-on-primary py-5 rounded-lg font-headline-sm uppercase tracking-widest hover:bg-primary-fixed-dim active:scale-95 transition-all shadow-lg shadow-primary/10 disabled:opacity-50"
@@ -287,15 +360,15 @@ export default function CheckoutPage() {
       {showQR && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
           <div className="bg-surface-container border border-outline-variant rounded-xl p-8 max-w-md w-full shadow-2xl relative">
-            <button 
+            <button
               onClick={() => setShowQR(false)}
               className="absolute top-4 right-4 text-on-surface-variant hover:text-primary"
             >
               <span className="material-symbols-outlined">close</span>
             </button>
-            
+
             <h3 className="font-headline-md text-primary text-center mb-6 uppercase tracking-widest">Thanh Toán Đơn Hàng</h3>
-            
+
             <div className="flex justify-center mb-6 bg-white p-4 rounded-xl">
               <QRCodeSVG value={qrData} size={250} />
             </div>

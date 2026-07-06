@@ -22,8 +22,8 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
   const renderedServices = services.map((service) => ({ raw: service, formatted: formatService(service) }));
 
   return (
-    <div className="w-full">
-        <table className="w-full text-left border-collapse">
+    <div className="w-full overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left border-collapse min-w-[600px]">
           <thead className="sticky top-0 z-10 shadow-sm">
             <tr className="bg-surface-container-high border-b border-outline-gold">
               <th className="px-4 py-3 font-bold text-primary uppercase tracking-wider text-[11px] bg-surface-container-high">Dịch Vụ</th>

@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { bookingService } from "@/services/booking.service";
 import { staffDashboardService } from "@/services/staffDashboard.service";
 import DateTimeSelection from "@/components/booking/DateTimeSelection";
+import POSServiceList from "@/components/staff/pos/POSServiceList";
+import POSSummaryCard from "@/components/staff/pos/POSSummaryCard";
 import axios from "axios";
 
 export default function POSBookingPage() {
@@ -434,90 +436,15 @@ export default function POSBookingPage() {
         </div>
 
         {/* Services & Products Section */}
-        <div className="mb-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-            <div>
-              <h2 className="font-headline-sm text-2xl text-on-surface mb-1">Thêm Dịch vụ / Sản phẩm</h2>
-              <span className="font-label-md text-xs text-gold-dim">Tìm kiếm để thêm vào giỏ hàng POS</span>
-            </div>
-            <div className="relative w-full md:max-w-md flex items-center gap-3">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant text-lg">search</span>
-              <input
-                className="w-full bg-surface-container border border-outline-variant rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:border-primary text-on-surface placeholder:text-outline-variant/40 transition-all text-sm font-body-md"
-                placeholder="Ví dụ: Cắt tóc, sáp vuốt..."
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="bg-surface-container border border-outline-variant rounded-lg h-11 px-3 text-sm"
-                aria-label="Sắp xếp theo giá"
-              >
-                <option value="priceAsc">Giá: Tăng dần</option>
-                <option value="priceDesc">Giá: Giảm dần</option>
-              </select>
-            </div>
-          </div>
-
-          {searchTerm.trim() === "" ? (
-            <div className="text-center py-10 bg-surface-container-lowest border border-dashed border-outline-variant/50 rounded-xl">
-              <span className="material-symbols-outlined text-4xl text-outline-variant mb-2">search</span>
-              <p className="text-on-surface-variant font-body-md">Vui lòng gõ từ khóa để tìm kiếm Dịch vụ hoặc Sản phẩm.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {displayedItems.map(item => {
-                const isSelected = selectedItems.some(i => i._id === item._id);
-                const isProduct = item.itemType === 'product';
-                
-                return (
-                  <div
-                    key={item._id || item.id}
-                    onClick={() => selectItem(item)}
-                    className={`bg-surface-container/70 backdrop-blur-md p-5 rounded-xl cursor-pointer transition-all duration-300 flex flex-col justify-between min-h-[140px] relative overflow-hidden group border ${
-                      isSelected ? 'border-primary bg-primary/5 scale-[0.98]' : 'border-outline-variant hover:border-primary'
-                    }`}
-                  >
-                    <div className="absolute top-2 right-2 z-20">
-                       <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${isProduct ? 'border-gold-dim text-gold-dim' : 'border-primary text-primary'}`}>
-                         {isProduct ? 'Sản phẩm' : 'Dịch vụ'}
-                       </span>
-                    </div>
-
-                    <div className="relative z-10">
-                      <div className="w-full h-36 mb-3 overflow-hidden rounded-lg bg-surface-container">
-                        {((item.images && item.images[0]) || item.image) ? (
-                          <img src={(item.images && item.images[0]) || item.image} alt={item.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-surface-container-high">
-                            <span className="material-symbols-outlined text-outline-variant text-4xl">inventory_2</span>
-                          </div>
-                        )}
-                      </div>
-                      <h3 className={`font-headline-sm text-lg line-clamp-2 leading-tight transition-colors ${isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'}`}>
-                        {item.name}
-                      </h3>
-                      {!isProduct && <p className="font-label-md text-on-surface-variant text-xs mt-1">{item.durationMinutes || item.duration || 30} phút</p>}
-                      {isProduct && <p className="font-label-md text-on-surface-variant text-xs mt-1">Kho: {item.stock}</p>}
-                    </div>
-                    <div className="flex justify-between items-end relative z-10 mt-4">
-                      <span className="font-label-md font-bold text-primary text-lg">{item.price ? item.price.toLocaleString('vi-VN') : 0}đ</span>
-                      <span className={`material-symbols-outlined text-2xl transition-colors ${isSelected ? 'text-primary' : 'text-outline-variant group-hover:text-primary'}`} style={{ fontVariationSettings: isSelected ? "'FILL' 1" : "'FILL' 0" }}>
-                        {isSelected ? 'check_circle' : 'add_circle'}
-                      </span>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  </div>
-                );
-              })}
-              {displayedItems.length === 0 && (
-                <div className="col-span-full text-center py-10 text-on-surface-variant">Không tìm thấy kết quả nào phù hợp.</div>
-              )}
-            </div>
-          )}
-        </div>
+        <POSServiceList 
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
+          displayedItems={displayedItems}
+          selectedItems={selectedItems}
+          selectItem={selectItem}
+        />
 
         {/* Staff Selection (Only show if there's at least one service selected) */}
         {hasServices && (
@@ -581,99 +508,19 @@ export default function POSBookingPage() {
       </section>
 
       {/* Right Side: Booking Summary & Checkout */}
-      <aside className="w-full lg:w-[450px] bg-surface-container/30 backdrop-blur-md border-l border-outline-variant/50 shrink-0 flex flex-col h-full">
-        <div className="flex flex-col p-6 md:p-8 lg:p-10 h-full overflow-hidden">
-          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-6 border-b border-outline-variant/20 pb-4 shrink-0">
-            Tóm Tắt Đơn POS
-          </h2>
-
-          {/* Summary List */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-4 pr-2">
-            {selectedItems.length === 0 ? (
-              <p className="text-on-surface-variant text-sm text-center mt-10">Giỏ hàng trống</p>
-            ) : (
-              selectedItems.map(item => {
-                const isProduct = item.itemType === 'product';
-                return (
-                  <div key={item._id} className="flex justify-between items-start animate-fade-in bg-surface-container-low p-4 rounded-xl border border-outline-variant/30">
-                    <div className="flex-1 pr-4">
-                      <h4 className="font-body-md font-semibold text-on-surface text-base leading-tight mb-1">{item.name}</h4>
-                      {!isProduct && (
-                        <span className="text-[10px] text-primary border border-primary/50 rounded px-1.5 py-0.5 uppercase">Dịch vụ</span>
-                      )}
-                      {isProduct && (
-                         <div className="flex items-center gap-3 mt-2 bg-surface p-1 rounded w-fit border border-outline-variant/50">
-                            <button onClick={() => decreaseQuantity(item._id)} className="w-6 h-6 flex items-center justify-center hover:bg-surface-variant rounded text-on-surface">-</button>
-                            <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
-                            <button onClick={() => increaseQuantity(item._id)} className="w-6 h-6 flex items-center justify-center hover:bg-surface-variant rounded text-on-surface">+</button>
-                         </div>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <span className="font-body-md font-bold text-on-surface block">
-                        {item.price ? ((item.price || 0) * (item.quantity || 1)).toLocaleString('vi-VN') : 0}đ
-                      </span>
-                      <button 
-                        onClick={() => selectItem(item)}
-                        className="text-[10px] text-error hover:underline uppercase tracking-tighter mt-2 inline-block"
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-            
-            {/* Display Barber in Summary */}
-            {hasServices && (
-              <div className="mt-4 pt-4 border-t border-outline-variant/20 shrink-0">
-                <p className="font-label-md text-on-surface-variant text-sm">
-                  Barber phụ trách: <span className="text-primary/80 font-bold ml-1">{selectedStaff ? (selectedStaff.userId?.name || "Unknown Barber") : 'Chưa chỉ định'}</span>
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Totals */}
-          <div className="border-t border-outline-variant/20 pt-6 space-y-4 shrink-0">
-            <div className="flex justify-between font-body-md text-on-surface-variant">
-              <span>Tạm tính</span>
-              <span className="font-label-md">{subTotal.toLocaleString('vi-VN')}đ</span>
-            </div>
-            <div className="flex justify-between font-body-md text-on-surface-variant">
-              <span>Thuế VAT (8%)</span>
-              <span className="font-label-md">{vat.toLocaleString('vi-VN')}đ</span>
-            </div>
-            <div className="flex justify-between font-headline-md text-3xl text-primary pt-4">
-              <span>Tổng Tiền</span>
-              <span className="font-bold tracking-tight">{total.toLocaleString('vi-VN')}đ</span>
-            </div>
-          </div>
-
-          {/* Actions Footer */}
-          <div className="mt-6 space-y-4 shrink-0">
-            <button 
-              onClick={handlePrint}
-              disabled={selectedItems.length === 0}
-              className="w-full py-5 border border-outline-gold text-primary rounded-lg font-label-md font-bold flex items-center justify-center gap-3 hover:bg-primary/5 transition-all active:scale-[0.98] group disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">print</span>
-              IN HÓA ĐƠN TẠM
-            </button>
-            <button 
-              onClick={openTimeModalOrCheckout}
-              disabled={selectedItems.length === 0}
-              className={`w-full py-5 rounded-lg font-label-md font-bold flex items-center justify-center gap-3 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 ${hasServices ? 'bg-primary text-on-primary hover:brightness-110 shadow-primary/20' : 'bg-green-600 text-white hover:bg-green-500 shadow-green-600/20'}`}
-            >
-              <span className="material-symbols-outlined">
-                {hasServices ? 'schedule' : 'point_of_sale'}
-              </span>
-              {hasServices ? 'CHỌN GIỜ & XÁC NHẬN' : 'THANH TOÁN NGAY'}
-            </button>
-          </div>
-        </div>
-      </aside>
+      <POSSummaryCard 
+        selectedItems={selectedItems}
+        hasServices={hasServices}
+        selectedStaff={selectedStaff}
+        subTotal={subTotal}
+        vat={vat}
+        total={total}
+        decreaseQuantity={decreaseQuantity}
+        increaseQuantity={increaseQuantity}
+        selectItem={selectItem}
+        handlePrint={handlePrint}
+        openTimeModalOrCheckout={openTimeModalOrCheckout}
+      />
 
       {/* Time Selection Modal */}
       {showTimeModal && (

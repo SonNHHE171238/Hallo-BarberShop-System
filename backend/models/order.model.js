@@ -43,6 +43,20 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    voucherCode: {
+      type: String,
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    voucherLockId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'VoucherLock',
+      default: null,
+    },
     status: {
       type: String,
       enum: ['pending', 'processing', 'shipped', 'completed', 'cancelled'],
@@ -50,15 +64,32 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['cod', 'payos'],
+      enum: ['cod', 'payos', 'bank_transfer'],
       required: true,
       default: 'cod',
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed'],
+      default: 'pending',
     },
     orderCode: {
       type: Number, // Dùng cho PayOS webhook map
       unique: true,
       sparse: true,
-    }
+    },
+    internalNote: {
+      type: String,
+      default: '',
+    },
+    historyLog: [
+      {
+        action: String,
+        actor: String,
+        note: String,
+        timestamp: { type: Date, default: Date.now },
+      }
+    ]
   },
   { timestamps: true }
 );
