@@ -256,6 +256,26 @@ exports.updateOrderStatus = async (req, res, next) => {
           note: 'Đơn hàng đã hoàn tất giao hàng và thanh toán đầy đủ.',
         });
       }
+
+      // Redeem voucher lock if order is completed (for COD or admin manually completing)
+      if (status === 'completed' && order.voucherLockId) {
+        try {
+          const voucherController = require('./voucher.controller');
+          await voucherController.redeemVoucherLock(order.voucherLockId);
+        } catch (err) {
+          console.error("Failed to redeem voucher lock for completed order:", err);
+        }
+      }
+
+      // Release voucher lock if order is cancelled
+      if (status === 'cancelled' && order.voucherLockId) {
+        try {
+          const voucherController = require('./voucher.controller');
+          await voucherController.releaseVoucherLock(order.voucherLockId);
+        } catch (err) {
+          console.error("Failed to release voucher lock for order:", err);
+        }
+      }
     }
 
     await order.save();

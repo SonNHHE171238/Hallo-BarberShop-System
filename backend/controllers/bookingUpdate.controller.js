@@ -174,6 +174,16 @@ exports.updateBookingStatus = async (req, res) => {
         );
         // Don't fail the status update if schedule update fails, but log the error
       }
+
+      // Redeem voucher lock if booking is completed (for cash/offline payments)
+      if (booking.voucherLockId) {
+        try {
+          const voucherController = require("./voucher.controller");
+          await voucherController.redeemVoucherLock(booking.voucherLockId);
+        } catch (err) {
+          console.error("Failed to redeem voucher lock for completed booking:", err);
+        }
+      }
     }
 
     // Handle schedule updates for status changes
@@ -197,6 +207,16 @@ exports.updateBookingStatus = async (req, res) => {
           scheduleError,
         );
         // Don't fail the status update if schedule update fails, but log the error
+      }
+
+      // Release voucher lock if booking is cancelled
+      if (booking.voucherLockId) {
+        try {
+          const voucherController = require("./voucher.controller");
+          await voucherController.releaseVoucherLock(booking.voucherLockId);
+        } catch (err) {
+          console.error("Failed to release voucher lock for cancelled booking:", err);
+        }
       }
     }
 
