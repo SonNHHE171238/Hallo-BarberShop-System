@@ -158,6 +158,7 @@ const bookAppointment = async (args) => {
 
     await newBooking.save();
 
+    const formattedDate = bookingDate.split('-').reverse().join('/');
     return JSON.stringify({ 
       success: true, 
       message: "Đặt lịch thành công", 
@@ -167,7 +168,7 @@ const bookAppointment = async (args) => {
         customerPhone: cleanPhone,
         serviceNames: services.map(s => s.name),
         barberName: assignedBarberName,
-        time: `${startTime} ngày ${bookingDate}`,
+        time: `${startTime} ngày ${formattedDate}`,
         totalPrice: totalPrice
       }
     });
@@ -245,6 +246,7 @@ const updateAppointment = async (args) => {
     
     await existingBooking.save();
 
+    const formattedDate = bookingDate.split('-').reverse().join('/');
     return JSON.stringify({ 
       success: true, 
       message: "Cập nhật lịch thành công", 
@@ -254,7 +256,7 @@ const updateAppointment = async (args) => {
         customerPhone: cleanPhone,
         serviceNames: services.map(s => s.name),
         barberName: assignedBarberName,
-        time: `${startTime} ngày ${bookingDate}`,
+        time: `${startTime} ngày ${formattedDate}`,
         totalPrice: totalPrice
       }
     });
@@ -451,9 +453,12 @@ const placeOrder = async (args) => {
       };
 
       try {
-        const paymentLinkResponse = await payos.createPaymentLink(body);
+        const paymentLinkResponse = await payos.paymentRequests.create(body);
         paymentUrl = paymentLinkResponse.checkoutUrl;
-        paymentMessage = `Vui lòng click vào đường link sau để thanh toán trực tuyến: ${paymentUrl}`;
+        
+        // Cập nhật để trả về cả Markdown QR
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentLinkResponse.qrCode)}`;
+        paymentMessage = `Vui lòng click vào đường link sau để thanh toán trực tuyến: ${paymentUrl}\n\nHoặc quét mã QR dưới đây:\n![QR Code](${qrCodeUrl})`;
       } catch (payosError) {
         console.error("Lỗi tạo PayOS link via chatbot:", payosError);
         paymentMessage = "Đã xảy ra lỗi khi tạo link thanh toán online. Bạn vui lòng thanh toán COD khi nhận hàng nhé.";
@@ -512,7 +517,7 @@ const generateBookingPaymentLink = async (args) => {
       cancelUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}`
     };
 
-    const paymentLinkRes = await payos.createPaymentLink(body);
+    const paymentLinkRes = await payos.paymentRequests.create(body);
 
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentLinkRes.qrCode)}`;
 
@@ -713,7 +718,7 @@ const geminiTools = [{
     },
     {
       name: "placeOrder",
-      description: "Tạo đơn đặt hàng mua sản phẩm từ shop cho khách hàng. Chỉ dùng khi khách hàng chốt muốn mua sản phẩm cụ thể.",
+      description: "Tạo đơn đặt hàng mua sản phẩm. CHÚ Ý: Bắt buộc tên sản phẩm phải khớp chính xác 100% với danh sách từ getShopProducts. Không được tự ý đoán hoặc thay thế tên sản phẩm.",
       parameters: {
         type: "OBJECT",
         properties: {
@@ -727,7 +732,7 @@ const geminiTools = [{
             items: {
               type: "OBJECT",
               properties: {
-                productName: { type: "STRING", description: "Tên chính xác của sản phẩm theo list" },
+                productName: { type: "STRING", description: "Tên chính xác tuyệt đối của sản phẩm theo danh sách kho (không được tự chế ra tên khác)" },
                 quantity: { type: "INTEGER", description: "Số lượng mua" }
               },
               required: ["productName", "quantity"]
