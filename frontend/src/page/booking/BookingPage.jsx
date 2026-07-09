@@ -28,6 +28,9 @@ export default function BookingPage() {
   const [showQR, setShowQR] = useState(false);
   const [currentBookingId, setCurrentBookingId] = useState(null);
   const [successQueryString, setSuccessQueryString] = useState("");
+  const [qrData, setQrData] = useState("");
+  const [orderCode, setOrderCode] = useState(null);
+  const [amountToPay, setAmountToPay] = useState(0);
   
   // Voucher State
   const [voucherCodeInput, setVoucherCodeInput] = useState("");
