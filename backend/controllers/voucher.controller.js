@@ -144,7 +144,7 @@ exports.deleteVoucher = async (req, res) => {
 // Apply a voucher (validate and calculate discount)
 exports.applyVoucher = async (req, res) => {
   try {
-    const { code, totalAmount } = req.body;
+    const { code, totalAmount, productIds = [], serviceIds = [] } = req.body;
     let userId = null;
     
     // Attempt to extract userId from token if provided
@@ -177,6 +177,34 @@ exports.applyVoucher = async (req, res) => {
     }
     if (now > voucher.validUntil) {
       return res.status(400).json({ success: false, message: 'Voucher has expired' });
+    }
+
+    // Check applicableUsers
+    if (voucher.applicableUsers && voucher.applicableUsers.length > 0) {
+      if (!userId || !voucher.applicableUsers.some(uid => uid.toString() === userId.toString())) {
+        return res.status(403).json({ success: false, message: 'This voucher is not applicable to your account' });
+      }
+    }
+
+    // Check applicable products and services
+    const hasProductRestriction = voucher.applicableProducts && voucher.applicableProducts.length > 0;
+    const hasServiceRestriction = voucher.applicableServices && voucher.applicableServices.length > 0;
+
+    if (hasProductRestriction || hasServiceRestriction) {
+      let isProductValid = false;
+      let isServiceValid = false;
+
+      if (hasProductRestriction && productIds.length > 0) {
+        isProductValid = productIds.some(pid => voucher.applicableProducts.some(vpid => vpid.toString() === pid.toString()));
+      }
+
+      if (hasServiceRestriction && serviceIds.length > 0) {
+        isServiceValid = serviceIds.some(sid => voucher.applicableServices.some(vsid => vsid.toString() === sid.toString()));
+      }
+
+      if (!isProductValid && !isServiceValid) {
+        return res.status(400).json({ success: false, message: 'This voucher cannot be applied to the selected items' });
+      }
     }
 
     // Count active locks (holding or redeemed)
@@ -254,7 +282,7 @@ exports.applyVoucher = async (req, res) => {
 };
 
 // Helper methods for internal use by Booking/Order controllers
-exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone) => {
+exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone, productIds = [], serviceIds = []) => {
   if (!code) return null;
   const voucher = await Voucher.findOne({ code: code.toUpperCase(), isActive: true });
   if (!voucher) throw new Error('Invalid voucher code');
@@ -263,6 +291,34 @@ exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone
   if (now < voucher.validFrom) throw new Error('Voucher is not yet valid');
   if (now > voucher.validUntil) throw new Error('Voucher has expired');
   if (totalAmount < voucher.minOrderValue) throw new Error(`Minimum order value of ${voucher.minOrderValue} required`);
+
+  // Check applicableUsers
+  if (voucher.applicableUsers && voucher.applicableUsers.length > 0) {
+    if (!userId || !voucher.applicableUsers.some(uid => uid.toString() === userId.toString())) {
+      throw new Error('This voucher is not applicable to your account');
+    }
+  }
+
+  // Check applicable products and services
+  const hasProductRestriction = voucher.applicableProducts && voucher.applicableProducts.length > 0;
+  const hasServiceRestriction = voucher.applicableServices && voucher.applicableServices.length > 0;
+
+  if (hasProductRestriction || hasServiceRestriction) {
+    let isProductValid = false;
+    let isServiceValid = false;
+
+    if (hasProductRestriction && productIds.length > 0) {
+      isProductValid = productIds.some(pid => voucher.applicableProducts.some(vpid => vpid.toString() === pid.toString()));
+    }
+
+    if (hasServiceRestriction && serviceIds.length > 0) {
+      isServiceValid = serviceIds.some(sid => voucher.applicableServices.some(vsid => vsid.toString() === sid.toString()));
+    }
+
+    if (!isProductValid && !isServiceValid) {
+      throw new Error('This voucher cannot be applied to the selected items');
+    }
+  }
 
   // Check global limit
   const activeLocks = await VoucherLock.countDocuments({ voucherId: voucher._id, status: { $in: ['holding', 'redeemed'] } });
@@ -322,5 +378,47 @@ exports.releaseVoucherLock = async (lockId) => {
   if (lock && lock.status === 'holding') {
     lock.status = 'released';
     await lock.save();
+  }
+};
+
+exports.getMyVouchers = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id || req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const now = new Date();
+
+    const vouchers = await Voucher.find({
+      isActive: true,
+      validUntil: { $gte: now },
+      $or: [
+        { applicableUsers: { $size: 0 } },
+        { applicableUsers: { $exists: false } },
+        { applicableUsers: userId }
+      ]
+    }).sort({ validUntil: 1 });
+
+    const validVouchers = [];
+    for (const v of vouchers) {
+      const activeLocks = await VoucherLock.countDocuments({ voucherId: v._id, status: { $in: ['holding', 'redeemed'] } });
+      if (v.usedCount + activeLocks >= v.usageLimit) {
+        continue;
+      }
+      
+      const orderUsages = await Order.countDocuments({ userId: userId, voucherCode: v.code, status: { $ne: 'cancelled' } });
+      const bookingUsages = await Booking.countDocuments({ customerId: userId, voucherCode: v.code, status: { $nin: ['cancelled', 'rejected'] } });
+      const totalUserUsages = orderUsages + bookingUsages;
+      
+      if (totalUserUsages < v.usageLimitPerUser) {
+        validVouchers.push(v);
+      }
+    }
+
+    return res.status(200).json({ success: true, data: validVouchers });
+  } catch (error) {
+    console.error('Error fetching my vouchers:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
