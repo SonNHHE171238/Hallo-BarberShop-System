@@ -198,12 +198,17 @@ const staffDashboardService = {
       let uiStatus = 'Chưa tới';
       let statusClass = 'bg-surface-bright/50 text-gold-dim border-gold-dim/30';
       
-      if (b.status === 'completed') {
-        uiStatus = 'Hoàn thành';
-        statusClass = 'bg-primary/5 text-primary border-primary/20';
-      } else if (b.status === 'cancelled' || b.status === 'rejected') {
+      const isFuture = new Date(b.bookingDate).setHours(0,0,0,0) > new Date().setHours(0,0,0,0);
+
+      if (b.status === 'cancelled' || b.status === 'rejected') {
         uiStatus = 'Đã hủy';
         statusClass = 'bg-error/10 text-error border-error/20';
+      } else if (isFuture) {
+        uiStatus = 'Chưa tới';
+        statusClass = 'bg-surface-bright/50 text-gold-dim border-gold-dim/30';
+      } else if (b.status === 'completed') {
+        uiStatus = 'Hoàn thành';
+        statusClass = 'bg-primary/5 text-primary border-primary/20';
       } else if (b.status === 'no_show') {
         uiStatus = 'Không đến';
         statusClass = 'bg-error/10 text-error border-error/20';
@@ -216,7 +221,9 @@ const staffDashboardService = {
 
       return {
         _id: b._id,
+        rawDate: b.bookingDate,
         time: new Date(b.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date(b.bookingDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         customerName: b.bookingType === 'user' && b.customerId ? b.customerId.name : (b.customerName || 'Khách Vãng Lai'),
         customerPhone: b.bookingType === 'user' && b.customerId ? b.customerId.phone : (b.customerPhone || 'N/A'),
         customerType: b.bookingType === 'user' ? 'Customer' : 'Guest',
@@ -241,14 +248,134 @@ const staffDashboardService = {
     // Assuming 1 chair per barber
     const emptyChairs = Math.max(0, totalBarbers - serving);
 
+    // Check if there are future/past bookings beyond this date
+    let hasFutureBookings = true;
+    let hasPastBookings = true;
+    if (date) {
+      const start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+      
+      const futureCount = await Booking.countDocuments({ bookingDate: { $gt: end } });
+      hasFutureBookings = futureCount > 0;
+      
+      const pastCount = await Booking.countDocuments({ bookingDate: { $lt: start } });
+      hasPastBookings = pastCount > 0;
+    }
+
     return {
       appointments: formattedBookings,
       stats: {
         total: totalBookings,
         serving: serving,
         emptyChairs: emptyChairs
-      }
+      },
+      hasFutureBookings,
+      hasPastBookings
     };
+  },
+
+  addItemsToBooking: async (bookingId, payload) => {
+    const { newServices, newProducts } = payload;
+    const booking = await Booking.findById(bookingId).populate('services');
+    if (!booking) throw new Error('Booking not found');
+    
+    // Only allow if booking is not completed/cancelled
+    if (['completed', 'cancelled', 'rejected', 'no_show'].includes(booking.status)) {
+      throw new Error('Cannot add items to a closed booking');
+    }
+
+    let additionalPrice = 0;
+    let additionalDuration = 0;
+
+    // Handle new Services
+    if (newServices && newServices.length > 0) {
+      const Service = require('../models/service.model');
+      for (const sId of newServices) {
+        const svc = await Service.findById(sId);
+        if (svc) {
+          booking.services.push(svc._id);
+          additionalPrice += svc.price || 0;
+          additionalDuration += svc.durationMinutes || 30;
+        }
+      }
+    }
+
+    // Handle new Products
+    if (newProducts && newProducts.length > 0) {
+      const Product = require('../models/product.model');
+      for (const p of newProducts) {
+        const product = await Product.findById(p.productId);
+        if (!product) throw new Error(`Product ${p.productId} not found`);
+        if (product.stock < p.quantity) {
+          throw new Error(`Not enough stock for ${product.name}`);
+        }
+        
+        // Decrease stock
+        product.stock -= p.quantity;
+        await product.save();
+
+        booking.products.push({
+          productId: product._id,
+          quantity: p.quantity,
+          priceAtPurchase: product.price
+        });
+        additionalPrice += (product.price * p.quantity);
+      }
+    }
+
+    booking.totalPrice += additionalPrice;
+    booking.durationMinutes += additionalDuration;
+
+    await booking.save();
+    return booking;
+  },
+
+  removeItemFromBooking: async (bookingId, payload) => {
+    const { itemType, itemId } = payload;
+    const booking = await Booking.findById(bookingId).populate('services');
+    if (!booking) throw new Error('Booking not found');
+    
+    // Only allow if booking is not completed/cancelled
+    if (['completed', 'cancelled', 'rejected', 'no_show'].includes(booking.status)) {
+      throw new Error('Cannot remove items from a closed booking');
+    }
+
+    if (itemType === 'service') {
+      if (booking.services.length <= 1) {
+        throw new Error('Lịch hẹn phải có ít nhất 1 dịch vụ. Vui lòng thêm dịch vụ khác trước khi xoá dịch vụ này.');
+      }
+      const serviceIndex = booking.services.findIndex(s => s._id.toString() === itemId);
+      if (serviceIndex === -1) throw new Error('Service not found in booking');
+      
+      const removedSvc = booking.services[serviceIndex];
+      booking.totalPrice = Math.max(0, booking.totalPrice - (removedSvc.price || 0));
+      booking.durationMinutes = Math.max(0, booking.durationMinutes - (removedSvc.durationMinutes || 0));
+      
+      booking.services.splice(serviceIndex, 1);
+    } else if (itemType === 'product') {
+      const productIndex = booking.products.findIndex(p => p.productId.toString() === itemId);
+      if (productIndex === -1) throw new Error('Product not found in booking');
+      
+      const removedProd = booking.products[productIndex];
+      booking.totalPrice = Math.max(0, booking.totalPrice - ((removedProd.priceAtPurchase || 0) * removedProd.quantity));
+      
+      // Restore stock
+      const Product = require('../models/product.model');
+      const dbProduct = await Product.findById(itemId);
+      if (dbProduct) {
+        dbProduct.stock += removedProd.quantity;
+        await dbProduct.save();
+      }
+      
+      booking.products.splice(productIndex, 1);
+    } else {
+      throw new Error('Invalid itemType');
+    }
+
+    await booking.save();
+    return booking;
   }
 };
 

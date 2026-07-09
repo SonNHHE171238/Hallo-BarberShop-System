@@ -30,6 +30,25 @@ const bookingSchema = new Schema(
         required: true,
       },
     ],
+    products: [
+      {
+        productId: {
+          type: Schema.Types.ObjectId,
+          ref: 'Product',
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        priceAtPurchase: {
+          type: Number,
+          required: true,
+          min: 0,
+        }
+      }
+    ],
     bookingDate: {
       type: Date,
       required: true,

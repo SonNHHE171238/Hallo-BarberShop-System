@@ -289,11 +289,9 @@ export default function POSBookingPage() {
   const total = subTotal + vat;
 
   // Filtered + Sorted items for display
-  // REQUIREMENT: không hiển thị 1 list ra POS trước (Chỉ hiện khi có Search)
-  const displayedItems = searchTerm.trim() === "" 
-    ? [] 
-    : allItems
+  const displayedItems = allItems
         .filter(i => {
+          if (searchTerm.trim() === "") return true;
           const term = searchTerm.trim().toLowerCase();
           return (i.name || '').toLowerCase().includes(term) || (i.description || '').toLowerCase().includes(term);
         })

@@ -11,7 +11,7 @@ const throwUserFriendlyError = (msg, statusCode = 400) => {
 
 exports.getAllAccounts = async (req, res, next) => {
     try {
-        const users = await User.find({ isDeleted: { $ne: true } })
+        const users = await User.find({})
             .select('-passwordHash -otpHash -resetTokenHash')
             .sort({ createdAt: -1 });
         return res.json({ users });
@@ -78,7 +78,7 @@ exports.deleteAccount = async (req, res, next) => {
         }
 
         if (user.role === 'admin') {
-            throwUserFriendlyError('Bạn không thể xóa tài khoản của Quản trị viên. Hãy hạ cấp họ xuống trước.', 403);
+            throwUserFriendlyError('Bạn không thể xóa tài khoản của Quản trị viên.', 403);
         }
 
         // Soft delete
@@ -86,8 +86,127 @@ exports.deleteAccount = async (req, res, next) => {
         user.status = 'banned'; // Đảm bảo không thể đăng nhập
         await user.save();
 
+        if (user.role === 'barber') {
+            const Barber = require('../models/barber.model');
+            const BarberSchedule = require('../models/barber-schedule.model');
+            
+            const barber = await Barber.findOne({ userId: user._id });
+            if (barber) {
+                barber.isDeleted = true;
+                barber.isAvailable = false;
+                await barber.save();
+                
+                const normalizeDateString = (date) => {
+                    const iso = new Date(date).toISOString();
+                    return iso.split('T')[0];
+                };
+                
+                const today = normalizeDateString(new Date());
+                await BarberSchedule.updateMany(
+                    { barberId: barber._id, date: { $gte: today } },
+                    {
+                        $set: {
+                            'availableSlots.$[slot].isBlocked': true,
+                            'availableSlots.$[slot].blockReason': 'barber_deleted',
+                            isOffDay: true,
+                            offReason: 'other',
+                        },
+                    },
+                    {
+                        arrayFilters: [{ 'slot.isBooked': false }],
+                    }
+                );
+            }
+        }
+
         return res.json({
             message: 'Đã xóa tài khoản thành công (Khóa mềm).',
+            user
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.restoreAccount = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const user = await User.findById(id);
+        if (!user) {
+            throwUserFriendlyError('Không tìm thấy tài khoản này.', 404);
+        }
+
+        user.isDeleted = false;
+        user.status = 'active'; 
+        await user.save();
+
+        if (user.role === 'barber') {
+            const Barber = require('../models/barber.model');
+            const BarberSchedule = require('../models/barber-schedule.model');
+            
+            const barber = await Barber.findOne({ userId: user._id });
+            if (barber) {
+                barber.isDeleted = false;
+                barber.isAvailable = true;
+                await barber.save();
+                
+                const normalizeDateString = (date) => {
+                    const iso = new Date(date).toISOString();
+                    return iso.split('T')[0];
+                };
+                
+                const today = normalizeDateString(new Date());
+                await BarberSchedule.updateMany(
+                    { barberId: barber._id, date: { $gte: today } },
+                    {
+                        $set: {
+                            'availableSlots.$[slot].isBlocked': false,
+                            'availableSlots.$[slot].blockReason': null,
+                            isOffDay: false,
+                            offReason: null,
+                        },
+                    },
+                    {
+                        arrayFilters: [{ 'slot.blockReason': 'barber_deleted' }],
+                    }
+                );
+            }
+        }
+
+        return res.json({
+            message: 'Đã khôi phục tài khoản thành công.',
+            user
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.updateAccountStatus = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const user = await User.findById(id);
+        if (!user) {
+            throwUserFriendlyError('Không tìm thấy tài khoản này.', 404);
+        }
+
+        if (['admin', 'staff', 'barber'].includes(user.role)) {
+            throwUserFriendlyError('Bạn không thể thay đổi trạng thái tài khoản của Quản trị viên, Nhân viên lễ tân hoặc Thợ cắt tóc.', 403);
+        }
+
+        if (!['active', 'banned'].includes(status)) {
+            throwUserFriendlyError('Trạng thái không hợp lệ.', 400);
+        }
+
+        user.status = status;
+        user.isDeleted = status === 'banned';
+        await user.save();
+
+        return res.json({
+            message: status === 'active' ? 'Đã mở khóa tài khoản thành công.' : 'Đã khóa tài khoản thành công.',
             user
         });
     } catch (error) {

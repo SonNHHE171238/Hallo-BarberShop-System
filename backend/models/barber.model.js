@@ -64,6 +64,11 @@ const barberSchema = new mongoose.Schema({
     default: true
   },
 
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+
   workingSince: {
     type: Date,
     required: true
