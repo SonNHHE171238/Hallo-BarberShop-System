@@ -27,6 +27,12 @@ export const adminAccountService = {
         });
     },
 
+    restoreAccount: async (accountId) => {
+        return fetchWithAuth(`/admin/accounts/${accountId}/restore`, {
+            method: 'PATCH',
+        });
+    },
+
     updateAccountStatus: async (accountId, status) => {
         return fetchWithAuth(`/admin/accounts/${accountId}/status`, {
             method: 'PATCH',

@@ -57,14 +57,11 @@ export default function AdminBarberForm({ barber, onSubmit, onCancel, isEdit = f
         if (!isEdit) {
             if (!formData.name.trim()) nextErrors.name = 'Tên là bắt buộc.';
             if (!formData.email.trim()) nextErrors.email = 'Email là bắt buộc.';
+            else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email)) nextErrors.email = 'Email không hợp lệ.';
             if (!formData.phone.trim()) nextErrors.phone = 'Số điện thoại là bắt buộc.';
             if (!formData.bio.trim()) nextErrors.bio = 'Bio là bắt buộc.';
             if (!formData.experienceYears || Number(formData.experienceYears) <= 0) nextErrors.experienceYears = 'Số năm kinh nghiệm phải lớn hơn 0.';
             if (!formData.password.trim()) nextErrors.password = 'Mật khẩu là bắt buộc khi tạo mới.';
-        }
-
-        if (formData.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email)) {
-            nextErrors.email = 'Email không hợp lệ.';
         }
 
         if (formData.maxDailyBookings && Number(formData.maxDailyBookings) <= 0) {

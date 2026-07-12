@@ -151,7 +151,7 @@ exports.getAllAdminBarbers = async (req, res) => {
         nextWeek.setDate(new Date().getDate() + 7);
         const nextWeekStr = normalizeDateString(nextWeek);
 
-        const barberUsers = await User.find({ role: 'barber' }).select('name email phone avatarUrl status');
+        const barberUsers = await User.find({ role: 'barber' }).select('name email phone avatarUrl status isDeleted');
         const barbers = await Barber.find();
         
         const barberIds = barbers.map((barber) => barber._id);
@@ -196,11 +196,13 @@ exports.getAllAdminBarbers = async (req, res) => {
                     preferredWorkingHours: { start: '08:00', end: '20:00' }
                 },
                 user: {
+                    _id: user._id,
                     name: user.name || 'Thợ chưa có tên',
                     phone: user.phone || '',
                     avatarUrl: user.avatarUrl || '',
                     email: user.email || '',
                     status: user.status || 'active',
+                    isDeleted: user.isDeleted || false,
                 },
                 scheduleSummary: summarySchedules,
             };

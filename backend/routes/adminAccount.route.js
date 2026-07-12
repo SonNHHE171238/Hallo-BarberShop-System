@@ -12,5 +12,7 @@ router.use(authorizeRoles('admin'));
 router.get('/', adminAccountController.getAllAccounts);
 router.post('/', adminAccountController.createAccount);
 router.delete('/:id', adminAccountController.deleteAccount);
+router.patch('/:id/restore', adminAccountController.restoreAccount);
+router.patch('/:id/status', adminAccountController.updateAccountStatus);
 
 module.exports = router;

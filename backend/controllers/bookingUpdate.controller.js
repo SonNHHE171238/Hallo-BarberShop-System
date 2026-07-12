@@ -81,7 +81,7 @@ exports.updateBookingStatus = async (req, res) => {
         }
 
         // Log successful time window validation
-              }
+      }
 
       // Date-based validation for no-show status
       if (status === "no_show") {
@@ -118,9 +118,10 @@ exports.updateBookingStatus = async (req, res) => {
           customerId: booking.customerId,
           bookingId: booking._id,
           barberId: booking.barberId,
-          serviceId: booking.services && booking.services.length > 0 
-            ? (booking.services[0]._id || booking.services[0]) 
-            : null,
+          serviceId:
+            booking.services && booking.services.length > 0
+              ? booking.services[0]._id || booking.services[0]
+              : null,
           originalBookingDate: booking.bookingDate,
           markedBy: userId,
           reason: "no_show",
@@ -136,7 +137,10 @@ exports.updateBookingStatus = async (req, res) => {
       // Create service history record
       const serviceHistory = new CustomerServiceHistory({
         customerId: booking.customerId,
-        serviceId: booking.services && booking.services.length > 0 ? booking.services[0]._id : null,
+        serviceId:
+          booking.services && booking.services.length > 0
+            ? booking.services[0]._id
+            : null,
         bookingId: booking._id,
         barberId: booking.barberId,
         completedAt: completionTime,
@@ -145,9 +149,14 @@ exports.updateBookingStatus = async (req, res) => {
 
       // Update service popularity
       const Service = require("../models/service.model");
-      await Service.findByIdAndUpdate(booking.services && booking.services.length > 0 ? booking.services[0]._id : null, {
-        $inc: { popularity: 1 },
-      });
+      await Service.findByIdAndUpdate(
+        booking.services && booking.services.length > 0
+          ? booking.services[0]._id
+          : null,
+        {
+          $inc: { popularity: 1 },
+        },
+      );
 
       // DYNAMIC AVAILABILITY: Release barber slots from completion time onwards
       const BarberSchedule = require("../models/barber-schedule.model");
@@ -164,7 +173,6 @@ exports.updateBookingStatus = async (req, res) => {
             null, // No session for this operation
           );
 
-        
         // Store completion time in booking for future reference
         booking.completedAt = completionTime;
       } catch (scheduleError) {
@@ -181,7 +189,10 @@ exports.updateBookingStatus = async (req, res) => {
           const voucherController = require("./voucher.controller");
           await voucherController.redeemVoucherLock(booking.voucherLockId);
         } catch (err) {
-          console.error("Failed to redeem voucher lock for completed booking:", err);
+          console.error(
+            "Failed to redeem voucher lock for completed booking:",
+            err,
+          );
         }
       }
     }
@@ -200,8 +211,7 @@ exports.updateBookingStatus = async (req, res) => {
           booking._id,
           null, // No session for this operation
         );
-
-              } catch (scheduleError) {
+      } catch (scheduleError) {
         console.error(
           "Error unmarking schedule slots for cancelled booking:",
           scheduleError,
@@ -215,7 +225,10 @@ exports.updateBookingStatus = async (req, res) => {
           const voucherController = require("./voucher.controller");
           await voucherController.releaseVoucherLock(booking.voucherLockId);
         } catch (err) {
-          console.error("Failed to release voucher lock for cancelled booking:", err);
+          console.error(
+            "Failed to release voucher lock for cancelled booking:",
+            err,
+          );
         }
       }
     }
@@ -426,8 +439,7 @@ exports.updateBookingDetails = async (req, res) => {
           [newStartTime],
           bookingId,
         );
-
-              } catch (scheduleError) {
+      } catch (scheduleError) {
         console.error("Error updating barber schedule:", scheduleError);
         // Don't fail the booking update if schedule update fails
       }
@@ -485,8 +497,41 @@ exports.assignBarberToBooking = async (req, res) => {
       return res.status(404).json({ message: "New barber not found" });
     }
 
-    // Store old barber info for logging
+    // Fetch customer info
+    const User = require("../models/user.model");
+    let customerNameForEmail = booking.customerName || "Quý khách";
+    let customerEmailForEmail = booking.customerEmail;
+    if (booking.customerId) {
+      const customer = await User.findById(booking.customerId).select(
+        "name email",
+      );
+      if (customer) {
+        customerNameForEmail = customer.name;
+        customerEmailForEmail = customer.email;
+      }
+    }
+
+    // Fetch service info
+    const Service = require("../models/service.model");
+    let serviceNameForEmail = "Dịch vụ";
+    let firstServiceId =
+      booking.services && booking.services.length > 0
+        ? booking.services[0]._id || booking.services[0]
+        : null;
+    if (firstServiceId) {
+      const service = await Service.findById(firstServiceId).select("name");
+      if (service) {
+        serviceNameForEmail = service.name;
+      }
+    }
+
+    // Store old barber info for logging and email
     const oldBarberId = booking.barberId;
+    const oldBarber = await Barber.findById(oldBarberId).populate(
+      "userId",
+      "name",
+    );
+    const oldBarberName = oldBarber?.userId?.name || "Unknown";
 
     // Update the booking
     booking.barberId = newBarberId;
@@ -504,8 +549,10 @@ exports.assignBarberToBooking = async (req, res) => {
 
       // Get service duration for proper slot marking
       const Service = require("../models/service.model");
-      const service = await Service.findById(booking.services && booking.services.length > 0 ? booking.services[0]._id : null);
-      const durationMinutes = service ? service.durationMinutes : 30; // Default 30 minutes
+      const serviceForDuration = await Service.findById(firstServiceId);
+      const durationMinutes = serviceForDuration
+        ? serviceForDuration.durationMinutes
+        : 30; // Default 30 minutes
 
       // 1. Free up slots for the old barber (if exists)
       if (oldBarberId) {
@@ -516,7 +563,7 @@ exports.assignBarberToBooking = async (req, res) => {
             booking._id,
             null, // No session for standalone operation
           );
-                  } catch (unmaskError) {
+        } catch (unmaskError) {
           console.error("Error freeing slots for old barber:", unmaskError);
           // Continue even if this fails
         }
@@ -532,17 +579,16 @@ exports.assignBarberToBooking = async (req, res) => {
         null, // No session for standalone operation
       );
 
-      
       // Recalculate available slots for both barbers after successful assignment
       try {
         // Recalculate for old barber (if exists)
         if (oldBarberId) {
           await BarberSchedule.recalculateAvailableSlots(oldBarberId, dateStr);
-                  }
+        }
 
         // Recalculate for new barber
         await BarberSchedule.recalculateAvailableSlots(newBarberId, dateStr);
-              } catch (recalcError) {
+      } catch (recalcError) {
         console.error(
           "Error recalculating available slots after assignment:",
           recalcError,
@@ -553,6 +599,25 @@ exports.assignBarberToBooking = async (req, res) => {
       console.error("Error updating barber schedules:", scheduleError);
       // Continue with the assignment even if schedule update fails
       // But log the error for debugging
+    }
+
+    // Send email notification to customer
+    try {
+      if (customerEmailForEmail) {
+        const bookingDate = new Date(booking.bookingDate);
+        const timeSlot = bookingDate.toTimeString().substring(0, 5);
+
+        await emailService.sendBookingReassignmentEmail(customerEmailForEmail, {
+          customerName: customerNameForEmail,
+          serviceName: serviceNameForEmail,
+          newBarberName: newBarber.userId.name,
+          oldBarberName,
+          bookingDate,
+          timeSlot,
+        });
+      }
+    } catch (emailError) {
+      console.error("Error sending reassignment email:", emailError);
     }
 
     // Return simple response without complex populate
@@ -624,8 +689,7 @@ exports.cancelBooking = async (req, res) => {
         booking._id,
         null, // No session for standalone MongoDB
       );
-
-          } catch (scheduleError) {
+    } catch (scheduleError) {
       console.error("Error unmarking schedule slots:", scheduleError);
       return res.status(500).json({
         message:
@@ -645,7 +709,7 @@ exports.cancelBooking = async (req, res) => {
       await Barber.findByIdAndUpdate(booking.barberId, {
         $inc: { totalBookings: -1 },
       });
-          } catch (updateError) {
+    } catch (updateError) {
       console.error(
         "Error updating barber totalBookings on cancellation:",
         updateError,
@@ -665,12 +729,15 @@ exports.cancelBooking = async (req, res) => {
           customerId: booking.customerId,
           bookingId: booking._id,
           barberId: booking.barberId,
-          serviceId: booking.services && booking.services.length > 0 
-            ? (booking.services[0]._id || booking.services[0]) 
-            : null,
+          serviceId:
+            booking.services && booking.services.length > 0
+              ? booking.services[0]._id || booking.services[0]
+              : null,
           originalBookingDate: booking.bookingDate,
           markedBy: userId,
-          reason: isLateCancellation ? "late_cancellation" : "customer_cancelled",
+          reason: isLateCancellation
+            ? "late_cancellation"
+            : "customer_cancelled",
           description: reason,
           isWithinPolicy: !isLateCancellation,
         });
@@ -702,7 +769,6 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
       });
     }
 
-        
     // Step 1: Check current barber data
     const Booking = require("../models/booking.model");
     const Barber = require("../models/barber.model");
@@ -715,23 +781,21 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
       .select("userId totalBookings")
       .lean();
 
-        for (const barber of barbers) {
+    for (const barber of barbers) {
       const realTimeCount = await Booking.countDocuments({
         barberId: barber._id,
         status: { $in: ["pending", "confirmed", "completed"] },
       });
-
-          }
+    }
 
     // Step 2: Simulate auto-assign logic
-    
+
     let finalBarberId = null;
     let autoAssignBarber = true; // Force auto-assign
 
     // Handle auto-assignment logic (same as createBookingSinglePage)
     if (autoAssignBarber) {
       try {
-        
         // Use the NEW auto-assignment logic (same as autoAssignBarberForSlot)
         const barberController = require("./barber.controller");
 
@@ -755,16 +819,15 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
         };
 
         // Call the auto-assign function
-                await barberController.autoAssignBarberForSlot(mockReq, mockRes);
-        
+        await barberController.autoAssignBarberForSlot(mockReq, mockRes);
+
         if (
           autoAssignResult &&
           autoAssignResult.success &&
           autoAssignResult.assignedBarber
         ) {
           finalBarberId = autoAssignResult.assignedBarber._id;
-
-                                      } else {
+        } else {
           console.error("❌ [TEST] Auto-assignment failed:", autoAssignResult);
         }
       } catch (autoAssignError) {
@@ -772,7 +835,6 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
       }
     }
 
-        
     res.json({
       success: true,
       message: "Test completed - check console logs for detailed analysis",
