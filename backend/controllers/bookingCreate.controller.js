@@ -22,6 +22,46 @@ const bookingService = require("../services/booking.service");
 const emailService = require("../services/email.service");
 const { sendSuccess } = require("../utils/response.helper");
 
+exports.preCheckBooking = async (req, res, next) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ message: "Số điện thoại là bắt buộc" });
+    }
+
+    const count = await NoShow.getNoShowCountByPhone(phone);
+    let requiresDeposit = false;
+    let depositRatio = 0;
+    let isBanned = false;
+
+    if (count >= 3) {
+      isBanned = true;
+    } else if (count === 2) {
+      requiresDeposit = true;
+      depositRatio = 1.0;
+    } else if (count === 1) {
+      requiresDeposit = true;
+      depositRatio = 0.5;
+    }
+
+    const latestBooking = await Booking.findOne({ customerPhone: phone })
+      .sort({ bookingDate: -1 })
+      .select('customerName customerEmail customerPhone');
+
+    const latestUser = await mongoose.model('User').findOne({ phone }).select('name email phone');
+
+    return res.json({
+      noShowCount: count,
+      isBanned,
+      requiresDeposit,
+      depositRatio,
+      customerInfo: latestUser || latestBooking || null
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createBooking = async (req, res, next) => {
   try {
     const {
@@ -57,7 +97,7 @@ exports.createBooking = async (req, res, next) => {
       }
     }
 
-    const populatedBooking = await bookingService.processCreateBooking({
+    const { populatedBooking, noShowCount } = await bookingService.processCreateBooking({
       bookingType,
       customerId,
       barberId,
@@ -72,6 +112,16 @@ exports.createBooking = async (req, res, next) => {
       customerPhone,
       voucherCode: req.body.voucherCode,
     });
+
+    let paymentLinkData = null;
+    if (noShowCount === 1 || noShowCount === 2) {
+      const paymentController = require("./payment.controller");
+      const depositAmount = noShowCount === 1 ? populatedBooking.totalPrice / 2 : populatedBooking.totalPrice;
+      paymentLinkData = await paymentController.createPaymentLinkHelper({
+        bookingId: populatedBooking._id,
+        amount: depositAmount
+      });
+    }
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
     if (emailToSend) {
@@ -94,6 +144,7 @@ exports.createBooking = async (req, res, next) => {
 
     return sendSuccess(res, 201, "Booking created successfully", {
       booking: populatedBooking,
+      paymentLinkData
     });
   } catch (err) {
     if (err.code === 11000) {
@@ -165,7 +216,7 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
     const shouldAutoAssign = !barberId || barberId === "random" || barberId === "auto" || autoAssignBarber || isAutoAssign;
 
-    const { populatedBooking, shouldAutoAssign: wasAutoAssigned } = await bookingService.processCreateSinglePageBooking({
+    const { populatedBooking, shouldAutoAssign: wasAutoAssigned, noShowCount } = await bookingService.processCreateSinglePageBooking({
       services,
       barberId,
       bookingDate,
@@ -181,6 +232,16 @@ exports.createBookingSinglePage = async (req, res, next) => {
       autoAssignBarber: shouldAutoAssign,
       voucherCode: req.body.voucherCode,
     });
+
+    let paymentLinkData = null;
+    if (noShowCount === 1 || noShowCount === 2) {
+      const paymentController = require("./payment.controller");
+      const depositAmount = noShowCount === 1 ? populatedBooking.totalPrice / 2 : populatedBooking.totalPrice;
+      paymentLinkData = await paymentController.createPaymentLinkHelper({
+        bookingId: populatedBooking._id,
+        amount: depositAmount
+      });
+    }
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
     if (emailToSend) {
@@ -198,7 +259,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
     return require("../utils/response.helper").sendSuccess(res, 201, "Booking created successfully", {
       booking: populatedBooking,
-      isAutoAssigned: wasAutoAssigned
+      isAutoAssigned: wasAutoAssigned,
+      paymentLinkData
     });
   } catch (err) {
     if (err.code === 11000) {
