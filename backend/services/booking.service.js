@@ -69,11 +69,18 @@ exports.processCreateBooking = async ({
     throw error;
   }
 
-  // No-show validation for User
-  if (bookingType === "user" && customerId) {
-    const isBlocked = await NoShow.isCustomerBlocked(customerId, 3);
-    if (isBlocked) {
-      const noShowCount = await NoShow.getCustomerNoShowCount(customerId);
+  // No-show validation for User/Guest by Phone
+  let phoneToCheck = customerPhone;
+  if (!phoneToCheck && customerId) {
+    const User = require("../models/user.model");
+    const user = await User.findById(customerId);
+    if (user) phoneToCheck = user.phone;
+  }
+
+  let noShowCount = 0;
+  if (phoneToCheck) {
+    noShowCount = await NoShow.getNoShowCountByPhone(phoneToCheck);
+    if (noShowCount >= 3) {
       const error = new Error(
         `Chức năng đặt lịch bị khóa do bạn đã hủy/không đến ${noShowCount} lần.`,
       );
@@ -238,7 +245,7 @@ exports.processCreateBooking = async ({
       populate: { path: "userId", select: "name email" },
     });
 
-  return populatedBooking;
+  return { populatedBooking, noShowCount };
 };
 
 /**
@@ -432,7 +439,7 @@ exports.processCreateSinglePageBooking = async (data) => {
   }
 
   // Delegate to processCreateBooking
-  const populatedBooking = await exports.processCreateBooking({
+  const { populatedBooking, noShowCount } = await exports.processCreateBooking({
     bookingType,
     customerId,
     barberId,
@@ -447,5 +454,5 @@ exports.processCreateSinglePageBooking = async (data) => {
     customerPhone,
   });
 
-  return { populatedBooking, shouldAutoAssign };
+  return { populatedBooking, shouldAutoAssign, noShowCount };
 };

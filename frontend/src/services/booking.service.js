@@ -182,5 +182,17 @@ export const bookingService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  preCheckBooking: async (phone) => {
+    try {
+      const response = await fetchWithAuth('/bookings/pre-check', {
+        method: 'POST',
+        body: JSON.stringify({ phone })
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
   }
 };

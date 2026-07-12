@@ -112,10 +112,17 @@ exports.updateBookingStatus = async (req, res) => {
           .json({ message: "Only barbers or admins can mark no-shows" });
       }
 
-      // Record the no-show only if the customer is a registered user
-      if (booking.customerId) {
+      let phone = booking.customerPhone;
+      if (!phone && booking.customerId) {
+        const User = require("../models/user.model");
+        const user = await User.findById(booking.customerId);
+        if (user) phone = user.phone;
+      }
+
+      if (phone) {
         const noShow = new NoShow({
-          customerId: booking.customerId,
+          customerId: booking.customerId || null,
+          customerPhone: phone,
           bookingId: booking._id,
           barberId: booking.barberId,
           serviceId: booking.services && booking.services.length > 0 
@@ -704,9 +711,17 @@ exports.cancelBooking = async (req, res) => {
     const isLateCancellation = hoursDifference < 2;
 
     try {
-      if (booking.customerId) {
+      let phone = booking.customerPhone;
+      if (!phone && booking.customerId) {
+        const User = require("../models/user.model");
+        const user = await User.findById(booking.customerId);
+        if (user) phone = user.phone;
+      }
+
+      if (phone) {
         await NoShow.create({
-          customerId: booking.customerId,
+          customerId: booking.customerId || null,
+          customerPhone: phone,
           bookingId: booking._id,
           barberId: booking.barberId,
           serviceId: booking.services && booking.services.length > 0 

@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
+import { bookingService } from '@/services/booking.service';
 
 const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedServices = [], selectedBarber, selectedDate, selectedTime, isLoading }) {
+  const [step, setStep] = useState(1);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [preCheckInfo, setPreCheckInfo] = useState(null);
+  const [isChecking, setIsChecking] = useState(false);
 
   if (!isOpen) return null;
 
@@ -32,6 +36,40 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
     return newErrors;
   };
 
+  const handleCheckPhone = async (e) => {
+    e.preventDefault();
+    setTouched({ phone: true });
+    
+    if (!customerPhone || customerPhone.trim() === "") {
+      setErrors({ phone: "Vui lòng nhập số điện thoại." });
+      return;
+    } else if (!PHONE_REGEX.test(customerPhone.replace(/\s/g, ""))) {
+      setErrors({ phone: "Số điện thoại không hợp lệ (VD: 0912345678)." });
+      return;
+    }
+
+    setErrors({});
+    setIsChecking(true);
+    try {
+      const result = await bookingService.preCheckBooking(customerPhone.replace(/\s/g, ""));
+      if (result.isBanned) {
+        setErrors({ phone: "Số điện thoại này đã bị khóa do không đến quá nhiều lần." });
+        return;
+      }
+      
+      setPreCheckInfo(result);
+      if (result.customerInfo) {
+        setCustomerName(result.customerInfo.name || result.customerInfo.customerName || "");
+        setCustomerEmail(result.customerInfo.email || result.customerInfo.customerEmail || "");
+      }
+      setStep(2);
+    } catch (err) {
+      setErrors({ phone: err.message || "Lỗi khi kiểm tra số điện thoại." });
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setTouched({ name: true, phone: true, email: true });
@@ -44,7 +82,7 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
     
     onSubmit({
       customerName,
-      customerPhone,
+      customerPhone: customerPhone.replace(/\s/g, ""),
       customerEmail,
       note
     });
@@ -64,21 +102,10 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
             Vui lòng cung cấp thông tin liên hệ để chúng tôi giữ lịch và xưng hô cho tiện nhé!
           </p>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {step === 1 ? (
+            <form onSubmit={handleCheckPhone} className="space-y-6">
               <div className="space-y-2 group">
-                <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Họ và Tên *</label>
-                <input 
-                  required
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all" 
-                  placeholder="Nguyễn Văn A" 
-                  type="text" 
-                />
-              </div>
-              <div className="space-y-2 group">
-                <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Số điện thoại *</label>
+                <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Vui lòng nhập Số điện thoại *</label>
                 <input 
                   required
                   value={customerPhone}
@@ -98,59 +125,121 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
                   </p>
                 )}
               </div>
-            </div>
-            <div className="space-y-2 group">
-              <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Email (Không bắt buộc)</label>
-              <input 
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-                onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
-                className={`w-full bg-surface-container border rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all ${errors.email && touched.email ? 'border-error focus:border-error focus:ring-1 focus:ring-error' : 'border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary'}`} 
-                placeholder="example@email.com" 
-                type="email" 
-              />
-              {errors.email && touched.email && (
-                <p className="text-error text-sm flex items-center gap-1 mt-1">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {errors.email}
-                </p>
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <button 
+                  type="submit" 
+                  disabled={isChecking}
+                  className="flex-1 bg-primary text-on-primary py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:shadow-[0_0_20px_rgba(233,193,118,0.3)] active:scale-[0.98] transition-all duration-300 disabled:opacity-70 flex justify-center items-center gap-2"
+                >
+                  {isChecking ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin">refresh</span>
+                      Đang kiểm tra...
+                    </>
+                  ) : (
+                    'Tiếp Tục'
+                  )}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={onClose}
+                  disabled={isChecking}
+                  className="sm:w-1/3 border-2 border-outline-variant text-on-surface-variant py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:border-primary hover:text-primary active:scale-[0.98] transition-all duration-300"
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {preCheckInfo?.requiresDeposit && (
+                <div className="bg-error/10 border border-error/20 p-4 rounded-lg mb-6">
+                  <p className="text-error font-bold mb-1 flex items-center gap-2">
+                    <span className="material-symbols-outlined">warning</span>
+                    Yêu cầu đặt cọc
+                  </p>
+                  <p className="text-on-surface-variant text-sm">
+                    Do bạn đã từng không đến {preCheckInfo.noShowCount} lần, hệ thống yêu cầu bạn đặt cọc {preCheckInfo.depositRatio * 100}% giá trị dịch vụ. Link thanh toán sẽ hiển thị sau khi bạn bấm Xác nhận.
+                  </p>
+                </div>
               )}
-            </div>
-            <div className="space-y-2 group">
-              <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Ghi chú cho Barber</label>
-              <textarea 
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="w-full bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all resize-none" 
-                placeholder="Bạn có yêu cầu đặc biệt nào không?..." 
-                rows="3"
-              ></textarea>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <button 
-                type="submit" 
-                disabled={isLoading}
-                className="flex-1 bg-primary text-on-primary py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:shadow-[0_0_20px_rgba(233,193,118,0.3)] active:scale-[0.98] transition-all duration-300 disabled:opacity-70 flex justify-center items-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <span className="material-symbols-outlined animate-spin">refresh</span>
-                    Đang xử lý...
-                  </>
-                ) : (
-                  'Xác Nhận Đặt Lịch'
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 group">
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Họ và Tên *</label>
+                  <input 
+                    required
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all" 
+                    placeholder="Nguyễn Văn A" 
+                    type="text" 
+                  />
+                </div>
+                <div className="space-y-2 group">
+                  <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Số điện thoại *</label>
+                  <input 
+                    readOnly
+                    disabled
+                    value={customerPhone}
+                    className={`w-full bg-surface-container/50 border rounded-lg p-3 text-on-surface/50 border-outline-variant`} 
+                    type="tel" 
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 group">
+                <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Email (Không bắt buộc)</label>
+                <input 
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
+                  className={`w-full bg-surface-container border rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all ${errors.email && touched.email ? 'border-error focus:border-error focus:ring-1 focus:ring-error' : 'border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary'}`} 
+                  placeholder="example@email.com" 
+                  type="email" 
+                />
+                {errors.email && touched.email && (
+                  <p className="text-error text-sm flex items-center gap-1 mt-1">
+                    <span className="material-symbols-outlined text-sm">error</span>
+                    {errors.email}
+                  </p>
                 )}
-              </button>
-              <button 
-                type="button" 
-                onClick={onClose}
-                disabled={isLoading}
-                className="sm:w-1/3 border-2 border-outline-variant text-on-surface-variant py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:border-primary hover:text-primary active:scale-[0.98] transition-all duration-300"
-              >
-                Hủy
-              </button>
-            </div>
-          </form>
+              </div>
+              <div className="space-y-2 group">
+                <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider group-focus-within:text-primary transition-colors">Ghi chú cho Barber</label>
+                <textarea 
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded-lg p-3 text-on-surface placeholder:text-on-surface-variant/40 outline-none transition-all resize-none" 
+                  placeholder="Bạn có yêu cầu đặc biệt nào không?..." 
+                  rows="3"
+                ></textarea>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="flex-1 bg-primary text-on-primary py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:shadow-[0_0_20px_rgba(233,193,118,0.3)] active:scale-[0.98] transition-all duration-300 disabled:opacity-70 flex justify-center items-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin">refresh</span>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    'Xác Nhận Đặt Lịch'
+                  )}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setStep(1)}
+                  disabled={isLoading}
+                  className="sm:w-1/3 border-2 border-outline-variant text-on-surface-variant py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:border-primary hover:text-primary active:scale-[0.98] transition-all duration-300"
+                >
+                  Quay Lại
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* Right: Summary Sidebar */}

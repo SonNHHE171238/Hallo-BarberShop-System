@@ -75,6 +75,12 @@ export default function BookingPage() {
         dateStr: dateStr
       });
 
+      if (response.paymentLinkData && response.paymentLinkData.checkoutUrl) {
+        toast.success("Vui lòng thanh toán cọc để giữ chỗ!");
+        window.location.href = response.paymentLinkData.checkoutUrl;
+        return;
+      }
+
       if (paymentMethod === 'payos' && bookingId !== "NEW") {
         toast.success("Đang tạo link thanh toán...");
         try {

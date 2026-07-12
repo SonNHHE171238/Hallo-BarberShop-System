@@ -22,6 +22,46 @@ const bookingService = require("../services/booking.service");
 const emailService = require("../services/email.service");
 const { sendSuccess } = require("../utils/response.helper");
 
+exports.preCheckBooking = async (req, res, next) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ message: "Số điện thoại là bắt buộc" });
+    }
+
+    const count = await NoShow.getNoShowCountByPhone(phone);
+    let requiresDeposit = false;
+    let depositRatio = 0;
+    let isBanned = false;
+
+    if (count >= 3) {
+      isBanned = true;
+    } else if (count === 2) {
+      requiresDeposit = true;
+      depositRatio = 1.0;
+    } else if (count === 1) {
+      requiresDeposit = true;
+      depositRatio = 0.5;
+    }
+
+    const latestBooking = await Booking.findOne({ customerPhone: phone })
+      .sort({ bookingDate: -1 })
+      .select('customerName customerEmail customerPhone');
+
+    const latestUser = await mongoose.model('User').findOne({ phone }).select('name email phone');
+
+    return res.json({
+      noShowCount: count,
+      isBanned,
+      requiresDeposit,
+      depositRatio,
+      customerInfo: latestUser || latestBooking || null
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createBooking = async (req, res, next) => {
   try {
     const {
@@ -57,7 +97,7 @@ exports.createBooking = async (req, res, next) => {
       }
     }
 
-    const populatedBooking = await bookingService.processCreateBooking({
+    const { populatedBooking, noShowCount } = await bookingService.processCreateBooking({
       bookingType,
       customerId,
       barberId,
@@ -71,6 +111,16 @@ exports.createBooking = async (req, res, next) => {
       customerEmail,
       customerPhone,
     });
+
+    let paymentLinkData = null;
+    if (noShowCount === 1 || noShowCount === 2) {
+      const paymentController = require("./payment.controller");
+      const depositAmount = noShowCount === 1 ? populatedBooking.totalPrice / 2 : populatedBooking.totalPrice;
+      paymentLinkData = await paymentController.createPaymentLinkHelper({
+        bookingId: populatedBooking._id,
+        amount: depositAmount
+      });
+    }
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
     if (emailToSend) {
@@ -93,6 +143,7 @@ exports.createBooking = async (req, res, next) => {
 
     return sendSuccess(res, 201, "Booking created successfully", {
       booking: populatedBooking,
+      paymentLinkData
     });
   } catch (err) {
     if (err.code === 11000) {
@@ -164,7 +215,7 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
     const shouldAutoAssign = !barberId || barberId === "random" || barberId === "auto" || autoAssignBarber || isAutoAssign;
 
-    const { populatedBooking, shouldAutoAssign: wasAutoAssigned } = await bookingService.processCreateSinglePageBooking({
+    const { populatedBooking, shouldAutoAssign: wasAutoAssigned, noShowCount } = await bookingService.processCreateSinglePageBooking({
       services,
       barberId,
       bookingDate,
@@ -179,6 +230,16 @@ exports.createBookingSinglePage = async (req, res, next) => {
       customerId,
       autoAssignBarber: shouldAutoAssign
     });
+
+    let paymentLinkData = null;
+    if (noShowCount === 1 || noShowCount === 2) {
+      const paymentController = require("./payment.controller");
+      const depositAmount = noShowCount === 1 ? populatedBooking.totalPrice / 2 : populatedBooking.totalPrice;
+      paymentLinkData = await paymentController.createPaymentLinkHelper({
+        bookingId: populatedBooking._id,
+        amount: depositAmount
+      });
+    }
 
     const emailToSend = customerEmail || populatedBooking.customerId?.email;
     if (emailToSend) {
@@ -196,7 +257,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
 
     return require("../utils/response.helper").sendSuccess(res, 201, "Booking created successfully", {
       booking: populatedBooking,
-      isAutoAssigned: wasAutoAssigned
+      isAutoAssigned: wasAutoAssigned,
+      paymentLinkData
     });
   } catch (err) {
     if (err.code === 11000) {
@@ -499,10 +561,17 @@ exports.updateBookingStatus = async (req, res) => {
           .json({ message: "Only barbers or admins can mark no-shows" });
       }
 
-      // Record the no-show only if the customer is a registered user
-      if (booking.customerId) {
+      let phone = booking.customerPhone;
+      if (!phone && booking.customerId) {
+        const User = require("../models/user.model");
+        const user = await User.findById(booking.customerId);
+        if (user) phone = user.phone;
+      }
+
+      if (phone) {
         const noShow = new NoShow({
-          customerId: booking.customerId,
+          customerId: booking.customerId || null,
+          customerPhone: phone,
           bookingId: booking._id,
           barberId: booking.barberId,
           serviceId: booking.services && booking.services.length > 0 
@@ -697,9 +766,17 @@ exports.cancelBooking = async (req, res) => {
     const isLateCancellation = hoursDifference < 2;
 
     try {
-      if (booking.customerId) {
+      let phone = booking.customerPhone;
+      if (!phone && booking.customerId) {
+        const User = require("../models/user.model");
+        const user = await User.findById(booking.customerId);
+        if (user) phone = user.phone;
+      }
+
+      if (phone) {
         await NoShow.create({
-          customerId: booking.customerId,
+          customerId: booking.customerId || null,
+          customerPhone: phone,
           bookingId: booking._id,
           barberId: booking.barberId,
           serviceId: booking.services && booking.services.length > 0 

@@ -62,6 +62,31 @@ exports.createPaymentLink = async (req, res, next) => {
   }
 };
 
+exports.createPaymentLinkHelper = async ({ bookingId, amount, returnUrl, cancelUrl }) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) throw new Error("Không tìm thấy lịch hẹn");
+
+  const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
+  booking.orderCode = orderCode;
+  booking.paymentMethod = "bank_transfer";
+  await booking.save();
+
+  const body = {
+    orderCode: orderCode,
+    amount: Math.round(Number(amount)),
+    description: `Thanh toan #${booking._id.toString().slice(-6).toUpperCase()}`,
+    returnUrl: returnUrl || process.env.PAYOS_RETURN_URL || "http://localhost:3000/booking/success",
+    cancelUrl: cancelUrl || process.env.PAYOS_CANCEL_URL || "http://localhost:3000/booking/success",
+  };
+
+  const paymentLinkRes = await payos.paymentRequests.create(body);
+  return {
+    checkoutUrl: paymentLinkRes.checkoutUrl,
+    paymentLinkId: paymentLinkRes.paymentLinkId,
+    qrCode: paymentLinkRes.qrCode
+  };
+};
+
 // Đón webhook từ PayOS
 exports.payosWebhook = async (req, res, next) => {
 

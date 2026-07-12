@@ -16,6 +16,7 @@ const {
 
 // Test endpoints
 router.post('/test/booking-flow-auto-assign', bookingController.testBookingFlowAutoAssign);
+router.post('/pre-check', bookingController.preCheckBooking);
 
 // Booking CRUD operations
 router.post('/', authenticate, bookingController.createBooking);
