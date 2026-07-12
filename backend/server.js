@@ -28,6 +28,10 @@ if (process.env.USE_LOCAL_DB === 'true') {
 mongoose.connect(dbUri)
   .then(() => {
     console.log('✅ Connected to MongoDB');
+    
+    // Start background jobs
+    require('./src/jobs/voucherCleanup.job');
+
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
     });

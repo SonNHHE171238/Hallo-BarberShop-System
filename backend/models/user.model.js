@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
     resetTokenHash: { type: String, select: false },
     resetTokenExpires: { type: Date },
     isDeleted: { type: Boolean, default: false },
+    loyaltyPoints: { type: Number, default: 0, min: 0 },
   },
   { 
     timestamps: true,
@@ -55,6 +56,7 @@ const userSchema = new mongoose.Schema(
           oauthId: ret.oauthId,
           isVerified: ret.isVerified,
           isDeleted: ret.isDeleted,
+          loyaltyPoints: ret.loyaltyPoints,
           createdAt: ret.createdAt,
           updatedAt: ret.updatedAt,
         };
@@ -74,6 +76,7 @@ const userSchema = new mongoose.Schema(
           oauthId: ret.oauthId,
           isVerified: ret.isVerified,
           isDeleted: ret.isDeleted,
+          loyaltyPoints: ret.loyaltyPoints,
           createdAt: ret.createdAt,
           updatedAt: ret.updatedAt,
         };

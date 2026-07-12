@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-const bookingController = require('../controllers/bookingCore.controller');
+const bookingCreateController = require('../controllers/bookingCreate.controller');
+const bookingReadController = require('../controllers/bookingRead.controller');
+const bookingUpdateController = require('../controllers/bookingUpdate.controller');
 const bookingAdminController = require('../controllers/bookingAdmin.controller');
 const bookingStatsController = require('../controllers/bookingStats.controller');
 const bookingAvailabilityController = require('../controllers/bookingAvailability.controller');
@@ -15,16 +17,16 @@ const {
 } = require('../middlewares/booking.middleware');
 
 // Test endpoints
-router.post('/test/booking-flow-auto-assign', bookingController.testBookingFlowAutoAssign);
-router.post('/pre-check', bookingController.preCheckBooking);
+router.post('/test/booking-flow-auto-assign', bookingUpdateController.testBookingFlowAutoAssign);
+router.post('/pre-check', bookingCreateController.preCheckBooking);
 
 // Booking CRUD operations
-router.post('/', authenticate, bookingController.createBooking);
-router.post('/single-page', optionalAuthenticate, bookingController.createBookingSinglePage);
-router.get('/me', authenticate, applyRoleBasedBookingFilter, bookingController.getMyBookings);
-router.get('/barber/today', authenticate, authorizeRoles('barber'), bookingController.getBarberTodayBookings);
-router.get('/barber/history', authenticate, authorizeRoles('barber'), bookingController.getBarberHistoryBookings);
-router.get('/all', authenticate, applyRoleBasedBookingFilter, bookingController.getAllBookings);
+router.post('/', authenticate, bookingCreateController.createBooking);
+router.post('/single-page', optionalAuthenticate, bookingCreateController.createBookingSinglePage);
+router.get('/me', authenticate, applyRoleBasedBookingFilter, bookingReadController.getMyBookings);
+router.get('/barber/today', authenticate, authorizeRoles('barber'), bookingReadController.getBarberTodayBookings);
+router.get('/barber/history', authenticate, authorizeRoles('barber'), bookingReadController.getBarberHistoryBookings);
+router.get('/all', authenticate, applyRoleBasedBookingFilter, bookingReadController.getAllBookings);
 
 // Stats
 router.get('/stats', authenticate, bookingStatsController.getBookingStats);
@@ -34,22 +36,23 @@ router.get('/admin/top-barbers', authenticate, authorizeRoles('admin'), bookingS
 
 // Walk-in booking
 router.get('/walk-in/available-slots', authenticate, authorizeRoles('admin'), bookingAvailabilityController.getWalkInAvailableSlots);
-router.post('/walk-in', authenticate, authorizeRoles('admin'), bookingController.createWalkInBooking);
+router.post('/walk-in', authenticate, authorizeRoles('admin'), bookingCreateController.createWalkInBooking);
 
 // Parameterized routes must come last
-router.get('/:id', authenticate, bookingController.getBookingDetail);
+router.get('/lookup/:phone', bookingReadController.lookupBookingsByPhone);
+router.get('/:id', authenticate, bookingReadController.getBookingDetail);
 
 // Admin-only booking management
 router.get('/pending/list', authenticate, authorizeRoles('admin'), bookingAdminController.getPendingBookings);
 router.put('/:bookingId/confirm', authenticate, requireAdminForBookingConfirmation, bookingAdminController.confirmBooking);
 router.post('/bulk-confirm', authenticate, requireAdminForBookingConfirmation, bookingAdminController.bulkConfirmBookings);
-router.put('/:bookingId/assign-barber', authenticate, authorizeRoles('admin', 'staff'), bookingController.assignBarberToBooking);
+router.put('/:bookingId/assign-barber', authenticate, authorizeRoles('admin', 'staff'), bookingUpdateController.assignBarberToBooking);
 
 // Booking status management
-router.put('/:bookingId/status', authenticate, checkBookingUpdatePermission, bookingController.updateBookingStatus);
-router.put('/:bookingId/cancel', authenticate, bookingController.cancelBooking);
+router.put('/:bookingId/status', authenticate, checkBookingUpdatePermission, bookingUpdateController.updateBookingStatus);
+router.put('/:bookingId/cancel', authenticate, bookingUpdateController.cancelBooking);
 router.put('/:bookingId/reschedule', authenticate, customerBookingController.rescheduleBooking);
-router.put('/:bookingId', authenticate, checkBookingUpdatePermission, bookingController.updateBookingDetails);
+router.put('/:bookingId', authenticate, checkBookingUpdatePermission, bookingUpdateController.updateBookingDetails);
 
 // Admin booking rejection
 router.put('/:bookingId/reject', authenticate, authorizeRoles('admin'), bookingAdminController.rejectBooking);
@@ -65,6 +68,6 @@ router.post('/check-availability', authenticate, bookingAvailabilityController.c
 router.get('/conflicts', authenticate, bookingAvailabilityController.getBookingConflicts);
 
 // Route for dynamic time slots
-router.post('/available-slots', bookingController.getAvailableSlots);
+router.post('/available-slots', bookingReadController.getAvailableSlots);
 
 module.exports = router;

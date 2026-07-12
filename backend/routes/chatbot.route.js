@@ -11,7 +11,4 @@ const upload = multer({
 // POST /api/chatbot
 router.post('/', chatbotController.chat);
 
-// POST /api/chatbot/test-stability-preview
-router.post('/test-stability-preview', upload.single('image'), chatbotController.testStabilityPreview);
-
 module.exports = router;

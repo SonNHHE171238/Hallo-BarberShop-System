@@ -1,6 +1,7 @@
 const { PayOS } = require("@payos/node");
 const Booking = require("../models/booking.model");
 const { sendSuccess } = require("../utils/response.helper");
+const voucherController = require("./voucher.controller");
 
 const payos = new PayOS({
   clientId: process.env.PAYOS_CLIENT_ID,
@@ -54,7 +55,9 @@ exports.createPaymentLink = async (req, res, next) => {
     return sendSuccess(res, 200, "Tạo link thanh toán thành công", {
       checkoutUrl: paymentLinkRes.checkoutUrl,
       paymentLinkId: paymentLinkRes.paymentLinkId,
-      qrCode: paymentLinkRes.qrCode // Chuỗi text QR để gen ảnh tại client
+      qrCode: paymentLinkRes.qrCode, // Chuỗi text QR để gen ảnh tại client
+      orderCode: orderCode,
+      amount: amountToPay
     });
   } catch (error) {
     console.error("Error creating payment link:", error);
@@ -130,12 +133,18 @@ exports.payosWebhook = async (req, res, next) => {
           transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
         });
 
+        // Redeem voucher if applies
+        if (booking.voucherLockId) {
+          await voucherController.redeemVoucherLock(booking.voucherLockId);
+        }
+
       } else {
         const Order = require("../models/order.model");
         const order = await Order.findOne({ orderCode: webhookData.orderCode });
         
         if (order) {
           order.status = 'processing';
+          order.paymentStatus = 'paid';
           await order.save();
 
           const Payment = require("../models/payment.model");
@@ -147,6 +156,11 @@ exports.payosWebhook = async (req, res, next) => {
             status: 'success',
             transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
           });
+
+          // Redeem voucher if applies
+          if (order.voucherLockId) {
+            await voucherController.redeemVoucherLock(order.voucherLockId);
+          }
         } else {
           console.warn("Webhook valid but no Booking or Order found for orderCode:", webhookData.orderCode);
         }

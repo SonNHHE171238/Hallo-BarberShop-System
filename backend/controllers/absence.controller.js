@@ -10,11 +10,48 @@ const normalizeDateStr = (date) => {
 
 exports.createAbsenceRequest = async (req, res) => {
     try {
-        const { barberId, startDate, endDate, reason, description } = req.body;
+        let { barberId, startDate, endDate, reason, description } = req.body;
         
+        // If the user is a barber, override barberId with their actual Barber document ID
+        if (req.role === 'barber') {
+            const barber = await Barber.findOne({ userId: req.userId });
+            if (!barber) {
+                return res.status(400).json({ success: false, message: 'Hồ sơ Barber của bạn chưa được thiết lập. Vui lòng liên hệ quản lý.' });
+            }
+            barberId = barber._id;
+        }
+
         // Validate dates
         if (endDate < startDate) {
             return res.status(400).json({ success: false, message: 'End date must be on or after start date.' });
+        }
+
+        // Calculate requested days
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const requestedDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+        // Check the 2 days per month limit
+        const startMonth = startDate.substring(0, 7); // YYYY-MM
+        const monthAbsences = await BarberAbsence.find({
+            barberId,
+            isApproved: { $ne: false }, // Include pending and approved
+            startDate: { $regex: `^${startMonth}` } // Matches YYYY-MM
+        });
+
+        let totalDaysThisMonth = 0;
+        monthAbsences.forEach(absence => {
+            const aStart = new Date(absence.startDate);
+            const aEnd = new Date(absence.endDate);
+            const aDays = Math.round((aEnd - aStart) / (1000 * 60 * 60 * 24)) + 1;
+            totalDaysThisMonth += aDays;
+        });
+
+        if (totalDaysThisMonth + requestedDays > 2) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Quy định: Tối đa 2 ngày nghỉ/tháng. Bạn đã sử dụng ${totalDaysThisMonth} ngày trong tháng này.` 
+            });
         }
 
         // Check if there is already an overlapping absence
@@ -78,7 +115,9 @@ exports.getAbsenceRequests = async (req, res) => {
         if (req.role === 'barber') {
             const barber = await Barber.findOne({ userId: req.userId });
             if (!barber) {
-                return res.status(404).json({ success: false, message: 'Barber profile not found' });
+                // If the user doesn't have a Barber profile, they can't have any requests.
+                // Return an empty array instead of 404 to avoid breaking the frontend.
+                return res.json({ success: true, absences: [] });
             }
             query.barberId = barber._id;
         }

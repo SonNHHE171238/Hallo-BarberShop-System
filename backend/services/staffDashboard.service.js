@@ -73,7 +73,8 @@ const staffDashboardService = {
 
     const getFormattedBookings = async (start, end) => {
       const bookings = await Booking.find({
-        bookingDate: { $gte: start, $lte: end }
+        bookingDate: { $gte: start, $lte: end },
+        status: { $nin: ['cancelled', 'rejected', 'no_show'] }
       })
         .populate('customerId', 'name phone')
         .populate('services', 'name price durationMinutes')
@@ -107,32 +108,39 @@ const staffDashboardService = {
   },
 
   getBarbersStatus: async () => {
+    const User = require('../models/user.model');
+    const BarberAbsence = require('../models/barber-absence.model');
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const barbers = await Barber.find().populate('userId', 'name');
+    const barberUsers = await User.find({ role: 'barber', isDeleted: false });
+    const barberProfiles = await Barber.find().populate('userId');
+
     const statuses = [];
 
-    for (const barber of barbers) {
-      // Check if on break (Nghỉ phép)
-      const isAbsent = await BarberAbsence.exists({
-        barberId: barber._id,
-        date: { $gte: todayStart, $lte: todayEnd },
-        status: 'approved'
-      });
+    for (const u of barberUsers) {
+      const uid = u._id.toString();
+      const bp = barberProfiles.find(p => p.userId && p.userId._id.toString() === uid);
 
       let statusStr = 'Làm việc';
-      if (isAbsent) {
-        statusStr = 'Nghỉ phép';
+      
+      if (bp) {
+        const isAbsent = await BarberAbsence.exists({
+          barberId: bp._id,
+          date: { $gte: todayStart, $lte: todayEnd },
+          status: 'approved'
+        });
+        if (isAbsent) statusStr = 'Nghỉ phép';
       }
 
       statuses.push({
-        _id: barber._id,
-        name: barber.userId ? barber.userId.name : 'Barber',
-        role: barber.title || 'Barber',
-        image: barber.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(barber.userId ? barber.userId.name : 'Barber'),
+        _id: bp ? bp._id.toString() : uid,
+        name: u.name || 'Barber',
+        role: bp ? (bp.title || 'Barber') : 'Barber',
+        image: (bp && bp.profileImageUrl) ? bp.profileImageUrl : (u.avatarUrl || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name || 'Barber')),
         status: statusStr
       });
     }
@@ -140,19 +148,7 @@ const staffDashboardService = {
     return statuses;
   },
 
-  updateCheckIn: async (bookingId, isCheckedIn) => {
-    const booking = await Booking.findById(bookingId);
-    if (!booking) {
-      throw new Error("Không tìm thấy lịch hẹn");
-    }
-    booking.isCheckedIn = isCheckedIn;
-    // Tự động chuyển status sang confirmed nếu đang pending
-    if (booking.isCheckedIn && booking.status === 'pending') {
-      booking.status = 'confirmed';
-    }
-    await booking.save();
-    return booking;
-  },
+
 
   getAppointmentsList: async ({ date, barberId, status }) => {
     const query = {};
@@ -177,9 +173,7 @@ const staffDashboardService = {
         query.status = { $in: ['pending', 'confirmed'] };
       } else if (status === 'serving') {
         // Đang làm
-        query.status = 'in-progress'; 
-        // Wait, if "in-progress" is not a status, maybe just use "confirmed"?
-        // In the HTML, "Đang làm" is a status. If we don't have it, we use confirmed + isCheckedIn
+        query.status = 'in_progress';
       } else {
         query.status = status;
       }
@@ -215,6 +209,9 @@ const staffDashboardService = {
       } else if (b.status === 'confirmed') {
         uiStatus = 'Khách đã đến';
         statusClass = 'bg-green-800/20 text-green-700 border-green-700/50';
+      } else if (b.status === 'in_progress') {
+        uiStatus = 'Đang làm';
+        statusClass = 'bg-secondary/20 text-secondary border-secondary/50';
       } else {
         uiStatus = 'Chưa tới';
       }
@@ -232,7 +229,6 @@ const staffDashboardService = {
         rawStatus: b.status,
         uiStatus,
         statusClass,
-        isCheckedIn: b.isCheckedIn || false,
         totalPrice: b.totalPrice || 0,
         amountPaid: b.amountPaid || 0,
         paymentStatus: b.paymentStatus || 'pending'

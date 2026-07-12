@@ -66,7 +66,7 @@ exports.lookupByPhone = async (req, res) => {
     // Lấy thông tin Barber và Service
     const barberUser = await User.findById(targetBooking.barberId.userId);
     const barberName = barberUser ? barberUser.name : "Thợ cắt";
-    const barberImage = barberUser ? barberUser.avatar : "https://via.placeholder.com/150";
+    const barberImage = barberUser ? barberUser.avatarUrl : "https://via.placeholder.com/150";
 
     const serviceName = targetBooking.services && targetBooking.services.length > 0 
       ? targetBooking.services[0].name 
@@ -128,9 +128,29 @@ exports.createFeedback = async (req, res) => {
       rating
     });
 
-    // 3. Xử lý cộng điểm Loyalty nếu là Customer
+    // Cập nhật lại số sao trung bình cho Barber
+    const mongoose = require("mongoose");
+    const stats = await FeedbackBarber.aggregate([
+      { $match: { barberId: new mongoose.Types.ObjectId(booking.barberId) } },
+      { $group: {
+          _id: "$barberId",
+          avgRating: { $avg: "$rating" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    if (stats.length > 0) {
+      await Barber.findByIdAndUpdate(booking.barberId, {
+        averageRating: Math.round(stats[0].avgRating * 10) / 10,
+        ratingCount: stats[0].count
+      });
+    }
+
+    // 3. Xử lý cộng điểm Loyalty và Sinh Voucher nếu là Customer
     let pointsEarned = 0;
     let totalPoints = 0;
+    let rewardVoucherCode = null;
 
     if (booking.bookingType === "user" && booking.customerId) {
       pointsEarned = 50; // Tặng 50 điểm
@@ -142,6 +162,27 @@ exports.createFeedback = async (req, res) => {
       if (user) {
         totalPoints = user.loyaltyPoints;
       }
+
+      // Sinh Voucher thưởng
+      const Voucher = require('../models/voucher.model');
+      const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+      rewardVoucherCode = `GIFT-BK-${randomStr}`;
+      
+      const validFrom = new Date();
+      const validUntil = new Date(validFrom.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 ngày
+      
+      await Voucher.create({
+        code: rewardVoucherCode,
+        discountType: 'fixed_amount',
+        discountValue: 20000,
+        minOrderValue: 100000,
+        validFrom,
+        validUntil,
+        usageLimit: 1,
+        usageLimitPerUser: 1,
+        applicableUsers: [booking.customerId],
+        isActive: true
+      });
     }
 
     return res.status(201).json({
@@ -149,7 +190,8 @@ exports.createFeedback = async (req, res) => {
       message: "Gửi đánh giá thành công!",
       data: {
         pointsEarned,
-        totalPoints
+        totalPoints,
+        rewardVoucherCode
       }
     });
 

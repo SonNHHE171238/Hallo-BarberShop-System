@@ -196,7 +196,7 @@ function BookingSuccessContent() {
               >
                 Về Trang Chủ
               </button>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {user ? (
                   <button 
                     onClick={() => router.push('/customer/dashboard')}

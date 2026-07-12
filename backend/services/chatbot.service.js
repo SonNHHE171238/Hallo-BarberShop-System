@@ -1,301 +1,23 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const Service = require('../models/service.model');
-const Barber = require('../models/barber.model');
-const User = require('../models/user.model');
-const Booking = require('../models/booking.model');
-const bookingAvailabilityService = require('./bookingAvailability.service');
 const { systemPrompt: aiAdvicePrompt, responseSchema: adviceSchema } = require('../utils/geminiSchema');
+const { tools, geminiTools } = require('./chatbotTools.service');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const getShopServices = async () => {
-  try {
-    const services = await Service.find({ isActive: true }).select('name description price category durationMinutes -_id');
-    return JSON.stringify(services);
-  } catch (error) {
-    return JSON.stringify({ error: "Failed to fetch services." });
-  }
-};
+const systemInstruction = `Bạn là nhân viên lễ tân tư vấn chuyên nghiệp, nhiệt tình của Hallo BarberShop. Ngày hiện tại của hệ thống là {{CURRENT_DATE}}.
+Nhiệm vụ của bạn là hỗ trợ khách hàng thông tin về dịch vụ, thợ cắt tóc, sản phẩm bán lẻ (sáp, gôm...), tra cứu lịch, đặt lịch, hủy lịch và cập nhật lịch hẹn.
 
-const getAvailableBarbers = async () => {
-  try {
-    // Lấy danh sách thợ trực tiếp từ User
-    const barberUsers = await User.find({ role: 'barber', status: 'active' });
-    const formatted = [];
-    
-    for (const user of barberUsers) {
-      const existingBarber = await Barber.findOne({ userId: user._id });
-      
-      formatted.push({
-        name: user.name || "Thợ cắt tóc",
-        bio: existingBarber ? existingBarber.bio : null,
-        specialties: existingBarber && existingBarber.specialties ? existingBarber.specialties : [],
-        experienceYears: existingBarber ? existingBarber.experienceYears : null,
-        rating: existingBarber ? existingBarber.averageRating : null
-      });
-    }
-
-    return JSON.stringify(formatted);
-  } catch (error) {
-    return JSON.stringify({ error: "Failed to fetch barbers." });
-  }
-};
-
-const bookAppointment = async (args) => {
-  try {
-    const { customerName, customerPhone, serviceNames, barberName, bookingDate, startTime } = args;
-
-    if (!customerPhone || customerPhone.length < 9) {
-      return JSON.stringify({ success: false, reason: "Số điện thoại không hợp lệ hoặc bị thiếu. Bạn PHẢI hỏi lại khách hàng số điện thoại chính xác." });
-    }
-
-    // 1. Lấy thông tin dịch vụ
-    const services = await Service.find({ name: { $in: serviceNames }, isActive: true });
-    if (!services || services.length === 0) {
-      return JSON.stringify({ success: false, reason: "Không tìm thấy dịch vụ nào khớp với yêu cầu." });
-    }
-    const serviceIds = services.map(s => s._id);
-    const totalDuration = services.reduce((acc, curr) => acc + (curr.durationMinutes || 30), 0);
-
-    // 2. Format thời gian (Giả sử múi giờ VN +07:00)
-    const requestedDateTime = new Date(`${bookingDate}T${startTime}:00+07:00`);
-    const now = new Date();
-    if (requestedDateTime < now) {
-      return JSON.stringify({ success: false, reason: "Thời gian đặt lịch nằm trong quá khứ. Vui lòng báo khách chọn lại thời gian hợp lệ trong tương lai." });
-    }
-
-    // 2.5 Kiểm tra spam (trùng lặp)
-    const duplicate = await Booking.findOne({ customerPhone, bookingDate: requestedDateTime, status: "pending" });
-    if (duplicate) {
-      return JSON.stringify({ success: true, message: "Lịch này đã được ghi nhận trước đó, không cần tạo mới." });
-    }
-
-    // 3. Tìm thợ
-    let barberId = null;
-    let assignedBarberName = "Bất kỳ";
-    
-    if (barberName && barberName !== "Any" && barberName.toLowerCase() !== "bất kỳ") {
-      const barbers = await Barber.find({ isAvailable: true }).populate('userId');
-      const foundBarber = barbers.find(b => b.userId && b.userId.name && b.userId.name.toLowerCase().includes(barberName.toLowerCase()));
-      
-      if (foundBarber) {
-        barberId = foundBarber._id;
-        assignedBarberName = foundBarber.userId.name;
-      } else {
-        return JSON.stringify({ success: false, reason: `Không tìm thấy thợ tên ${barberName}. Vui lòng chọn thợ khác hoặc để tiệm tự sắp xếp.` });
-      }
-    }
-
-    // 4. Kiểm tra lịch trống
-    if (barberId) {
-      const availability = await bookingAvailabilityService.checkAvailability(barberId, requestedDateTime.toISOString(), totalDuration);
-      if (!availability.available) {
-        return JSON.stringify({ success: false, reason: `Thợ ${assignedBarberName} đã kín lịch vào lúc ${startTime} ngày ${bookingDate}. Vui lòng chọn giờ khác.` });
-      }
-    } else {
-      // Auto-assign
-      const barbers = await Barber.find({ isAvailable: true }).populate('userId');
-      let foundAvailable = false;
-      for (const b of barbers) {
-        const availability = await bookingAvailabilityService.checkAvailability(b._id, requestedDateTime.toISOString(), totalDuration);
-        if (availability.available) {
-          barberId = b._id;
-          assignedBarberName = b.userId.name || "Thợ cắt tóc";
-          foundAvailable = true;
-          break;
-        }
-      }
-      if (!foundAvailable) {
-        return JSON.stringify({ success: false, reason: `Rất tiếc, tất cả thợ đều kín lịch vào lúc ${startTime} ngày ${bookingDate}. Vui lòng chọn giờ hoặc ngày khác.` });
-      }
-    }
-
-    // 5. Tạo Booking
-    const totalPrice = services.reduce((acc, curr) => acc + (curr.price || 0), 0);
-    const newBooking = new Booking({
-      bookingType: "guest",
-      customerName: customerName,
-      customerPhone: customerPhone,
-      barberId: barberId,
-      services: serviceIds,
-      bookingDate: requestedDateTime,
-      durationMinutes: totalDuration,
-      totalPrice: totalPrice,
-      status: "pending",
-    });
-
-    await newBooking.save();
-
-    return JSON.stringify({ 
-      success: true, 
-      message: "Đặt lịch thành công", 
-      bookingDetails: {
-        bookingId: newBooking._id,
-        customerName,
-        customerPhone,
-        serviceNames: services.map(s => s.name),
-        barberName: assignedBarberName,
-        time: `${startTime} ngày ${bookingDate}`,
-        totalPrice: totalPrice
-      }
-    });
-
-  } catch (error) {
-    console.error("Error in bookAppointment tool:", error);
-    return JSON.stringify({ success: false, reason: "Lỗi hệ thống khi đặt lịch: " + error.message });
-  }
-};
-
-const updateAppointment = async (args) => {
-  try {
-    const { bookingId, customerName, customerPhone, serviceNames, barberName, bookingDate, startTime } = args;
-
-    if (!customerPhone || customerPhone.length < 9) {
-      return JSON.stringify({ success: false, reason: "Số điện thoại không hợp lệ hoặc bị thiếu." });
-    }
-
-    const existingBooking = await Booking.findById(bookingId);
-    if (!existingBooking) {
-      return JSON.stringify({ success: false, reason: "Không tìm thấy lịch hẹn với ID này để cập nhật." });
-    }
-
-    // 1. Lấy thông tin dịch vụ
-    const services = await Service.find({ name: { $in: serviceNames }, isActive: true });
-    if (!services || services.length === 0) {
-      return JSON.stringify({ success: false, reason: "Không tìm thấy dịch vụ nào khớp với yêu cầu." });
-    }
-    const serviceIds = services.map(s => s._id);
-    const totalDuration = services.reduce((acc, curr) => acc + (curr.durationMinutes || 30), 0);
-
-    // 2. Format thời gian
-    const requestedDateTime = new Date(`${bookingDate}T${startTime}:00+07:00`);
-    const now = new Date();
-    if (requestedDateTime < now) {
-      return JSON.stringify({ success: false, reason: "Thời gian cập nhật nằm trong quá khứ. Vui lòng chọn lại." });
-    }
-
-    // 3. Tìm thợ
-    let barberId = null;
-    let assignedBarberName = "Bất kỳ";
-    
-    if (barberName && barberName !== "Any" && barberName.toLowerCase() !== "bất kỳ") {
-      const barbers = await Barber.find({ isAvailable: true }).populate('userId');
-      const foundBarber = barbers.find(b => b.userId && b.userId.name && b.userId.name.toLowerCase().includes(barberName.toLowerCase()));
-      
-      if (foundBarber) {
-        barberId = foundBarber._id;
-        assignedBarberName = foundBarber.userId.name;
-      } else {
-        return JSON.stringify({ success: false, reason: `Không tìm thấy thợ tên ${barberName}.` });
-      }
-    }
-
-    // 4. Cập nhật DB
-    const totalPrice = services.reduce((acc, curr) => acc + (curr.price || 0), 0);
-    existingBooking.customerName = customerName;
-    existingBooking.customerPhone = customerPhone;
-    existingBooking.barberId = barberId;
-    existingBooking.services = serviceIds;
-    existingBooking.bookingDate = requestedDateTime;
-    existingBooking.durationMinutes = totalDuration;
-    existingBooking.totalPrice = totalPrice;
-    
-    await existingBooking.save();
-
-    return JSON.stringify({ 
-      success: true, 
-      message: "Cập nhật lịch thành công", 
-      bookingDetails: {
-        bookingId: existingBooking._id,
-        customerName,
-        customerPhone,
-        serviceNames: services.map(s => s.name),
-        barberName: assignedBarberName,
-        time: `${startTime} ngày ${bookingDate}`,
-        totalPrice: totalPrice
-      }
-    });
-
-  } catch (error) {
-    console.error("Error in updateAppointment tool:", error);
-    return JSON.stringify({ success: false, reason: "Lỗi hệ thống khi cập nhật: " + error.message });
-  }
-};
-
-const tools = {
-  getShopServices,
-  getAvailableBarbers,
-  bookAppointment,
-  updateAppointment
-};
-
-// Define tool specifications for Gemini
-const geminiTools = [{
-  functionDeclarations: [
-    {
-      name: "getShopServices",
-      description: "Lấy danh sách các dịch vụ hiện có tại Hallo BarberShop, bao gồm tên dịch vụ, giá tiền, mô tả và thời gian thực hiện.",
-      parameters: {
-        type: "OBJECT",
-        properties: {},
-      },
-    },
-    {
-      name: "getAvailableBarbers",
-      description: "Lấy danh sách các thợ cắt tóc đang có sẵn tại Hallo BarberShop, bao gồm tên, chuyên môn, kinh nghiệm và đánh giá.",
-      parameters: {
-        type: "OBJECT",
-        properties: {},
-      },
-    },
-    {
-      name: "bookAppointment",
-      description: "Tiến hành đặt lịch hẹn cho khách hàng vào hệ thống sau khi đã thu thập đủ thông tin (tên, sđt, dịch vụ, ngày, giờ, thợ).",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          customerName: { type: "STRING", description: "Tên khách hàng" },
-          customerPhone: { type: "STRING", description: "Số điện thoại của khách hàng" },
-          serviceNames: { type: "ARRAY", items: { type: "STRING" }, description: "Mảng chứa tên các dịch vụ khách hàng muốn đặt (phải khớp với tên dịch vụ thật từ getShopServices)" },
-          barberName: { type: "STRING", description: "Tên thợ cắt tóc khách hàng yêu cầu, nếu không yêu cầu thì điền 'Any'" },
-          bookingDate: { type: "STRING", description: "Ngày đặt lịch định dạng YYYY-MM-DD" },
-          startTime: { type: "STRING", description: "Giờ bắt đầu định dạng HH:mm" }
-        },
-        required: ["customerName", "customerPhone", "serviceNames", "barberName", "bookingDate", "startTime"]
-      }
-    },
-    {
-      name: "updateAppointment",
-      description: "Sử dụng để CẬP NHẬT hoặc THAY ĐỔI thông tin một lịch hẹn đã đặt thành công trước đó (đổi ngày, giờ, thợ, dịch vụ, sđt).",
-      parameters: {
-        type: "OBJECT",
-        properties: {
-          bookingId: { type: "STRING", description: "ID của lịch hẹn cần cập nhật (bạn nhận được ID này từ kết quả của bookAppointment)" },
-          customerName: { type: "STRING", description: "Tên khách hàng" },
-          customerPhone: { type: "STRING", description: "Số điện thoại của khách hàng" },
-          serviceNames: { type: "ARRAY", items: { type: "STRING" }, description: "Mảng chứa tên các dịch vụ" },
-          barberName: { type: "STRING", description: "Tên thợ cắt tóc khách hàng yêu cầu" },
-          bookingDate: { type: "STRING", description: "Ngày đặt lịch định dạng YYYY-MM-DD" },
-          startTime: { type: "STRING", description: "Giờ bắt đầu định dạng HH:mm" }
-        },
-        required: ["bookingId", "customerName", "customerPhone", "serviceNames", "barberName", "bookingDate", "startTime"]
-      }
-    }
-  ]
-}];
-
-const systemInstruction = `Bạn là một trợ lý ảo tư vấn khách hàng và Booking Agent cho Hallo BarberShop.
-Nhiệm vụ của bạn là tư vấn nhiệt tình, thân thiện, và giúp khách hàng CHỐT ĐẶT LỊCH.
-Quy trình hoạt động:
-1. Mỗi khi người dùng hỏi về dịch vụ hoặc thợ, HÃY SỬ DỤNG FUNCTION CALLING (getShopServices hoặc getAvailableBarbers) ĐỂ LẤY THÔNG TIN. KHÔNG tự bịa data. Hệ thống sẽ tự động hiển thị Menu tương tác cho khách hàng dựa trên kết quả.
-2. Sau khi khách hàng chọn xong từ Menu và gửi lại danh sách dịch vụ, hãy tính TỔNG TIỀN dựa vào bảng giá và báo cho khách.
-3. Khi khách hàng có ý định đặt lịch, chủ động hỏi các thông tin còn thiếu một cách tự nhiên: Tên, Số điện thoại, Ngày, Giờ, và Thợ cắt. Ngày hiện tại: ${new Date().toISOString().split('T')[0]}.
-4. CHỈ KHI thu thập đủ thông tin: Gọi tool 'bookAppointment' để lưu vào hệ thống. BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC TỰ BỊA SỐ ĐIỆN THOẠI HAY BẤT CỨ THÔNG TIN NÀO. Nếu khách chưa cung cấp số điện thoại, BẮT BUỘC PHẢI HỎI LẠI khách hàng.
-5. Nếu khách hàng muốn ĐẶT LỊCH CHO NHIỀU NGƯỜI CÙNG LÚC (ví dụ: cho bản thân và bạn bè), bạn PHẢI gọi công cụ 'bookAppointment' NHIỀU LẦN (mỗi người 1 lần gọi riêng biệt).
-6. Nếu khách hàng muốn THAY ĐỔI thông tin lịch hẹn ĐÃ ĐẶT (đổi giờ, đổi ngày, đổi sđt...), hãy dùng công cụ 'updateAppointment' thay vì tạo mới.
-7. Sau khi gọi tool 'bookAppointment' hoặc 'updateAppointment' thành công, HÃY báo kết quả và TRÌNH BÀY RÕ RÀNG danh sách thông tin chi tiết bao gồm BẮT BUỘC các trường: Mã đặt lịch (Booking ID), Dịch vụ, Tổng chi phí, Thời gian, Thợ phụ trách.
-8. TUYỆT ĐỐI KHÔNG liệt kê danh sách dịch vụ hay thợ bằng văn bản dài dòng. Bạn chỉ được phép dùng function calling để lấy dữ liệu, sau đó trả lời ngắn gọn: "Đây là danh sách thợ/dịch vụ, mời bạn bấm nút chọn ở Menu bên dưới nhé." (Hệ thống sẽ tự động vẽ UI dựa vào dữ liệu bạn đã gọi).
-Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
+CÁC QUY TẮC QUAN TRỌNG:
+1. LUÔN chào hỏi khách hàng thân thiện và xưng hô "mình" và "bạn" (hoặc anh/chị nếu phù hợp).
+2. Khi khách hỏi về dịch vụ, hãy ưu tiên dùng tool 'getShopServices'. Khi khách hỏi về mặt hàng/sản phẩm, hãy dùng tool 'getShopProducts'.
+3. Khi khách hỏi về thợ, hãy dùng tool 'getAvailableBarbers'. Nếu thợ khách yêu cầu đang bận hoặc không làm việc, HÃY tự động đề xuất: "Thợ [Tên thợ] hiện đang không nhận khách/bận. Mời bạn chọn thợ khác ở Menu bên dưới nhé."
+4. KHI GỌI TOOL 'getShopServices' HOẶC 'getAvailableBarbers', TUYỆT ĐỐI KHÔNG ĐƯỢC GIẢI THÍCH HAY LIỆT KÊ TÊN DỊCH VỤ/THỢ BẰNG TEXT. CHỈ TRẢ LỜI ĐÚNG 1 CÂU: "Mời bạn ấn vào nút bên dưới để xem menu nhé".
+5. Để ĐẶT LỊCH ('bookAppointment'), bạn CẦN thu thập ĐỦ 6 thông tin: Tên, SĐT hợp lệ, Tên dịch vụ, Tên thợ (nếu không có thì truyền "Any"), Ngày đặt (định dạng YYYY-MM-DD), Giờ đặt (HH:mm). SAU KHI ĐẶT LỊCH THÀNH CÔNG, BẮT BUỘC PHẢI liệt kê lại rõ ràng thông tin xác nhận cho khách bao gồm: Mã Lịch Hẹn (Booking ID), Tên khách, SĐT, Thời gian và Dịch vụ. SAU ĐÓ HÀY LUÔN HỎI KHÁCH: "Bạn có muốn thanh toán trước (toàn bộ hóa đơn) để giữ chỗ chắc chắn không bị hủy nếu đến muộn quá 15 phút không?". Nếu khách đồng ý, gọi 'generateBookingPaymentLink'.
+6. Để MUA HÀNG ('placeOrder'), bạn CẦN thu thập ĐỦ 4 thông tin: Tên, SĐT hợp lệ, Địa chỉ, Hình thức thanh toán (COD hoặc PayOS). TUYỆT ĐỐI KHÔNG tự ý thay thế sản phẩm khách yêu cầu bằng sản phẩm khác. Nếu tool placeOrder báo lỗi (success: false), BẮT BUỘC phải đọc chính xác lý do lỗi ('reason') cho khách (VD: báo rõ số lượng còn lại trong kho là bao nhiêu nếu không đủ). KHÔNG ĐƯỢC báo chung chung là hết hàng nếu kho vẫn còn.
+7. NẾU khách muốn THAY ĐỔI lịch hẹn đã đặt, BẮT BUỘC phải gọi tool 'lookupAppointments' (với SĐT) ĐẦU TIÊN để lấy 'Mã đặt lịch' (bookingId) và các thông tin cũ (ngày, giờ, dịch vụ). Sau khi có đủ thông tin cũ và mới, mới gọi 'updateAppointment'.
+8. Nếu khách muốn HỦY LỊCH hoặc TRA CỨU LỊCH, hãy yêu cầu SĐT và gọi tool 'cancelAppointment' hoặc 'lookupAppointments'. (Nếu khách hỏi "Tôi đã thanh toán xong chưa?", hãy gọi 'lookupAppointments' và xem trường "Thanh toán" để trả lời số tiền còn thiếu hoặc đã đủ).
+9. BẠN LÀ NHÂN VIÊN TƯ VẤN, KHÔNG PHẢI LẬP TRÌNH VIÊN. TUYỆT ĐỐI KHÔNG sinh ra JSON hay code trong câu trả lời. Đối với QR Code thanh toán, nếu được trả về định dạng Markdown Ảnh (![QR Code](url)), hãy TRÍCH DẪN Y HỆT NGUYÊN VĂN vào tin nhắn của bạn để hiển thị cho khách kèm các thông tin số tài khoản.
+10. Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
 
 exports.handleChat = async (message, history, imageBase64, mimeType) => {
   if (!process.env.GEMINI_API_KEY) {
@@ -308,9 +30,12 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
   }
 
   // --- LUỒNG 1: Xử lý Text thông thường (gemini-3.1-flash-lite) ---
+  const currentDate = new Date().toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).split('/').reverse().join('-'); // format: YYYY-MM-DD
+  const dynamicSystemInstruction = systemInstruction.replace('{{CURRENT_DATE}}', currentDate);
+
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
-    systemInstruction: systemInstruction,
+    systemInstruction: dynamicSystemInstruction,
     tools: geminiTools,
   });
 
@@ -340,6 +65,42 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
         functionResult = await tools.bookAppointment(call.args);
       } else if (call.name === "updateAppointment") {
         functionResult = await tools.updateAppointment(call.args);
+      } else if (call.name === "checkBarberSchedule") {
+        functionResult = await tools.checkBarberSchedule(call.args);
+      } else if (call.name === "getShopProducts") {
+        functionResult = await tools.getShopProducts();
+      } else if (call.name === "placeOrder") {
+        functionResult = await tools.placeOrder(call.args);
+      } else if (call.name === "generateBookingPaymentLink") {
+        functionResult = await tools.generateBookingPaymentLink(call.args);
+      } else if (call.name === "lookupAppointments") {
+        functionResult = await tools.lookupAppointments(call.args);
+      } else if (call.name === "cancelAppointment") {
+        functionResult = await tools.cancelAppointment(call.args);
+      }
+
+      // Tự động load Menu Thợ nếu các tool trên báo lỗi không tìm thấy thợ, hoặc thợ kín lịch/nghỉ/tạm ngừng/không có hồ sơ
+      try {
+        const parsedResult = JSON.parse(functionResult);
+        const reason = parsedResult.reason || "";
+        const message = parsedResult.message || "";
+        const notFound = parsedResult.success === false && (
+          reason.includes("Không tìm thấy thợ") || 
+          reason.includes("tạm ngừng nhận khách") || 
+          reason.includes("chưa có hồ sơ")
+        );
+        const notAvailable = parsedResult.success === true && (
+          message.includes("không làm việc") || 
+          message.includes("đã kín lịch") ||
+          message.includes("tạm ngừng")
+        );
+        
+        if (notFound || notAvailable) {
+          const barbersRaw = await tools.getAvailableBarbers();
+          menuBarbers = JSON.parse(barbersRaw);
+        }
+      } catch(e) {
+        // Bỏ qua nếu parse lỗi
       }
 
       return {
