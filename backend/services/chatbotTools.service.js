@@ -491,7 +491,7 @@ const placeOrder = async (args) => {
       const body = {
         orderCode: orderCode,
         amount: totalAmount,
-        description: `Thanh toan don hang chatbot`,
+        description: `TT don hang Chatbot`,
         items: orderItems.map(item => ({
           name: item.name.substring(0, 25), // PayOS name length limit
           quantity: item.quantity,
@@ -507,7 +507,7 @@ const placeOrder = async (args) => {
         
         // Cập nhật để trả về cả Markdown QR
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentLinkResponse.qrCode)}`;
-        paymentMessage = `Vui lòng click vào đường link sau để thanh toán trực tuyến: ${paymentUrl}\n\nHoặc quét mã QR dưới đây:\n![QR Code](${qrCodeUrl})`;
+        paymentMessage = `Vui lòng quét mã QR dưới đây để hoàn tất thanh toán trực tuyến:\n![QR Code](${qrCodeUrl})`;
       } catch (payosError) {
         console.error("Lỗi tạo PayOS link via chatbot:", payosError);
         paymentMessage = "Đã xảy ra lỗi khi tạo link thanh toán online. Bạn vui lòng thanh toán COD khi nhận hàng nhé.";
@@ -572,7 +572,7 @@ const generateBookingPaymentLink = async (args) => {
 
     return JSON.stringify({
       success: true,
-      message: `Tạo link thanh toán thành công!\n\nSố tiền cần thanh toán: ${amountToPay} VNĐ\nSố tài khoản: ${paymentLinkRes.accountNumber}\nTên tài khoản: ${paymentLinkRes.accountName}\nNội dung chuyển khoản: ${paymentLinkRes.description}\n\nẢnh QR:\n![QR Code](${qrCodeUrl})\n\nLink trực tiếp: ${paymentLinkRes.checkoutUrl}`
+      message: `Tạo link thanh toán thành công!\n\nSố tiền cần thanh toán: ${amountToPay} VNĐ\nSố tài khoản: ${paymentLinkRes.accountNumber}\nTên tài khoản: ${paymentLinkRes.accountName}\nNội dung chuyển khoản: ${paymentLinkRes.description}\n\nẢnh QR:\n![QR Code](${qrCodeUrl})`
     });
 
   } catch (error) {

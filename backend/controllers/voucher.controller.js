@@ -383,7 +383,7 @@ exports.releaseVoucherLock = async (lockId) => {
 
 exports.getMyVouchers = async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id || req.userId;
+    const userId = req.userId || (req.user && (req.user.id || req.user._id));
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
@@ -447,7 +447,7 @@ exports.getPublicVouchers = async (req, res) => {
 // Save a voucher to user profile
 exports.saveVoucher = async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id || req.userId;
+    const userId = req.userId || (req.user && (req.user.id || req.user._id));
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
