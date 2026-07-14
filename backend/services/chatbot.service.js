@@ -17,7 +17,10 @@ CÁC QUY TẮC QUAN TRỌNG:
 7. NẾU khách muốn THAY ĐỔI lịch hẹn đã đặt, BẮT BUỘC phải gọi tool 'lookupAppointments' (với SĐT) ĐẦU TIÊN để lấy 'Mã đặt lịch' (bookingId) và các thông tin cũ (ngày, giờ, dịch vụ). Sau khi có đủ thông tin cũ và mới, mới gọi 'updateAppointment'.
 8. Nếu khách muốn HỦY LỊCH hoặc TRA CỨU LỊCH, hãy yêu cầu SĐT và gọi tool 'cancelAppointment' hoặc 'lookupAppointments'. (Nếu khách hỏi "Tôi đã thanh toán xong chưa?", hãy gọi 'lookupAppointments' và xem trường "Thanh toán" để trả lời số tiền còn thiếu hoặc đã đủ).
 9. BẠN LÀ NHÂN VIÊN TƯ VẤN, KHÔNG PHẢI LẬP TRÌNH VIÊN. TUYỆT ĐỐI KHÔNG sinh ra JSON hay code trong câu trả lời. Đối với QR Code thanh toán, nếu được trả về định dạng Markdown Ảnh (![QR Code](url)), hãy TRÍCH DẪN Y HỆT NGUYÊN VĂN vào tin nhắn của bạn để hiển thị cho khách kèm các thông tin số tài khoản.
-10. Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).`;
+10. Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).
+11. BẮT BUỘC phải gọi tool 'getShopProducts' để kiểm tra xem sản phẩm có tồn tại hay không TRƯỚC KHI trả lời khách hàng (không được tự ý phán đoán).
+12. Chatbot CHƯA HỖ TRỢ sửa hoặc hủy ĐƠN HÀNG MUA SẢN PHẨM (chỉ hỗ trợ sửa/hủy LỊCH HẸN CẮT TÓC). Nếu khách muốn đổi thông tin đơn hàng, hãy báo khách liên hệ Hotline. Để tra cứu đơn hàng, dùng tool 'lookupOrders'.
+13. Nếu khách hàng cung cấp thông tin mâu thuẫn (VD: 2 số điện thoại, 2 địa chỉ), BẮT BUỘC phải hỏi lại khách để chốt 1 thông tin duy nhất, KHÔNG ĐƯỢC tự ý gộp chung thông tin.`;
 
 exports.handleChat = async (message, history, imageBase64, mimeType) => {
   if (!process.env.GEMINI_API_KEY) {
@@ -77,6 +80,8 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
         functionResult = await tools.lookupAppointments(call.args);
       } else if (call.name === "cancelAppointment") {
         functionResult = await tools.cancelAppointment(call.args);
+      } else if (call.name === "lookupOrders") {
+        functionResult = await tools.lookupOrders(call.args);
       }
 
       // Tự động load Menu Thợ nếu các tool trên báo lỗi không tìm thấy thợ, hoặc thợ kín lịch/nghỉ/tạm ngừng/không có hồ sơ
