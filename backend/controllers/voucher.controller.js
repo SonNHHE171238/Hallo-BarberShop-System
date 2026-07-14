@@ -422,3 +422,59 @@ exports.getMyVouchers = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+// Get all public active vouchers
+exports.getPublicVouchers = async (req, res) => {
+  try {
+    const now = new Date();
+    // Only fetch vouchers that don't have applicableUsers restrictions (or size 0), are active and valid
+    const vouchers = await Voucher.find({
+      isActive: true,
+      validUntil: { $gte: now },
+      $or: [
+        { applicableUsers: { $size: 0 } },
+        { applicableUsers: { $exists: false } }
+      ]
+    }).select('code discountType discountValue minOrderValue maxDiscountAmount validUntil usageLimit usedCount').sort({ validUntil: 1 });
+
+    return res.status(200).json({ success: true, data: vouchers });
+  } catch (error) {
+    console.error('Error fetching public vouchers:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Save a voucher to user profile
+exports.saveVoucher = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id || req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    const { voucherId } = req.body;
+    if (!voucherId) {
+      return res.status(400).json({ success: false, message: 'Voucher ID is required' });
+    }
+
+    const User = require('../models/user.model');
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if already saved
+    if (user.savedVouchers && user.savedVouchers.includes(voucherId)) {
+      return res.status(400).json({ success: false, message: 'Voucher already saved' });
+    }
+
+    if (!user.savedVouchers) user.savedVouchers = [];
+    user.savedVouchers.push(voucherId);
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Voucher saved successfully' });
+  } catch (error) {
+    console.error('Error saving voucher:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

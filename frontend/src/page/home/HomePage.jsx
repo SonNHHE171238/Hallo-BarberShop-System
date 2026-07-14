@@ -7,7 +7,6 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
 import AboutUs from "@/components/home/AboutUs";
-import Services from "@/components/shared/Services";
 import HotDeals from "@/components/home/HotDeals";
 import BusinessHours from "@/components/home/BusinessHours";
 import Barbers from "@/components/home/Barbers";
@@ -41,7 +40,6 @@ export default function HomePage() {
       <main>
         <Hero />
         <AboutUs />
-        <Services />
         <HotDeals />
         <BusinessHours />
         <Barbers />
