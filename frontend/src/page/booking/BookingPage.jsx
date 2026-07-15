@@ -9,7 +9,7 @@ import BarberSelection from "@/components/booking/BarberSelection";
 import DateTimeSelection from "@/components/booking/DateTimeSelection";
 import BookingSummarySidebar from "@/components/booking/BookingSummarySidebar";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { bookingService } from "@/services/booking.service";
 import { voucherService } from "@/services/voucher.service";
 import toast from 'react-hot-toast';
@@ -41,6 +41,18 @@ export default function BookingPage() {
 
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Auto-fill voucher from URL
+  useEffect(() => {
+    const code = searchParams.get('voucherCode') || localStorage.getItem('auto_voucher');
+    if (code) {
+      setVoucherCodeInput(code);
+      if (localStorage.getItem('auto_voucher')) {
+        localStorage.removeItem('auto_voucher');
+      }
+    }
+  }, [searchParams]);
 
   // Polling for Booking Payment Status
   useEffect(() => {

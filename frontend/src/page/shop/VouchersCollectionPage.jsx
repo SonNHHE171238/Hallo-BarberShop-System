@@ -30,35 +30,27 @@ export default function VouchersCollectionPage() {
     fetchVouchers();
   }, []);
 
-  const handleSaveVoucher = async (voucher) => {
-    if (!user) {
-      toast("Vui lòng đăng nhập để lưu mã giảm giá!", { icon: "ℹ️" });
-      router.push("/login");
-      return;
-    }
+  const handleUseVoucher = (voucher) => {
+    // Tự động copy mã vào clipboard
+    navigator.clipboard.writeText(voucher.code);
+    toast.success(`Đã sao chép mã ${voucher.code}!`, { icon: "✂️" });
 
-    if (user.role !== "customer") {
-      toast("Chỉ khách hàng mới có thể lưu mã giảm giá.", { icon: "⚠️" });
-      return;
-    }
+    // Lưu mã vào bộ nhớ tạm để tự động điền khi thanh toán
+    localStorage.setItem('auto_voucher', voucher.code);
 
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/vouchers/save",
-        { voucherId: voucher._id },
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        // Also copy to clipboard for convenience
-        navigator.clipboard.writeText(voucher.code);
-        toast.success(`Đã lưu mã ${voucher.code} vào tài khoản! (Đã sao chép)`);
-      }
-    } catch (error) {
-      if (error.response && error.response.data && error.response.data.message === "Voucher already saved") {
-        toast("Bạn đã lưu mã này rồi!", { icon: "ℹ️" });
-      } else {
-        toast.error("Lỗi khi lưu mã. Vui lòng thử lại sau.");
-      }
+    if (voucher.voucherType === 'booking_only') {
+      setTimeout(() => {
+        router.push(`/booking?voucherCode=${voucher.code}`);
+      }, 500); // Đợi nửa giây cho toast hiện lên rồi mới chuyển trang
+    } else if (voucher.voucherType === 'product_only') {
+      setTimeout(() => {
+        router.push(`/shop?voucherCode=${voucher.code}`);
+      }, 500);
+    } else {
+      // Đối với mã áp dụng được cho cả hai, chỉ báo toast để khách tự quyết định đi đâu
+      setTimeout(() => {
+        toast("Mã đã sẵn sàng! Bạn có thể đặt lịch hoặc mua sáp.", { icon: "🚀", duration: 3000 });
+      }, 500);
     }
   };
 
@@ -131,6 +123,12 @@ export default function VouchersCollectionPage() {
                       Tối đa {formatCurrency(voucher.maxDiscountAmount)}
                     </p>
                   )}
+                  {/* Badge hiển thị loại mã */}
+                  <div className="mt-3">
+                    {voucher.voucherType === 'booking_only' && <span className="text-xs px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">Chỉ áp dụng Đặt lịch</span>}
+                    {voucher.voucherType === 'product_only' && <span className="text-xs px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full">Chỉ áp dụng Mua sáp</span>}
+                    {(!voucher.voucherType || voucher.voucherType === 'all') && <span className="text-xs px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full">Áp dụng Mọi hóa đơn</span>}
+                  </div>
                 </div>
 
                 {/* Bottom Half */}
@@ -147,10 +145,10 @@ export default function VouchersCollectionPage() {
                   </div>
                   
                   <button 
-                    onClick={() => handleSaveVoucher(voucher)}
+                    onClick={() => handleUseVoucher(voucher)}
                     className="w-full py-3 bg-primary text-on-primary font-label-lg font-bold uppercase tracking-widest rounded-lg hover:bg-primary-fixed transition-colors duration-300 relative overflow-hidden group/btn shadow-lg shadow-primary/20"
                   >
-                    <span className="relative z-10">Lưu Mã Ngay</span>
+                    <span className="relative z-10">Dùng Ngay</span>
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300"></div>
                   </button>
                 </div>

@@ -207,10 +207,18 @@ exports.applyVoucher = async (req, res) => {
       }
     }
 
-    // Count active locks (holding or redeemed)
+    // Check voucherType
+    if (voucher.voucherType === 'product_only' && (!productIds || productIds.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá này chỉ áp dụng khi mua Sản phẩm' });
+    }
+    if (voucher.voucherType === 'booking_only' && (!serviceIds || serviceIds.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá này chỉ áp dụng cho Dịch vụ cắt tóc' });
+    }
+
+    // Count active locks (holding only)
     const activeLocks = await VoucherLock.countDocuments({
       voucherId: voucher._id,
-      status: { $in: ['holding', 'redeemed'] }
+      status: 'holding'
     });
 
     if (voucher.usedCount + activeLocks >= voucher.usageLimit) {
@@ -320,8 +328,16 @@ exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone
     }
   }
 
+  // Check voucherType
+  if (voucher.voucherType === 'product_only' && (!productIds || productIds.length === 0)) {
+    throw new Error('Mã giảm giá này chỉ áp dụng khi mua Sản phẩm');
+  }
+  if (voucher.voucherType === 'booking_only' && (!serviceIds || serviceIds.length === 0)) {
+    throw new Error('Mã giảm giá này chỉ áp dụng cho Dịch vụ cắt tóc');
+  }
+
   // Check global limit
-  const activeLocks = await VoucherLock.countDocuments({ voucherId: voucher._id, status: { $in: ['holding', 'redeemed'] } });
+  const activeLocks = await VoucherLock.countDocuments({ voucherId: voucher._id, status: 'holding' });
   if (voucher.usedCount + activeLocks >= voucher.usageLimit) {
     throw new Error('Voucher usage limit reached');
   }
@@ -402,7 +418,10 @@ exports.getMyVouchers = async (req, res) => {
 
     const validVouchers = [];
     for (const v of vouchers) {
-      const activeLocks = await VoucherLock.countDocuments({ voucherId: v._id, status: { $in: ['holding', 'redeemed'] } });
+      const activeLocks = await VoucherLock.countDocuments({
+        voucherId: v._id,
+        status: 'holding'
+      });
       if (v.usedCount + activeLocks >= v.usageLimit) {
         continue;
       }
@@ -435,7 +454,7 @@ exports.getPublicVouchers = async (req, res) => {
         { applicableUsers: { $size: 0 } },
         { applicableUsers: { $exists: false } }
       ]
-    }).select('code discountType discountValue minOrderValue maxDiscountAmount validUntil usageLimit usedCount').sort({ validUntil: 1 });
+    }).select('code discountType discountValue minOrderValue maxDiscountAmount validUntil usageLimit usedCount voucherType').sort({ validUntil: 1 });
 
     return res.status(200).json({ success: true, data: vouchers });
   } catch (error) {

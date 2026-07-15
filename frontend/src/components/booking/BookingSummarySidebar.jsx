@@ -22,7 +22,8 @@ export default function BookingSummarySidebar({
       // In booking, customerPhone might not be known yet until guest modal, 
       // but if user is logged in, token is sent. 
       // If guest, usageLimitPerUser might be checked by phone later.
-      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal, null);
+      const serviceIds = selectedServices.map(s => s._id || s.id);
+      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal, null, [], serviceIds);
       if (res.success) {
         setAppliedVoucher(res.data.code);
         setDiscountAmount(res.data.discountAmount);
