@@ -28,9 +28,7 @@ export default function BookingPage() {
   const [showQR, setShowQR] = useState(false);
   const [currentBookingId, setCurrentBookingId] = useState(null);
   const [successQueryString, setSuccessQueryString] = useState("");
-  const [qrData, setQrData] = useState("");
-  const [orderCode, setOrderCode] = useState(null);
-  const [amountToPay, setAmountToPay] = useState(0);
+  const [payosData, setPayosData] = useState(null);
   
   // Voucher State
   const [voucherCodeInput, setVoucherCodeInput] = useState("");
@@ -149,9 +147,14 @@ export default function BookingPage() {
           });
           
           if (paymentRes && paymentRes.qrCode) {
-            setQrData(paymentRes.qrCode);
-            setOrderCode(paymentRes.orderCode);
-            setAmountToPay(paymentRes.amount);
+            setPayosData({
+              qrCode: paymentRes.qrCode,
+              orderCode: paymentRes.orderCode,
+              amount: paymentRes.amount,
+              accountName: paymentRes.accountName,
+              accountNumber: paymentRes.accountNumber,
+              bin: paymentRes.bin
+            });
             setSuccessQueryString(queryParams.toString());
             setCurrentBookingId(bookingId);
             setShowQR(true);
@@ -249,41 +252,37 @@ export default function BookingPage() {
       />
 
       {/* ================= QR CODE MODAL ================= */}
-      {showQR && (
+      {showQR && payosData && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
           <div className="bg-surface-container border border-outline-variant rounded-xl p-8 max-w-md w-full shadow-2xl relative">
-            <button 
-              onClick={() => {
-                 setShowQR(false);
-                 router.push(`/booking/success?${successQueryString}`);
-              }}
-              className="absolute top-4 right-4 text-on-surface-variant hover:text-primary"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
+            {/* Đã xóa nút Close theo yêu cầu để ép khách hàng thanh toán xong mới được thoát (hoặc phải tắt tab) */}
             
             <h3 className="font-headline-md text-primary text-center mb-6 uppercase tracking-widest">Thanh Toán Đặt Lịch</h3>
             
             <div className="flex justify-center mb-6 bg-white p-4 rounded-xl">
-              <QRCodeSVG value={qrData} size={250} />
+              <QRCodeSVG value={payosData.qrCode} size={250} />
             </div>
 
             <div className="space-y-4 mb-8 bg-surface-container-lowest p-4 rounded-lg border border-outline-variant text-center">
               <div className="flex justify-between items-center pb-2 border-b border-outline-variant/50">
                 <span className="text-on-surface-variant text-sm">Ngân hàng</span>
-                <span className="text-on-surface font-bold text-lg">MB BANK</span>
+                <span className="text-on-surface font-bold text-lg">{payosData.bin || 'PayOS Bank'}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-outline-variant/50">
+                <span className="text-on-surface-variant text-sm">Chủ tài khoản</span>
+                <span className="text-on-surface font-bold text-lg">{payosData.accountName || 'Hệ Thống'}</span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-outline-variant/50">
                 <span className="text-on-surface-variant text-sm">Số tài khoản</span>
-                <span className="text-primary font-bold text-lg">012345678999</span>
+                <span className="text-primary font-bold text-lg">{payosData.accountNumber || 'N/A'}</span>
               </div>
               <div className="flex justify-between items-center pb-2 border-b border-outline-variant/50">
                 <span className="text-on-surface-variant text-sm">Số tiền</span>
-                <span className="text-primary font-bold text-lg">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amountToPay)}</span>
+                <span className="text-primary font-bold text-lg">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payosData.amount)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-on-surface-variant text-sm">Nội dung chuyển khoản</span>
-                <span className="text-on-surface font-bold text-lg">{orderCode}</span>
+                <span className="text-on-surface font-bold text-lg">{payosData.orderCode}</span>
               </div>
             </div>
 

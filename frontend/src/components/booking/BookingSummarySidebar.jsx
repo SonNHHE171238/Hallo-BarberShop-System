@@ -1,15 +1,15 @@
 import React from "react";
 import { voucherService } from "@/services/voucher.service";
 
-export default function BookingSummarySidebar({ 
-  selectedServices = [], selectedBarber, selectedDate, selectedTime, 
+export default function BookingSummarySidebar({
+  selectedServices = [], selectedBarber, selectedDate, selectedTime,
   paymentMethod, setPaymentMethod, onConfirm, isLoading, isGuest,
   voucherCodeInput, setVoucherCodeInput, appliedVoucher, setAppliedVoucher,
   discountAmount, setDiscountAmount, voucherError, setVoucherError,
   applyingVoucher, setApplyingVoucher
 }) {
   const isReady = selectedServices.length > 0 && selectedBarber && selectedDate && selectedTime;
-  
+
   const subTotal = selectedServices.reduce((total, s) => total + (s.price || 0), 0);
   const totalPrice = Math.max(0, subTotal - discountAmount);
   const depositAmount = isGuest ? Math.round(totalPrice / 2) : totalPrice;
@@ -53,7 +53,7 @@ export default function BookingSummarySidebar({
             <h3 className="text-headline-sm font-headline-sm text-primary tracking-tight">Chi Tiết Đặt Lịch</h3>
           </div>
           <div className="p-6 space-y-6">
-            
+
             {/* Service Detail */}
             <div className={`flex items-start space-x-4 ${selectedServices.length === 0 && 'opacity-50'}`}>
               <span className="material-symbols-outlined text-primary mt-1">content_cut</span>
@@ -105,9 +105,9 @@ export default function BookingSummarySidebar({
                 <div className="space-y-2">
                   <label className="flex items-center space-x-3 cursor-pointer group">
                     <div className="relative flex items-center justify-center w-5 h-5">
-                      <input 
-                        type="radio" 
-                        name="paymentMethod" 
+                      <input
+                        type="radio"
+                        name="paymentMethod"
                         value="cash"
                         checked={paymentMethod === 'cash'}
                         onChange={(e) => setPaymentMethod(e.target.value)}
@@ -118,7 +118,7 @@ export default function BookingSummarySidebar({
                     </div>
                     <span className="text-body-md text-on-surface group-hover:text-primary transition-colors">Thanh toán tại quán (Tiền mặt)</span>
                   </label>
-                  
+
                   {isGuest && paymentMethod === 'cash' && (
                     <div className="mt-2 p-3 bg-surface-variant/50 border border-outline-variant rounded-lg">
                       <p className="text-body-sm text-on-surface-variant flex items-start">
@@ -127,12 +127,12 @@ export default function BookingSummarySidebar({
                       </p>
                     </div>
                   )}
-                  
+
                   <label className="flex items-center space-x-3 cursor-pointer group mt-2">
                     <div className="relative flex items-center justify-center w-5 h-5">
-                      <input 
-                        type="radio" 
-                        name="paymentMethod" 
+                      <input
+                        type="radio"
+                        name="paymentMethod"
                         value="payos"
                         checked={paymentMethod === 'payos'}
                         onChange={(e) => setPaymentMethod(e.target.value)}
@@ -152,9 +152,9 @@ export default function BookingSummarySidebar({
             {/* Voucher Section */}
             <div className={`pt-4 border-t border-outline-variant/30 ${!isReady && 'opacity-50'}`}>
               <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="Mã giảm giá" 
+                <input
+                  type="text"
+                  placeholder="Mã giảm giá"
                   value={voucherCodeInput}
                   onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
                   disabled={!isReady || appliedVoucher || applyingVoucher}
@@ -202,14 +202,13 @@ export default function BookingSummarySidebar({
                   </span>
                 </div>
               )}
-              <button 
+              <button
                 onClick={onConfirm}
                 disabled={!isReady || isLoading}
-                className={`w-full font-headline-md py-4 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 ${
-                  isReady && !isLoading
-                    ? 'bg-primary text-on-primary hover:shadow-[0_0_20px_rgba(255,222,165,0.3)] active:scale-95 cursor-pointer' 
+                className={`w-full font-headline-md py-4 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 ${isReady && !isLoading
+                    ? 'bg-primary text-on-primary hover:shadow-[0_0_20px_rgba(255,222,165,0.3)] active:scale-95 cursor-pointer'
                     : 'bg-surface-variant text-outline cursor-not-allowed'
-                }`}
+                  }`}
               >
                 <span>{isLoading ? 'Đang xử lý...' : 'Xác Nhận Đặt Lịch'}</span>
                 {!isLoading && <span className="material-symbols-outlined">arrow_forward</span>}
