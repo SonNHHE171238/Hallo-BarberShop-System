@@ -872,3 +872,166 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
 };
 
 // Create a new walk-in booking (Admin/Staff only)
+exports.guestCancelBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { phone, reason } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ success: false, message: "Vui lòng cung cấp số điện thoại để xác thực." });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy lịch hẹn" });
+    }
+
+    // Verify phone
+    let bookingPhone = booking.customerPhone;
+    if (!bookingPhone && booking.customerId) {
+      const User = require("../models/user.model");
+      const user = await User.findById(booking.customerId).select("phone");
+      if (user) bookingPhone = user.phone;
+    }
+
+    if (bookingPhone !== phone) {
+      return res.status(403).json({ success: false, message: "Xác thực số điện thoại thất bại." });
+    }
+
+    // Check cancellation validation (using existing utility if applicable or simple check)
+    if (!["pending", "confirmed"].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: "Không thể hủy lịch hẹn ở trạng thái này." });
+    }
+
+    // Apply time restrictions
+    if (shouldApplyTimeRestrictions(booking)) {
+      const now = new Date();
+      const bookingTime = new Date(booking.bookingDate);
+      const hoursDifference = (bookingTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      if (hoursDifference < 2) {
+        return res.status(400).json({
+          success: false,
+          message: "Chỉ có thể hủy lịch trước giờ hẹn ít nhất 2 tiếng."
+        });
+      }
+    }
+
+    // Unmark time slots
+    const BarberSchedule = require("../models/barber-schedule.model");
+    const bookingDate = new Date(booking.bookingDate);
+    const dateStr = bookingDate.toISOString().split("T")[0];
+
+    try {
+      await BarberSchedule.unmarkSlotsAsBooked(booking.barberId, dateStr, booking._id, null);
+    } catch (err) {
+      console.error("Error unmarking schedule slots:", err);
+    }
+
+    booking.status = "cancelled";
+    booking.note = booking.note ? `${booking.note}\nKhách tự hủy: ${reason || ''}` : `Khách tự hủy: ${reason || ''}`;
+    await booking.save();
+
+    // Decrease totalBookings
+    try {
+      const Barber = require("../models/barber.model");
+      await Barber.findByIdAndUpdate(booking.barberId, { $inc: { totalBookings: -1 } });
+    } catch (err) {}
+
+    res.json({ success: true, message: "Hủy lịch hẹn thành công", booking });
+  } catch (err) {
+    console.error("Error in guestCancelBooking:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.guestRescheduleBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { phone, bookingDate, barberId, durationMinutes } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ success: false, message: "Vui lòng cung cấp số điện thoại để xác thực." });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy lịch hẹn" });
+    }
+
+    let bookingPhone = booking.customerPhone;
+    if (!bookingPhone && booking.customerId) {
+      const User = require("../models/user.model");
+      const user = await User.findById(booking.customerId).select("phone");
+      if (user) bookingPhone = user.phone;
+    }
+
+    if (bookingPhone !== phone) {
+      return res.status(403).json({ success: false, message: "Xác thực số điện thoại thất bại." });
+    }
+
+    if (!["pending", "confirmed"].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: "Không thể đổi lịch ở trạng thái này." });
+    }
+
+    // Verify time restriction (e.g. > 2 hours)
+    if (shouldApplyTimeRestrictions(booking)) {
+      const now = new Date();
+      const oldTime = new Date(booking.bookingDate);
+      if ((oldTime.getTime() - now.getTime()) / (1000 * 60 * 60) < 2) {
+        return res.status(400).json({ success: false, message: "Không thể đổi lịch khi sát giờ (cách < 2 tiếng)." });
+      }
+    }
+
+    const targetBarberId = barberId || booking.barberId;
+    const targetDuration = durationMinutes || booking.durationMinutes;
+    const newDate = new Date(bookingDate);
+
+    // Simple conflict check
+    const dateStr = newDate.toISOString().split("T")[0];
+    const newStart = newDate;
+    const newEnd = new Date(newStart.getTime() + targetDuration * 60000);
+
+    const conflictingBookings = await Booking.find({
+      barberId: targetBarberId,
+      _id: { $ne: bookingId },
+      bookingDate: {
+        $gte: new Date(dateStr + "T00:00:00.000Z"),
+        $lt: new Date(dateStr + "T23:59:59.999Z"),
+      },
+      status: { $in: ["pending", "confirmed"] }
+    });
+
+    for (const conflict of conflictingBookings) {
+      const cStart = new Date(conflict.bookingDate);
+      const cEnd = new Date(cStart.getTime() + (conflict.durationMinutes || 30) * 60000);
+      if ((newStart >= cStart && newStart < cEnd) || (newEnd > cStart && newEnd <= cEnd) || (newStart <= cStart && newEnd >= cEnd)) {
+        return res.status(409).json({ success: false, message: "Khung giờ này đã có người đặt, vui lòng chọn giờ khác." });
+      }
+    }
+
+    // Unmark old slots
+    const BarberSchedule = require("../models/barber-schedule.model");
+    try {
+      const oldDateStr = booking.bookingDate.toISOString().split("T")[0];
+      await BarberSchedule.unmarkSlotsAsBooked(booking.barberId, oldDateStr, booking._id);
+    } catch(e) {}
+
+    // Update booking
+    booking.bookingDate = newDate;
+    booking.barberId = targetBarberId;
+    booking.durationMinutes = targetDuration;
+    await booking.save();
+
+    // Mark new slots
+    try {
+      const newStartTime = newDate.toTimeString().substring(0, 5);
+      await BarberSchedule.markSlotsAsBooked(targetBarberId, dateStr, [newStartTime], booking._id);
+    } catch(e) {}
+
+    res.json({ success: true, message: "Đổi lịch thành công", data: booking });
+  } catch (err) {
+    console.error("Error in guestRescheduleBooking:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

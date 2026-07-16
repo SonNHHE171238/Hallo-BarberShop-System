@@ -120,8 +120,6 @@ exports.payosWebhook = async (req, res, next) => {
           booking.paymentStatus = "partial_paid";
         }
         
-        booking.status = "completed"; 
-        booking.completedAt = new Date();
         await booking.save();
 
 

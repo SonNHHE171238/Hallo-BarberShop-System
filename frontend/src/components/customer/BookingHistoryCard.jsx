@@ -55,7 +55,7 @@ export default function BookingHistoryCard({
         </div>
       </div>
 
-      {(!hideActions || (isGuest && isCompleted)) && (
+      {(!hideActions || isGuest) && (
         <div className="flex flex-col gap-3 w-full md:w-auto shrink-0">
           {!hideActions && isPending && (
             <>
@@ -104,19 +104,29 @@ export default function BookingHistoryCard({
             </button>
           )}
           
-          {hideActions && isGuest && isCompleted && (
-            booking.isReviewed ? (
-              <div className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-outline text-on-surface-variant font-bold text-label-md cursor-not-allowed uppercase tracking-widest opacity-70 bg-surface-container">
-                Đã Đánh Giá
-              </div>
-            ) : (
+          {hideActions && isGuest && (
+            <>
               <Link
-                href={guestPhone ? `/review?phone=${guestPhone}` : "/review"}
-                className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-primary text-primary font-bold text-label-md hover:bg-primary/10 transition-colors uppercase tracking-widest"
+                href={`/lookup/detail?id=${booking._id}&phone=${guestPhone}`}
+                className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 active:scale-95 transition-all uppercase tracking-widest shadow-md"
               >
-                Đánh giá
+                Chi Tiết
               </Link>
-            )
+              {isCompleted && (
+                booking.isReviewed ? (
+                  <div className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-outline text-on-surface-variant font-bold text-label-md cursor-not-allowed uppercase tracking-widest opacity-70 bg-surface-container">
+                    Đã Đánh Giá
+                  </div>
+                ) : (
+                  <Link
+                    href={guestPhone ? `/review?phone=${guestPhone}` : "/review"}
+                    className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-primary text-primary font-bold text-label-md hover:bg-primary/10 transition-colors uppercase tracking-widest"
+                  >
+                    Đánh giá
+                  </Link>
+                )
+              )}
+            </>
           )}
         </div>
       )}
