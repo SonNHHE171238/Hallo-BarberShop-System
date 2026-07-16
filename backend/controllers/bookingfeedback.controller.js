@@ -173,9 +173,11 @@ exports.createFeedback = async (req, res) => {
       
       await Voucher.create({
         code: rewardVoucherCode,
-        discountType: 'fixed_amount',
-        discountValue: 20000,
-        minOrderValue: 100000,
+        voucherType: 'booking_only',
+        discountType: 'percentage',
+        discountValue: 10,
+        maxDiscountAmount: 50000,
+        minOrderValue: 0,
         validFrom,
         validUntil,
         usageLimit: 1,

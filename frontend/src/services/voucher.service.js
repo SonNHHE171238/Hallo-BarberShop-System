@@ -51,11 +51,12 @@ export const voucherService = {
   },
 
   // Customer endpoints
-  applyVoucher: async (code, totalAmount, customerPhone = null) => {
+  applyVoucher: async (code, totalAmount, customerPhone = null, productIds = [], serviceIds = []) => {
     try {
       return await fetchWithAuth('/vouchers/apply', {
         method: 'POST',
-        body: JSON.stringify({ code, totalAmount, customerPhone }),
+        body: JSON.stringify({ code, totalAmount, customerPhone, productIds, serviceIds }),
+        fullResponse: true
       });
     } catch (error) {
       const msg = error.message || "";
