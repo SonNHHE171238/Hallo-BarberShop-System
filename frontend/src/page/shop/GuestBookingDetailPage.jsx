@@ -8,12 +8,15 @@ import Footer from "@/components/layout/Footer";
 import toast from "react-hot-toast";
 import axios from "axios";
 import Image from "next/image";
+import { getBookingStatusConfig } from "@/constants/statusMaps";
+import { extractTimeSlot } from "@/utils/formatters";
 
 export default function GuestBookingDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const phone = searchParams.get("phone");
+  const source = searchParams.get("source");
 
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -215,16 +218,7 @@ export default function GuestBookingDetailPage() {
   const amountPaid = booking.amountPaid || 0;
   const remaining = Math.max(0, booking.totalPrice - amountPaid);
 
-  const getStatusDisplay = (status) => {
-    switch (status) {
-      case "completed": return { text: "Hoàn thành", icon: "check_circle", color: "text-success border-success/30 bg-success/10" };
-      case "cancelled": return { text: "Đã hủy", icon: "cancel", color: "text-error border-error/30 bg-error/10" };
-      case "confirmed": return { text: "Đã xác nhận", icon: "event_available", color: "text-info border-info/30 bg-info/10" };
-      case "pending": return { text: "Đang chờ", icon: "pending", color: "text-warning border-warning/30 bg-warning/10" };
-      default: return { text: "Đang phục vụ", icon: "sync", color: "text-primary border-primary/30 bg-primary/10" };
-    }
-  };
-  const statusInfo = getStatusDisplay(booking.status);
+  const statusInfo = getBookingStatusConfig(booking.status);
   const todayDate = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
 
   return (
@@ -236,7 +230,13 @@ export default function GuestBookingDetailPage() {
         <header className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
           <div>
             <button 
-              onClick={() => router.push(`/lookup/bookings?phone=${phone}`)} 
+              onClick={() => {
+                if (source === 'customer') {
+                  router.push('/customer/history');
+                } else {
+                  router.push(`/lookup/bookings?phone=${phone}`);
+                }
+              }} 
               className="group flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors mb-4 font-label-md text-xs uppercase tracking-widest"
             >
               <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
@@ -245,7 +245,7 @@ export default function GuestBookingDetailPage() {
             <div className="flex items-center gap-3 mb-3">
               <span className={`px-3 py-1.5 rounded-full border ${statusInfo.color} font-label-md text-xs uppercase tracking-widest flex items-center gap-1.5 backdrop-blur-sm shadow-sm`}>
                 <span className="material-symbols-outlined text-[14px]">{statusInfo.icon}</span>
-                {statusInfo.text}
+                {statusInfo.label}
               </span>
               <span className="text-on-surface-variant font-mono text-sm tracking-wider">#{booking._id.slice(-6).toUpperCase()}</span>
             </div>
@@ -262,7 +262,7 @@ export default function GuestBookingDetailPage() {
             <div className="flex flex-col">
               <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Giờ hẹn</span>
               <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">
-                {booking.date ? new Date(booking.date).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : (booking.time || "N/A")}
+                {extractTimeSlot(booking.timeSlot || booking.bookingDate)}
               </span>
             </div>
           </div>
@@ -317,10 +317,10 @@ export default function GuestBookingDetailPage() {
                   )}
                 </div>
                 <div>
-                  <h3 className="font-headline-sm text-on-surface text-lg mb-1">{booking.barberName || "Sắp xếp tự động"}</h3>
+                  <h3 className="font-headline-sm text-on-surface text-lg mb-1">{booking.barberId?.userId?.name || booking.barberName || "Sắp xếp tự động"}</h3>
                   <p className="font-label-md text-[10px] text-primary uppercase tracking-widest flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[14px]">stars</span>
-                    {(booking.barberName === "Auto" || !booking.barberName) ? "Hệ thống sắp xếp" : "Chuyên gia Barber"}
+                    {(booking.barberName === "Auto" || booking.barberName === "Sắp xếp tự động" || !booking.barberName) ? "Hệ thống sắp xếp" : "Chuyên gia Barber"}
                   </p>
                 </div>
               </div>
@@ -381,20 +381,22 @@ export default function GuestBookingDetailPage() {
                       </div>
 
                       {!isCompleted && remaining > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                          <button 
-                            onClick={() => handlePayment("deposit")}
-                            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-primary bg-primary/10 text-primary font-bold uppercase tracking-widest text-sm hover:bg-primary hover:text-on-primary transition-all duration-300"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">account_balance</span>
-                            Cọc 50%
-                          </button>
+                        <div className={`grid grid-cols-1 ${amountPaid > 0 ? '' : 'md:grid-cols-2'} gap-4 mt-4`}>
+                          {amountPaid === 0 && (
+                            <button 
+                              onClick={() => handlePayment("deposit")}
+                              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-primary bg-primary/10 text-primary font-bold uppercase tracking-widest text-sm hover:bg-primary hover:text-on-primary transition-all duration-300"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">account_balance</span>
+                              Cọc 50%
+                            </button>
+                          )}
                           <button 
                             onClick={() => handlePayment("full")}
                             className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-on-primary font-bold uppercase tracking-widest text-sm shadow-lg hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300"
                           >
                             <span className="material-symbols-outlined text-[20px]">payments</span>
-                            Thanh toán 100%
+                            {amountPaid === 0 ? "Thanh toán 100%" : "Thanh toán phần còn lại"}
                           </button>
                         </div>
                       )}

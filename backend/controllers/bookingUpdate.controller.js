@@ -705,10 +705,28 @@ exports.cancelBooking = async (req, res) => {
       });
     }
 
+    // Prepare cancellation note
+    let customerName = booking.customerName || "Khách hàng";
+    let customerPhone = booking.customerPhone || "";
+    if (!customerPhone && booking.customerId) {
+      const User = require("../models/user.model");
+      const user = await User.findById(booking.customerId);
+      if (user) {
+        customerPhone = user.phone;
+        if (!booking.customerName) customerName = user.name || "Khách hàng";
+      }
+    }
+
+    const bDate = new Date(booking.bookingDate);
+    const dateString = bDate.toLocaleDateString('vi-VN');
+    const timeString = booking.timeSlot || bDate.toTimeString().substring(0, 5);
+    const priceString = booking.totalPrice ? booking.totalPrice.toLocaleString('vi-VN') : "0";
+    const cancelNote = `Khách ${customerName} - SĐT ${customerPhone} huỷ booking: ngày ${dateString} giờ ${timeString} giá ${priceString}đ`;
+
     booking.status = "cancelled";
     booking.note = booking.note
-      ? `${booking.note}\nCancellation reason: ${reason}`
-      : `Cancellation reason: ${reason}`;
+      ? `${booking.note}\nLý do: ${reason}\n${cancelNote}`
+      : `Lý do: ${reason}\n${cancelNote}`;
     await booking.save();
 
     // CRITICAL: Decrease barber's totalBookings count when booking is cancelled
@@ -928,8 +946,26 @@ exports.guestCancelBooking = async (req, res) => {
       console.error("Error unmarking schedule slots:", err);
     }
 
+    // Prepare cancellation note
+    let customerName = booking.customerName || "Khách hàng";
+    let customerPhone = bookingPhone || "";
+    if (!customerPhone && booking.customerId) {
+      const User = require("../models/user.model");
+      const user = await User.findById(booking.customerId);
+      if (user) {
+        customerPhone = user.phone;
+        if (!booking.customerName) customerName = user.name || "Khách hàng";
+      }
+    }
+
+    const bDate = new Date(booking.bookingDate);
+    const dateString = bDate.toLocaleDateString('vi-VN');
+    const timeString = booking.timeSlot || bDate.toTimeString().substring(0, 5);
+    const priceString = booking.totalPrice ? booking.totalPrice.toLocaleString('vi-VN') : "0";
+    const cancelNote = `Khách ${customerName} - SĐT ${customerPhone} huỷ booking: ngày ${dateString} giờ ${timeString} giá ${priceString}đ`;
+
     booking.status = "cancelled";
-    booking.note = booking.note ? `${booking.note}\nKhách tự hủy: ${reason || ''}` : `Khách tự hủy: ${reason || ''}`;
+    booking.note = booking.note ? `${booking.note}\nKhách tự hủy: ${reason || ''}\n${cancelNote}` : `Khách tự hủy: ${reason || ''}\n${cancelNote}`;
     await booking.save();
 
     // Decrease totalBookings

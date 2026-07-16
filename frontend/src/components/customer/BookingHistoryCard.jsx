@@ -57,6 +57,14 @@ export default function BookingHistoryCard({
 
       {(!hideActions || isGuest) && (
         <div className="flex flex-col gap-3 w-full md:w-auto shrink-0">
+          {!hideActions && !isCompleted && (
+            <Link
+              href={`/lookup/detail?id=${booking._id}&phone=${booking.customerPhone}&source=customer`}
+              className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-primary text-primary font-bold text-label-md hover:bg-primary/10 transition-colors uppercase tracking-widest"
+            >
+              Chi Tiết
+            </Link>
+          )}
           {!hideActions && isPending && (
             <>
               {onCancel && (
@@ -106,12 +114,14 @@ export default function BookingHistoryCard({
           
           {hideActions && isGuest && (
             <>
-              <Link
-                href={`/lookup/detail?id=${booking._id}&phone=${guestPhone}`}
-                className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 active:scale-95 transition-all uppercase tracking-widest shadow-md"
-              >
-                Chi Tiết
-              </Link>
+              {!isCompleted && (
+                <Link
+                  href={`/lookup/detail?id=${booking._id}&phone=${guestPhone}`}
+                  className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 active:scale-95 transition-all uppercase tracking-widest shadow-md"
+                >
+                  Chi Tiết
+                </Link>
+              )}
               {isCompleted && (
                 booking.isReviewed ? (
                   <div className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-outline text-on-surface-variant font-bold text-label-md cursor-not-allowed uppercase tracking-widest opacity-70 bg-surface-container">
