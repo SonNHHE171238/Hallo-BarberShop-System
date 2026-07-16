@@ -23,9 +23,9 @@ export default function BookingSummarySidebar({
       // but if user is logged in, token is sent. 
       // If guest, usageLimitPerUser might be checked by phone later.
       const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal, null);
-      if (res.success) {
-        setAppliedVoucher(res.data.code);
-        setDiscountAmount(res.data.discountAmount);
+      if (res) {
+        setAppliedVoucher(res.code);
+        setDiscountAmount(res.discountAmount);
         setVoucherError("");
       }
     } catch (err) {

@@ -327,11 +327,18 @@ exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone
   }
 
   // Check per-user limit
-  const userLocks = await VoucherLock.countDocuments({
-    voucherId: voucher._id,
-    status: { $in: ['holding', 'redeemed'] },
-    $or: [{ userId: userId || 'none' }, { customerPhone: customerPhone || 'none' }]
-  });
+  let userLocks = 0;
+  const userQuery = [];
+  if (userId) userQuery.push({ userId });
+  if (customerPhone) userQuery.push({ customerPhone });
+
+  if (userQuery.length > 0) {
+    userLocks = await VoucherLock.countDocuments({
+      voucherId: voucher._id,
+      status: { $in: ['holding', 'redeemed'] },
+      $or: userQuery
+    });
+  }
 
   if (userLocks >= voucher.usageLimitPerUser) {
     throw new Error('You have reached the maximum usage limit for this voucher');

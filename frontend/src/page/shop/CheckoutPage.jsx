@@ -69,9 +69,9 @@ export default function CheckoutPage() {
     setVoucherError("");
     try {
       const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal + shippingFee, formData.phone);
-      if (res.success) {
-        setAppliedVoucher(res.data.code);
-        setDiscountAmount(res.data.discountAmount);
+      if (res) {
+        setAppliedVoucher(res.code);
+        setDiscountAmount(res.discountAmount);
         setVoucherError("");
       }
     } catch (err) {
