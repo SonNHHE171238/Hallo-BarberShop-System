@@ -9,14 +9,16 @@ exports.createBlog = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Title and content are required' });
     }
 
-    const role = req.user.role;
+    const role = req.role;
     // Admin creates -> approved. Staff creates -> pending
     const status = role === 'admin' ? 'approved' : 'pending';
+    const image = req.file ? req.file.path : '';
 
     const blog = await Blog.create({
       title,
       content,
-      author: req.user.id,
+      image,
+      author: req.userId,
       status
     });
 
@@ -39,10 +41,10 @@ exports.updateBlog = async (req, res) => {
     }
 
     // Role checks
-    const role = req.user.role;
+    const role = req.role;
     if (role === 'staff') {
       // Staff can only edit their own blogs AND only if it's rejected
-      if (blog.author.toString() !== req.user.id) {
+      if (blog.author.toString() !== req.userId) {
         return res.status(403).json({ success: false, message: 'You can only edit your own blogs' });
       }
       if (blog.status !== 'rejected') {
@@ -58,6 +60,7 @@ exports.updateBlog = async (req, res) => {
 
     if (title) blog.title = title;
     if (content) blog.content = content;
+    if (req.file) blog.image = req.file.path;
     
     // Auto-generate new slug if title changes
     if (title && blog.isModified('title')) {
@@ -83,9 +86,9 @@ exports.deleteBlog = async (req, res) => {
     }
 
     // Role checks
-    const role = req.user.role;
+    const role = req.role;
     if (role === 'staff') {
-      if (blog.author.toString() !== req.user.id) {
+      if (blog.author.toString() !== req.userId) {
         return res.status(403).json({ success: false, message: 'You can only delete your own blogs' });
       }
       if (blog.status !== 'rejected') {
@@ -171,13 +174,13 @@ exports.getBlogBySlug = async (req, res) => {
 exports.getAdminBlogs = async (req, res) => {
   try {
     let query = {};
-    const role = req.user.role;
+    const role = req.role;
     
     if (role === 'staff') {
       // Staff sees their own blogs OR approved blogs from others
       query = {
         $or: [
-          { author: req.user.id },
+          { author: req.userId },
           { status: 'approved' }
         ]
       };

@@ -12,6 +12,10 @@ const blogSchema = new mongoose.Schema(
       unique: true,
       required: true,
     },
+    image: {
+      type: String,
+      default: '',
+    },
     content: {
       type: String,
       required: true,
@@ -39,7 +43,7 @@ const blogSchema = new mongoose.Schema(
 );
 
 // Middleware to pre-generate slug if not provided
-blogSchema.pre('validate', function (next) {
+blogSchema.pre('validate', function () {
   if (this.title && !this.slug) {
     this.slug = this.title
       .toLowerCase()
@@ -53,7 +57,6 @@ blogSchema.pre('validate', function (next) {
     // Add random string to avoid duplicate slugs for same title
     this.slug += '-' + Math.floor(Math.random() * 10000);
   }
-  next();
 });
 
 module.exports = mongoose.model('Blog', blogSchema);
