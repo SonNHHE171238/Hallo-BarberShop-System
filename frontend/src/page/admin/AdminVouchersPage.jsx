@@ -14,6 +14,7 @@ const defaultVoucherForm = {
   usageLimit: 100,
   usageLimitPerUser: 1,
   isActive: true,
+  voucherType: 'all',
 };
 
 function formatDateForInput(dateStr) {
@@ -91,6 +92,7 @@ export default function AdminVouchersPage() {
       usageLimit: voucher.usageLimit,
       usageLimitPerUser: voucher.usageLimitPerUser || 1,
       isActive: voucher.isActive,
+      voucherType: voucher.voucherType || 'all',
     });
     setFormOpen(true);
   };
@@ -256,6 +258,15 @@ export default function AdminVouchersPage() {
                   <select name="discountType" value={formData.discountType} onChange={handleChange} className="w-full border p-2 rounded text-sm">
                     <option value="percentage">Theo %</option>
                     <option value="fixed_amount">Số tiền cố định</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase">Phạm vi áp dụng</label>
+                  <select name="voucherType" value={formData.voucherType} onChange={handleChange} className="w-full border p-2 rounded text-sm">
+                    <option value="all">Mọi hóa đơn (Cả cắt tóc & mua hàng)</option>
+                    <option value="booking_only">Chỉ áp dụng Đặt lịch cắt tóc</option>
+                    <option value="product_only">Chỉ áp dụng Mua sáp/sản phẩm</option>
                   </select>
                 </div>
 

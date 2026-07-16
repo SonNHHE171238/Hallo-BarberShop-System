@@ -33,6 +33,22 @@ export default function AdminBlogManagementPage() {
     fetchAdminBlogs();
   }, []);
 
+  const handleDelete = async (blogId) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa bài viết này?")) return;
+    try {
+      const res = await axios.delete(`http://localhost:5000/api/blogs/${blogId}`, {
+        withCredentials: true
+      });
+      if (res.data.success) {
+        setBlogs(blogs.filter(b => b._id !== blogId));
+        alert("Xóa bài viết thành công!");
+      }
+    } catch (error) {
+      console.error("Failed to delete blog:", error);
+      alert(error.response?.data?.message || "Lỗi khi xóa bài viết");
+    }
+  };
+
   // Handle Sorting
   const sortedBlogs = [...blogs].sort((a, b) => {
     if (sortOption === "newest") return new Date(b.createdAt) - new Date(a.createdAt);
@@ -41,8 +57,10 @@ export default function AdminBlogManagementPage() {
     return 0;
   });
 
+  const isStaff = pathname?.startsWith('/staff');
+
   return (
-    <div className="max-w-container-max mx-auto w-full pb-12">
+    <div className={`max-w-container-max mx-auto w-full pb-12 ${isStaff ? 'px-4 md:px-8 pt-8 md:pt-12' : ''}`}>
       {/* Page Header Area */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
@@ -62,7 +80,7 @@ export default function AdminBlogManagementPage() {
           <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
         </div>
       ) : (
-        <BlogTable blogs={sortedBlogs} />
+        <BlogTable blogs={sortedBlogs} onDelete={handleDelete} />
       )}
     </div>
   );
