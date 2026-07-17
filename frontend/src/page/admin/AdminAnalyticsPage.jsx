@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { fetchWithAuth } from '@/services/api';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const fetcher = (url) => fetchWithAuth(url);
 
@@ -16,30 +17,49 @@ const formatFullCurrency = (val) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 };
 
+const formatXAxis = (tickItem) => {
+  if (!tickItem) return '';
+  const parts = tickItem.split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}`; // DD/MM
+  if (parts.length === 2) return `Th${parts[1]}`; // ThMM
+  return tickItem;
+};
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-surface-container-high border border-outline-variant p-3 rounded shadow-xl min-w-[150px]">
+        <p className="font-bold text-primary mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-xs flex justify-between gap-4 font-label-md" style={{ color: entry.color }}>
+            <span>{entry.name}:</span>
+            <span className="font-bold">{formatFullCurrency(entry.value)}</span>
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function AdminAnalyticsPage() {
   const [chartTimeframe, setChartTimeframe] = useState('thisMonth'); // 'thisMonth', 'thisYear'
 
-  const { data: res, error, isLoading } = useSWR(`/analytics/dashboard?chartTimeframe=${chartTimeframe}`, fetcher, {
-    refreshInterval: 60000 // refresh every minute
+  const { data: res, error, isLoading, isValidating } = useSWR(`/analytics/dashboard?timeframe=${chartTimeframe}`, fetcher, {
+    refreshInterval: 60000, // refresh every minute
+    keepPreviousData: true
   });
 
   const data = res;
+  const [animateBars, setAnimateBars] = useState(false);
 
   useEffect(() => {
-    // Re-trigger animation when data changes
-    if (!isLoading && data) {
-      setTimeout(() => {
-        const bars = document.querySelectorAll('.chart-bar');
-        bars.forEach(bar => {
-          const finalHeight = bar.getAttribute('data-height');
-          bar.style.height = '0';
-          setTimeout(() => {
-            bar.style.height = finalHeight;
-          }, 50);
-        });
-      }, 100);
+    if (data) {
+      setAnimateBars(false);
+      const timer = setTimeout(() => setAnimateBars(true), 50);
+      return () => clearTimeout(timer);
     }
-  }, [isLoading, data, chartTimeframe]);
+  }, [chartTimeframe, data?.revenueChart?.length]);
 
   if (error) {
     return <div className="p-8 text-error">Lỗi tải dữ liệu phân tích. Vui lòng thử lại.</div>;
@@ -56,16 +76,48 @@ export default function AdminAnalyticsPage() {
 
   return (
     <div className="w-full text-on-surface font-body-md selection:bg-primary selection:text-on-primary">
-      {isLoading ? (
+      {isLoading && !data ? (
         <div className="flex justify-center items-center h-64 mt-12">
           <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
         </div>
       ) : (
         <div className="max-w-[1400px] mx-auto px-6 md:px-margin-desktop py-8">
           
+          {/* Global Filter Bar */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 bg-surface-container-low p-4 rounded-xl border border-outline-variant/50">
+            <div>
+              <h2 className="font-headline-sm text-2xl text-on-surface">Báo cáo phân tích</h2>
+              <p className="text-sm text-on-surface-variant mt-1">Dữ liệu được lọc theo khoảng thời gian bạn chọn</p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              {isValidating && <span className="material-symbols-outlined animate-spin text-primary text-sm">refresh</span>}
+              <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant shadow-sm">
+                <button 
+                  onClick={() => setChartTimeframe('last7days')}
+                  className={`px-5 py-2 text-xs md:text-sm rounded-md transition-all ${chartTimeframe === 'last7days' ? 'bg-primary text-on-primary font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary hover:bg-surface-variant/50'}`}
+                >
+                  7 ngày qua
+                </button>
+                <button 
+                  onClick={() => setChartTimeframe('thisMonth')}
+                  className={`px-5 py-2 text-xs md:text-sm rounded-md transition-all ${chartTimeframe === 'thisMonth' ? 'bg-primary text-on-primary font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary hover:bg-surface-variant/50'}`}
+                >
+                  Tháng này
+                </button>
+                <button 
+                  onClick={() => setChartTimeframe('thisYear')}
+                  className={`px-5 py-2 text-xs md:text-sm rounded-md transition-all ${chartTimeframe === 'thisYear' ? 'bg-primary text-on-primary font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary hover:bg-surface-variant/50'}`}
+                >
+                  Năm nay
+                </button>
+              </div>
+            </div>
+          </div>
+          
           {/* Operational Overview (Moved to Top) */}
           <div className="bg-surface-container-low border border-outline-variant hover:border-primary transition-all p-8 rounded-xl mb-8">
-            <h4 className="font-headline-sm text-primary mb-6">Tổng quan hoạt động (Tất cả thời gian)</h4>
+            <h4 className="font-headline-sm text-primary mb-6">Tổng quan hoạt động ({chartTimeframe === 'last7days' ? '7 ngày qua' : chartTimeframe === 'thisMonth' ? 'Tháng này' : 'Năm nay'})</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-6">
               <div className="space-y-1">
                 <p className="text-[10px] text-outline uppercase font-label-md">Tổng lịch hẹn</p>
@@ -99,28 +151,15 @@ export default function AdminAnalyticsPage() {
           </div>
 
           {/* Main Revenue Chart */}
-          <div className="bg-surface-container-low border border-outline-variant p-8 rounded-xl mb-8 transition-all hover:border-primary">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div className="bg-surface-container-low border border-outline-variant p-8 rounded-xl mb-8 transition-all hover:border-primary relative">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 relative z-20">
               <div>
-                <h4 className="font-headline-sm text-primary">Biểu đồ doanh thu</h4>
+                <h4 className="font-headline-sm text-primary flex items-center gap-2">
+                  Biểu đồ doanh thu
+                </h4>
                 <p className="text-on-surface-variant text-sm">Thống kê chi tiết Tổng doanh thu, Dịch vụ và Sản phẩm</p>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-6">
-                {/* Chart Filters */}
-                <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
-                  <button 
-                    onClick={() => setChartTimeframe('thisMonth')}
-                    className={`px-4 py-1.5 text-xs rounded-md transition-all ${chartTimeframe === 'thisMonth' ? 'bg-primary text-on-primary font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
-                  >
-                    Tháng này
-                  </button>
-                  <button 
-                    onClick={() => setChartTimeframe('thisYear')}
-                    className={`px-4 py-1.5 text-xs rounded-md transition-all ${chartTimeframe === 'thisYear' ? 'bg-primary text-on-primary font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
-                  >
-                    Năm nay
-                  </button>
-                </div>
                 
                 {/* Chart Legends */}
                 <div className="flex items-center gap-4">
@@ -133,41 +172,44 @@ export default function AdminAnalyticsPage() {
                     <span className="text-xs font-label-md">Dịch vụ</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#ffdea5]/50"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#ffdea5] opacity-80"></div>
                     <span className="text-xs font-label-md">Sản phẩm</span>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="h-80 flex items-end justify-between gap-4 border-b border-outline-variant/30 pb-4 overflow-x-auto custom-scrollbar">
-              {revenueChart.length === 0 ? (
-                <div className="w-full h-full flex items-center justify-center text-on-surface-variant">Không có dữ liệu trong khoảng thời gian này</div>
-              ) : (
-                revenueChart.map((col, idx) => {
-                  const totalH = (col.total / maxRevenue) * 100;
-                  const serviceH = (col.service / maxRevenue) * 100;
-                  const productH = (col.product / maxRevenue) * 100;
-                  
-                  return (
-                    <div key={idx} className="flex-1 min-w-[60px] flex flex-col items-center group relative cursor-pointer">
-                      {/* Tooltip */}
-                      <div className="absolute -top-16 bg-surface-container-high border border-outline-variant p-2 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none whitespace-nowrap">
-                        <p className="text-xs font-bold text-primary mb-1">{col.label}</p>
-                        <p className="text-[10px]">Dịch vụ: {formatCurrency(col.service)}</p>
-                        <p className="text-[10px]">Sản phẩm: {formatCurrency(col.product)}</p>
-                      </div>
+            {/* Chart Area */}
+            <div className={`relative w-full overflow-x-auto custom-scrollbar transition-opacity duration-300 ${isValidating ? 'opacity-50' : 'opacity-100'} pb-4`}>
+              <div style={{ minWidth: revenueChart.length > 15 ? `${revenueChart.length * 50}px` : '100%', height: 320 }}>
+                {revenueChart.length === 0 ? (
+                  <div className="w-full h-full flex items-center justify-center text-on-surface-variant">Không có dữ liệu trong khoảng thời gian này</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={revenueChart} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.3} />
+                      <XAxis 
+                        dataKey="label" 
+                        tickFormatter={formatXAxis} 
+                        tick={{ fontSize: 10, fill: '#6b7280' }} 
+                        axisLine={{ stroke: '#e5e7eb' }} 
+                        tickLine={false} 
+                      />
+                      <YAxis 
+                        tickFormatter={(val) => formatCurrency(val)} 
+                        tick={{ fontSize: 10, fill: '#6b7280' }} 
+                        axisLine={false} 
+                        tickLine={false} 
+                      />
+                      <Tooltip content={<CustomTooltip />} />
                       
-                      <div className="w-full flex items-end justify-center gap-0.5 h-full">
-                        <div className="chart-bar w-1/4 bg-primary/30 rounded-t-sm transition-all duration-1000 ease-out" data-height={`${totalH}%`} style={{height: 0}}></div>
-                        <div className="chart-bar w-1/4 bg-[#214877] rounded-t-sm transition-all duration-1000 ease-out delay-100" data-height={`${serviceH}%`} style={{height: 0}}></div>
-                        <div className="chart-bar w-1/4 bg-[#ffdea5]/50 rounded-t-sm transition-all duration-1000 ease-out delay-200" data-height={`${productH}%`} style={{height: 0}}></div>
-                      </div>
-                      <span className="text-[10px] mt-2 text-outline-variant font-label-md truncate w-full text-center">{col.label.split(' ')[0].substring(5)}</span>
-                    </div>
-                  );
-                })
-              )}
+                      <Line type="monotone" dataKey="total" name="Tổng" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="service" name="Dịch vụ" stroke="#214877" strokeWidth={2} dot={{ r: 2 }} />
+                      <Line type="monotone" dataKey="product" name="Sản phẩm" stroke="#fcd34d" strokeWidth={2} dot={{ r: 2 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
             </div>
           </div>
 

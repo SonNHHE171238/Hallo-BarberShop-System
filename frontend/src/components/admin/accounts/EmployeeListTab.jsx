@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { adminBarberService } from "@/services/adminBarber.service";
@@ -8,95 +6,7 @@ import toast from 'react-hot-toast';
 import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
 import BarberUpcomingBookingsModal from '@/components/admin/accounts/BarberUpcomingBookingsModal';
 
-// MOCK DATA
-const mockStaff = [
-  {
-    id: "S001",
-    name: "Lê Minh Tuân",
-    role: "Master Barber",
-    type: "barber",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBx8T9PXuhBaJjSBYlm4mHv-IsMPQq7hmmXViHt3FKlNHo7oM3XyIsx42wCWMlJmgRjxJecaLdixJDWGZ3UHpnuKRXWtl2XmQH9c3vPLrVZvYX55cZzqD8W8LN-fBwBvGhgE5WBfgVOtlMonOBjY_RQ5QmpzW37Ufj3f9qZIQXij5dc3ZlEIIfxTfc9XuVXvN5_HrUVMpOPTR-5M4ScmcYh17ygYvFYeGu4ZI96yMaDjsRMVIUexXj_JObJrFT-HcBmn5xv0n4DxYhX",
-    rating: 5.0,
-    reviews: 142,
-    revenue: "42.5M",
-    status: "active",
-    shift: "08:00 - 17:00",
-    email: "tuan.lm@hallo.vn",
-    phone: "0901234567"
-  },
-  {
-    id: "S002",
-    name: "Trần Quốc Bảo",
-    role: "Senior Barber",
-    type: "barber",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuB-gZc0b5Oac5qxMyCxwJKB3cJzIFINrkBbg-o_MSxIeoFhGDWpbVThuWwNinEe21KVOUHRMS2DVe8uvrh3zJ7sc7mlt13aepdO66oeKh1m0J-22HtPFBb2ZhNyFOoDhnJTwfqlglDb_e0TuxTwc9B323QTwH7foIpPi7sFw6eG9bIZDYMPbkesWyW81wcPpJyyBYYkRewlLwlnFAo3hSuhfsl7gE93YLKUFVvj8GWMp-u5Q5cYB2B7VC465VuiDfCN1E1fjn-inMW-",
-    rating: 4.8,
-    reviews: 89,
-    revenue: "31.2M",
-    status: "inactive",
-    shift: "13:00 - 22:00",
-    email: "bao.tq@hallo.vn",
-    phone: "0912345678"
-  },
-  {
-    id: "S003",
-    name: "Nguyễn Thùy Linh",
-    role: "Senior Barber",
-    type: "barber",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuATrnQ0OmZNZXa9byI0921DRlhTp3nFF13W0Urb2YD5IBimdMThwvqvRa9gxfY1EW4GXfhUqRFC5D4N3hUFtQ8QEsNG8vNZING6lCywB0G6Y4k0H9bs5twbDkziO4xz-cciiEe6d-00pEI7G_Kn99F23CtZBUxKlHAqKo0GafPJau012y9gCz7T2bTpnvJLpZhDjI10ePLSTZbQVeYF2fkxeO8Qw0cQe8dXyNWiXDS674CYvv5BsErR7y_kXVt_f0oJexiFps018L6X",
-    rating: 4.9,
-    reviews: 112,
-    revenue: "38.9M",
-    status: "active",
-    shift: "09:00 - 18:00",
-    email: "linh.nt@hallo.vn",
-    phone: "0923456789"
-  },
-  {
-    id: "S004",
-    name: "Phạm Hoàng Nam",
-    role: "Junior Barber",
-    type: "barber",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBoAOMuBW7k4lsbjioNkOpx-INiGuUrp6PZGn8qGgiprAUmPRmgwln8pIKkvWoc9fURN_3UfyaImtumOY0LkM91-3pdAUfnCI3LN-Mz7hHAVfEN9oMsJKQZJvEiqQ0mK0pVpiB3iYM57uCCqyDX46zBpzwVgqS-P-aT6TaAtzb53361F8MCWPFqTvuOb0AO5P2dot7-A4l2VsgOrVCz5Ao1RPUt_xrr774CuQCxytT5qLwpXKFlfYuQmlgB0W55nhqeJ-nX7p3xmuDy",
-    rating: 4.6,
-    reviews: 45,
-    revenue: "18.2M",
-    status: "active",
-    shift: "08:00 - 17:00",
-    email: "nam.ph@hallo.vn",
-    phone: "0934567890"
-  },
-  {
-    id: "S005",
-    name: "Vũ Ngọc Ánh",
-    role: "Receptionist",
-    type: "staff",
-    avatar: "",
-    rating: null,
-    reviews: null,
-    revenue: null,
-    status: "active",
-    shift: "08:00 - 17:00",
-    email: "anh.vn@hallo.vn",
-    phone: "0945678901"
-  },
-  {
-    id: "S006",
-    name: "Đặng Thái Sơn",
-    role: "Apprentice",
-    type: "staff",
-    avatar: "",
-    rating: null,
-    reviews: null,
-    revenue: null,
-    status: "inactive",
-    shift: "13:00 - 22:00",
-    email: "son.dt@hallo.vn",
-    phone: "0956789012"
-  }
-];
-
-export default function AdminStaffPage() {
+export default function EmployeeListTab() {
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'barber', 'staff'
   const [staffList, setStaffList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -214,17 +124,11 @@ export default function AdminStaffPage() {
   });
 
   const totalStaff = staffList.length;
-  const activeStaff = staffList.filter(s => s.status === 'active').length;
-  const avgRating = totalStaff > 0 
-    ? (staffList.reduce((acc, curr) => acc + curr.rating, 0) / totalStaff).toFixed(1) 
-    : '0.0';
 
   return (
-    <div className="flex-1 flex flex-col relative w-full h-full min-h-screen">
-      {/* Page Content */}
-      <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full">
+    <div className="flex flex-col h-full overflow-hidden animate-fade-in fade-in">
         {/* Summary Banner */}
-        <div className="mb-6">
+        <div className="mb-6 shrink-0 mt-2">
           <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant py-3 px-6 rounded-lg flex items-center justify-between w-full border-l-4 border-l-primary shadow-sm">
             <span className="text-outline text-sm uppercase tracking-widest font-bold">Tổng nhân sự</span>
             <div className="flex items-center gap-4">
@@ -237,7 +141,7 @@ export default function AdminStaffPage() {
         </div>
 
         {/* Tabs & Actions */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 shrink-0">
           <div className="flex bg-surface-container-high rounded-lg p-1 border border-outline-variant">
             <button
               onClick={() => setActiveTab('all')}
@@ -272,11 +176,11 @@ export default function AdminStaffPage() {
         </div>
 
         {/* Staff Table List */}
-        <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant overflow-hidden rounded-xl mb-4">
-          <div className="overflow-x-auto custom-scrollbar">
+        <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant overflow-hidden rounded-xl mb-4 flex-1 flex flex-col min-h-0">
+          <div className="overflow-x-auto overflow-y-auto custom-scrollbar h-full">
             <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="border-b border-outline-variant bg-surface-container-high/50">
+              <thead className="sticky top-0 z-10 bg-surface-container-high/90 backdrop-blur">
+                <tr className="border-b border-outline-variant">
                   <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Nhân viên</th>
                   <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Liên hệ</th>
                   <th className="px-6 py-4 text-xs uppercase tracking-widest text-outline font-bold">Chức vụ</th>
@@ -288,11 +192,11 @@ export default function AdminStaffPage() {
               <tbody className="text-sm font-medium">
                 {isLoading ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-8 text-outline">Đang tải dữ liệu nhân sự...</td>
+                    <td colSpan="6" className="text-center py-8 text-outline">Đang tải dữ liệu nhân sự...</td>
                   </tr>
                 ) : filteredStaff.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-8 text-outline">Không có nhân sự nào.</td>
+                    <td colSpan="6" className="text-center py-8 text-outline">Không có nhân sự nào.</td>
                   </tr>
                 ) : (
                   filteredStaff.map((staff) => (
@@ -370,12 +274,6 @@ export default function AdminStaffPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-12">
-          <button className="text-outline hover:text-primary transition-colors flex items-center text-sm font-bold">
-            Xem chi tiết lịch <span className="material-symbols-outlined ml-1">arrow_right_alt</span>
-          </button>
-        </div>
-
         <GenericConfirmModal 
             isOpen={confirmModalOpen}
             title="Xóa nhân viên"
@@ -391,7 +289,6 @@ export default function AdminStaffPage() {
                 onAllResolved={() => executeDelete(accountToDelete.fullId)}
             />
         )}
-      </div>
     </div>
   );
 }

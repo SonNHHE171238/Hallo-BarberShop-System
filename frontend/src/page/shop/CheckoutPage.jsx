@@ -72,8 +72,7 @@ export default function CheckoutPage() {
   }, [user]);
 
   const subTotal = cartItems.reduce((total, item) => total + (item.productId.price * item.quantity), 0);
-  const shippingFee = subTotal > 2000000 ? 0 : 35000;
-  const totalAmount = Math.max(0, subTotal + shippingFee - discountAmount);
+  const totalAmount = Math.max(0, subTotal - discountAmount);
 
   const handleApplyVoucher = async () => {
     if (!voucherCodeInput.trim()) return;
@@ -81,7 +80,7 @@ export default function CheckoutPage() {
     setVoucherError("");
     try {
       const productIds = cartItems.map(item => item.productId._id);
-      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal + shippingFee, formData.phone, productIds, []);
+      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal, formData.phone, productIds, []);
       if (res.success) {
         setAppliedVoucher(res.data.code);
         setDiscountAmount(res.data.discountAmount);
@@ -137,7 +136,7 @@ export default function CheckoutPage() {
       if (res.data.success) {
         const orderData = res.data.data;
 
-        if (formData.paymentMethod === 'payos') {
+        if (formData.paymentMethod === 'bank_transfer') {
           if (res.data.qrCode) {
             setCurrentOrder(orderData);
             setQrData(res.data.qrCode);
@@ -167,14 +166,14 @@ export default function CheckoutPage() {
     if (showQR && currentOrder) {
       interval = setInterval(async () => {
         try {
-          const res = await axios.get(`http://localhost:5000/api/orders/${currentOrder._id}`, { withCredentials: true });
-          if (res.data.success && res.data.data.status !== 'pending') {
+          const res = await axios.get(`http://localhost:5000/api/orders/track/${currentOrder.orderCode}`);
+          if (res.data.success && res.data.data.paymentStatus === 'paid') {
             // Đã thanh toán thành công
             clearInterval(interval);
             setShowQR(false);
             sessionStorage.removeItem('hallo_cart');
             localStorage.removeItem('hallo_cart');
-            router.push(`/shop/checkout/success?orderCode=${currentOrder.orderCode}&total=${totalAmount}`);
+            router.push(`/shop/checkout/success?orderCode=${currentOrder.orderCode}&total=${totalAmount}&paid=true`);
           }
         } catch (error) {
           console.error("Polling error", error);
@@ -332,10 +331,6 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-on-surface-variant">
                   <span className="font-body-md">Tạm tính</span>
                   <span className="font-body-md">{formatPrice(subTotal)}</span>
-                </div>
-                <div className="flex justify-between text-on-surface-variant">
-                  <span className="font-body-md">Phí vận chuyển</span>
-                  <span className="font-body-md">{formatPrice(shippingFee)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-success">

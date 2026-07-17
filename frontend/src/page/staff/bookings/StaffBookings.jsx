@@ -244,10 +244,10 @@ export default function StaffBookings() {
                 <option value="all">Tất cả</option>
                 <option value="waiting">Đang chờ</option>
                 <option value="serving">Đang làm</option>
-                <option value="confirmed">Khách đã đến</option>
+                <option value="confirmed">Đã cọc/Giữ chỗ</option>
                 <option value="completed">Hoàn thành</option>
                 <option value="cancelled">Đã hủy</option>
-                <option value="no_show">Không đến</option>
+                <option value="no_show">Không tới</option>
                 <option value="rejected">Bị từ chối</option>
               </select>
             </div>
@@ -293,14 +293,14 @@ export default function StaffBookings() {
                         "bg-surface-container/20 border border-outline-variant/20 px-6 py-5 rounded-lg opacity-80 hover:opacity-100 transition-all cursor-pointer grayscale hover:grayscale-0";
                     } else if (
                       booking.uiStatus === "Đã hủy" ||
-                      booking.uiStatus === "Không đến"
+                      booking.uiStatus === "Không tới"
                     ) {
                       rowClass =
                         "bg-error-container/5 border border-error/10 px-6 py-5 rounded-lg opacity-60";
                       initialsClass = "bg-error/10 text-error";
-                    } else if (booking.uiStatus === "Khách đã đến") {
+                    } else if (booking.uiStatus === "Đã cọc/Giữ chỗ") {
                       rowClass =
-                        "glass-card px-6 py-5 rounded-lg hover:border-green-600 border border-green-600/30 transition-all cursor-pointer shadow-lg";
+                        "glass-card px-6 py-5 rounded-lg hover:border-info border border-info/30 transition-all cursor-pointer shadow-lg";
                     }
 
                     const isFuture =
@@ -438,11 +438,11 @@ export default function StaffBookings() {
                                 {displayStatus === "completed"
                                   ? "Đã xong"
                                   : displayStatus === "confirmed"
-                                    ? "Khách đã đến"
+                                    ? "Đã cọc/Giữ chỗ"
                                     : displayStatus === "in_progress"
                                       ? "Đang làm"
                                       : displayStatus === "no_show"
-                                        ? "Không đến"
+                                        ? "Không tới"
                                         : displayStatus === "cancelled" ||
                                             displayStatus === "rejected"
                                           ? "Đã Hủy"
@@ -723,9 +723,9 @@ export default function StaffBookings() {
                           setStatusConfirmModal({
                             isOpen: true,
                             status: "no_show",
-                            title: "Khách Không Đến",
+                            title: "Khách Không Tới",
                             message:
-                              "Xác nhận khách KHÔNG ĐẾN (No Show)? Lịch sẽ bị đóng.",
+                              "Xác nhận khách KHÔNG TỚI (No Show)? Lịch sẽ bị đóng.",
                             icon: "person_off",
                             color: "text-error",
                             bg: "bg-error/10",
@@ -733,7 +733,7 @@ export default function StaffBookings() {
                         }}
                         className="w-full py-3 bg-error text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
                       >
-                        Khách Không Đến (No Show)
+                        Khách Không Tới (No Show)
                       </button>
                       <button
                         onClick={() => {

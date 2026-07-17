@@ -127,9 +127,10 @@ export default function AdminBookingsPage() {
                             >
                                 <option value="all">Tất cả trạng thái</option>
                                 <option value="pending">Đang chờ</option>
-                                <option value="confirmed">Đã xác nhận</option>
+                                <option value="confirmed">Đã cọc/Giữ chỗ</option>
                                 <option value="completed">Hoàn thành</option>
                                 <option value="cancelled">Đã hủy</option>
+                                <option value="no_show">Không tới</option>
                             </select>
                             <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
                         </div>
@@ -226,9 +227,10 @@ export default function AdminBookingsPage() {
                                         <td className="px-3 py-2.5">
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyles(booking.status)}`}>
                                                 {booking.status === 'pending' ? 'Đang chờ' :
-                                                 booking.status === 'confirmed' ? 'Đã xác nhận' :
+                                                 booking.status === 'confirmed' ? 'Đã cọc/Giữ chỗ' :
                                                  booking.status === 'completed' ? 'Hoàn thành' :
-                                                 booking.status === 'cancelled' ? 'Đã hủy' : booking.status}
+                                                 booking.status === 'cancelled' ? 'Đã hủy' :
+                                                 booking.status === 'no_show' ? 'Không tới' : booking.status}
                                             </span>
                                         </td>
                                         <td className="px-3 py-2.5 text-right font-medium text-primary text-[14px]">

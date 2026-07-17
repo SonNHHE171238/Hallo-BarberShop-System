@@ -20,7 +20,6 @@ export default function StaffHeader() {
     { name: "POS", href: "/staff/pos" },
     { name: "Blog", href: "/staff/blogs" },
     { name: "Kho hàng", href: "/staff/inventory" },
-    { name: "Khách hàng", href: "/staff/customers" },
   ];
 
   return (

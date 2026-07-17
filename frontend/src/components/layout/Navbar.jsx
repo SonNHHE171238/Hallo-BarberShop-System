@@ -27,14 +27,17 @@ export default function Navbar() {
         try {
           const res = await axios.get("http://localhost:5000/api/cart", { withCredentials: true });
           if (res.data.success && res.data.data && res.data.data.items) {
-            setCartCount(res.data.data.items.length);
+            const items = res.data.data.items;
+            const count = items.reduce((acc, item) => acc + (item.quantity || 1), 0);
+            setCartCount(count);
           }
         } catch (error) {
           // Ignore error silently to not spam console
         }
       } else {
         const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
-        setCartCount(localCart.length);
+        const count = localCart.reduce((acc, item) => acc + (item.quantity || 1), 0);
+        setCartCount(count);
       }
     };
 
