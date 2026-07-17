@@ -209,6 +209,32 @@ exports.getCurrentRoster = async (req, res) => {
   }
 };
 
+exports.getCurrentPublishedRoster = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find the published roster for the current week
+    const roster = await WeeklyRoster.findOne({
+      status: 'published',
+      weekEndDate: { $gte: today }
+    }).sort({ weekStartDate: 1 });
+
+    if (!roster) {
+      return res.json({ success: true, roster: null, registration: null });
+    }
+
+    let registration = null;
+    if (req.role === 'staff') {
+      registration = await ShiftRegistration.findOne({ rosterId: roster._id, userId: req.userId });
+    }
+
+    res.json({ success: true, roster, registration });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 exports.getMyRegistration = async (req, res) => {
   try {
     const registration = await ShiftRegistration.findOne({ rosterId: req.params.id, userId: req.userId });
@@ -253,14 +279,15 @@ exports.registerShifts = async (req, res) => {
       registration.registeredShifts = registeredShifts;
       registration.totalShifts = totalShifts;
       registration.adminAdjusted = false; // Reset if they re-submit
-      registration.status = 'pending';
+      registration.status = 'approved';
     } else {
       registration = new ShiftRegistration({
         rosterId: roster._id,
         userId: req.userId,
         role: req.role,
         registeredShifts,
-        totalShifts
+        totalShifts,
+        status: 'approved'
       });
     }
 
