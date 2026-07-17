@@ -312,7 +312,7 @@ export default function AdminAbsencesPage() {
                         {new Date(b.originalDate).toLocaleString('vi-VN')}
                       </div>
                       <div className="text-sm text-on-surface-variant mt-1">
-                        Khách: <strong className="text-on-surface">{b.bookingId?.customerId?.name || "Khách hàng"}</strong> - SĐT: {b.bookingId?.customerId?.phone || "N/A"}
+                        Khách: <strong className="text-on-surface">{b.bookingId?.customerId?.name || b.bookingId?.customerName || "Khách hàng"}</strong> - SĐT: {b.bookingId?.customerId?.phone || b.bookingId?.customerPhone || "N/A"}
                       </div>
                       
                       <div className="mt-2 text-xs font-bold uppercase tracking-widest">
