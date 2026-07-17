@@ -18,6 +18,7 @@ export default function AdminHeader({ onMenuClick }) {
     if (pathname.includes('/admin/services')) return 'Dịch Vụ';
     if (pathname.includes('/admin/inventory')) return 'Kho Hàng';
     if (pathname.includes('/admin/products')) return 'Quản Lý Sản Phẩm';
+    if (pathname.includes('/admin/orders')) return 'Quản Lý Đơn Hàng';
     if (pathname.includes('/admin/analytics')) return 'Phân Tích Kinh Doanh';
     if (pathname === '/admin' || pathname === '/admin/') return 'Bảng Điều Khiển - Admin';
     return '';
