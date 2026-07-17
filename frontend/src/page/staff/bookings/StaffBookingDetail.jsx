@@ -162,13 +162,13 @@ export default function StaffBookingDetail() {
         };
       case "no_show":
         return {
-          text: "Không đến",
+          text: "Không tới",
           icon: "person_off",
           color: "bg-error/10 text-error border-error/20",
         };
       case "confirmed":
         return {
-          text: "Khách đã đến",
+          text: "Đã cọc/Giữ chỗ",
           icon: "event_available",
           color: "bg-green-800/20 text-green-700 border-green-700/50",
         };
@@ -644,7 +644,7 @@ export default function StaffBookingDetail() {
                     }}
                     className="flex-1 px-4 py-3 bg-error/10 hover:bg-error/20 border border-error/30 rounded text-error font-bold text-xs uppercase tracking-wider transition-colors"
                   >
-                    Không Đến (No Show)
+                    Không Tới (No Show)
                   </button>
                   <button
                     onClick={() => {

@@ -142,6 +142,7 @@ const staffController = {
         amountPaid: booking.amountPaid || 0,
         paymentStatus: booking.paymentStatus,
         status: booking.status,
+        note: booking.note,
         date: booking.bookingDate.toLocaleDateString('vi-VN'),
         time: booking.bookingDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         rawDate: booking.bookingDate

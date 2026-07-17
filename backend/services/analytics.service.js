@@ -32,6 +32,12 @@ class AnalyticsService {
       chartEnd.setHours(23, 59, 59, 999);
     }
 
+    // Không hiển thị các cột trống trong tương lai
+    const now = new Date();
+    if (chartEnd > now) {
+      chartEnd = now;
+    }
+
     const [
       revenueChart,
       compositionStats,
@@ -39,9 +45,9 @@ class AnalyticsService {
       operationalOverview
     ] = await Promise.all([
       this.getRevenueChart(chartStart, chartEnd, chartTimeframe),
-      this.getCompositionStats(globalStart, globalEnd),
-      this.getTopPerformers(globalStart, globalEnd),
-      this.getOperationalOverview(globalStart, globalEnd)
+      this.getCompositionStats(chartStart, chartEnd),
+      this.getTopPerformers(chartStart, chartEnd),
+      this.getOperationalOverview(chartStart, chartEnd)
     ]);
 
     return {
@@ -79,7 +85,8 @@ class AnalyticsService {
     const mergedMap = new Map();
     
     if (chartTimeframe === 'thisYear') {
-      for (let i = 0; i < 12; i++) {
+      const endMonth = end.getMonth();
+      for (let i = 0; i <= endMonth; i++) {
         const d = new Date(start.getFullYear(), i, 1);
         const yyyy = d.getFullYear();
         const mm = String(i + 1).padStart(2, '0');

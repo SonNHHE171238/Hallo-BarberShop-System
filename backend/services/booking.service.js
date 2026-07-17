@@ -227,12 +227,8 @@ exports.processCreateBooking = async ({
     voucherLockId,
   };
 
-  // If created via POS or auto-assigned by staff, it might be auto-confirmed
-  // We will let the controller decide, but if autoAssignedBarber is true, we confirm it
-  if (autoAssignedBarber) {
-    bookingData.status = "confirmed";
-    bookingData.confirmedAt = new Date();
-  }
+  // The default status from the schema is "pending".
+  // Walk-in bookings will override this directly when calling new Booking().
 
   const booking = new Booking(bookingData);
 

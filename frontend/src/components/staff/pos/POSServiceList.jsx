@@ -75,9 +75,9 @@ export default function POSServiceList({
         </div>
       </div>
 
-      {/* Grid Container */}
+      {/* List Container */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pb-12 pr-2">
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+        <div className="flex flex-col gap-3">
           {filteredByCategory.map((item) => {
             const isSelected = selectedItems.some((i) => i._id === item._id);
             const isProduct = item.itemType === "product";
@@ -86,71 +86,67 @@ export default function POSServiceList({
               <div
                 key={item._id || item.id}
                 onClick={() => selectItem(item)}
-                className={`bg-surface-container-lowest p-3 md:p-4 rounded-xl cursor-pointer transition-all duration-200 flex flex-col justify-between h-full min-h-[260px] relative overflow-hidden group shadow-sm hover:shadow-md ${
+                className={`bg-surface-container-lowest p-3 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-4 relative overflow-hidden group shadow-sm hover:shadow-md ${
                   isSelected
-                    ? "border-2 border-primary bg-primary/5 scale-[0.98]"
+                    ? "border-2 border-primary bg-primary/5 scale-[0.99]"
                     : "border border-outline-variant/50 hover:border-primary/50"
                 }`}
               >
-                {/* Type Badge */}
-                <div className="absolute top-3 left-3 z-20">
-                  <span
-                    className={`text-[9px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider backdrop-blur-md shadow-sm ${
-                      isProduct ? "bg-surface-variant/90 text-on-surface border border-outline-variant" : "bg-primary/90 text-on-primary"
-                    }`}
-                  >
-                    {isProduct ? "Sản phẩm" : "Dịch vụ"}
-                  </span>
+                {/* Image */}
+                <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 overflow-hidden rounded-lg bg-surface-variant/30 relative">
+                  {(item.images && item.images[0]) || item.image ? (
+                    <img
+                      src={(item.images && item.images[0]) || item.image}
+                      alt={item.name}
+                      className={`w-full h-full object-cover transition-transform duration-500 ${isSelected ? '' : 'group-hover:scale-110'}`}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="material-symbols-outlined text-outline-variant text-2xl md:text-3xl opacity-50">
+                        {isProduct ? 'inventory_2' : 'spa'}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="relative z-10 flex-1 flex flex-col">
-                  {/* Image */}
-                  <div className="w-full h-[130px] shrink-0 mb-3 overflow-hidden rounded-lg bg-surface-variant/30">
-                    {(item.images && item.images[0]) || item.image ? (
-                      <img
-                        src={(item.images && item.images[0]) || item.image}
-                        alt={item.name}
-                        className={`w-full h-full object-cover transition-transform duration-500 ${isSelected ? '' : 'group-hover:scale-110'}`}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="material-symbols-outlined text-outline-variant text-4xl opacity-50">
-                          {isProduct ? 'inventory_2' : 'spa'}
-                        </span>
-                      </div>
-                    )}
+                {/* Info */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                      isProduct ? "bg-surface-variant text-on-surface border border-outline-variant" : "bg-primary/10 text-primary"
+                    }`}>
+                      {isProduct ? "Sản phẩm" : "Dịch vụ"}
+                    </span>
                   </div>
-                  
-                  {/* Info */}
                   <h3
-                    className={`font-headline-sm text-sm md:text-base line-clamp-2 leading-tight transition-colors ${isSelected ? "text-primary font-bold" : "text-on-surface group-hover:text-primary"}`}
+                    className={`font-headline-sm text-sm md:text-base truncate transition-colors ${isSelected ? "text-primary font-bold" : "text-on-surface group-hover:text-primary"}`}
                   >
                     {item.name}
                   </h3>
                   
-                  <div className="mt-1 flex items-center justify-between opacity-80">
+                  <div className="mt-1 flex items-center opacity-80">
                     {!isProduct && (
-                      <span className="font-label-md text-on-surface-variant text-[11px] flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[12px]">schedule</span>
+                      <span className="font-label-md text-on-surface-variant text-xs flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">schedule</span>
                         {item.durationMinutes || item.duration || 30} phút
                       </span>
                     )}
                     {isProduct && (
-                      <span className="font-label-md text-on-surface-variant text-[11px] flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[12px]">inventory</span>
+                      <span className="font-label-md text-on-surface-variant text-xs flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">inventory</span>
                         Kho: {item.stock}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Footer / Price */}
-                <div className="flex justify-between items-end relative z-10 mt-3 pt-3 border-t border-outline-variant/30">
-                  <span className="font-label-md font-bold text-primary text-base md:text-lg">
+                {/* Price & Action */}
+                <div className="flex flex-col items-end justify-center shrink-0 pl-2">
+                  <span className="font-label-md font-bold text-primary text-base">
                     {item.price ? item.price.toLocaleString("vi-VN") : 0}đ
                   </span>
                   
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
+                  <div className={`mt-2 w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
                     isSelected ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant group-hover:bg-primary group-hover:text-on-primary"
                   }`}>
                     <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: isSelected ? "'FILL' 1" : "'FILL' 0" }}>

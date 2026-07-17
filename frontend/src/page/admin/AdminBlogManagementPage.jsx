@@ -22,7 +22,8 @@ export default function AdminBlogManagementPage() {
           withCredentials: true
         });
         if (res.data.success) {
-          setBlogs(res.data.data);
+          const data = res.data.data;
+          setBlogs(Array.isArray(data) ? data : (data?.blogs || []));
         }
       } catch (error) {
         console.error("Failed to fetch admin blogs:", error);
