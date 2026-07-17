@@ -8,7 +8,7 @@ const Booking = require('../models/booking.model');
 // Create a new voucher
 exports.createVoucher = async (req, res) => {
   try {
-    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive } = req.body;
+    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive, voucherType } = req.body;
     
     if (discountType === 'percentage' && (discountValue < 0 || discountValue > 100)) {
       return res.status(400).json({ success: false, message: 'Discount percentage must be between 0 and 100' });
@@ -46,7 +46,8 @@ exports.createVoucher = async (req, res) => {
       validUntil,
       usageLimit,
       usageLimitPerUser: usageLimitPerUser || 1,
-      isActive: isActive !== undefined ? isActive : true
+      isActive: isActive !== undefined ? isActive : true,
+      voucherType: voucherType || 'all'
     });
 
     await newVoucher.save();
@@ -111,7 +112,7 @@ exports.getVoucherById = async (req, res) => {
 // Update a voucher
 exports.updateVoucher = async (req, res) => {
   try {
-    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive } = req.body;
+    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive, voucherType } = req.body;
     
     const voucher = await Voucher.findById(req.params.id);
     if (!voucher) {
@@ -154,6 +155,7 @@ exports.updateVoucher = async (req, res) => {
     if (usageLimit !== undefined) voucher.usageLimit = usageLimit;
     if (usageLimitPerUser !== undefined) voucher.usageLimitPerUser = usageLimitPerUser;
     if (isActive !== undefined) voucher.isActive = isActive;
+    if (voucherType !== undefined) voucher.voucherType = voucherType;
 
     await voucher.save();
     return res.status(200).json({ success: true, message: 'Voucher updated successfully', data: voucher });
