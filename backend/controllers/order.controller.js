@@ -266,9 +266,20 @@ exports.getOrderStats = async (req, res, next) => {
 // Admin: Lấy tất cả đơn hàng
 exports.getAllOrders = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, searchTerm, orderStatus, paymentStatus, paymentMethod } = req.query;
+    const { page = 1, limit = 10, searchTerm, orderStatus, paymentStatus, paymentMethod, filterDate } = req.query;
     
     let filter = {};
+
+    if (filterDate) {
+      const targetDate = new Date(filterDate);
+      if (!isNaN(targetDate.getTime())) {
+        const start = new Date(targetDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(targetDate);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt = { $gte: start, $lte: end };
+      }
+    }
     
     if (searchTerm) {
       filter.$or = [
@@ -282,7 +293,7 @@ exports.getAllOrders = async (req, res, next) => {
     
     if (orderStatus && orderStatus !== 'Tất cả' && orderStatus !== 'Trạng thái ĐH') {
       const statusMap = {
-        "Đơn mới": "pending",
+        "Chờ xử lý": "pending",
         "Đang chuẩn bị": "processing",
         "Đang giao": "shipped",
         "Hoàn thành": "completed",

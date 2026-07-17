@@ -17,6 +17,7 @@ export default function AdminOrdersPage() {
   const [paymentMethod, setPaymentMethod] = useState("PT Thanh toán");
   const [paymentStatus, setPaymentStatus] = useState("Trạng thái TT");
   const [orderStatus, setOrderStatus] = useState("Trạng thái ĐH");
+  const [filterDate, setFilterDate] = useState("");
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -31,9 +32,7 @@ export default function AdminOrdersPage() {
   });
 
   const TABS = [
-    "Tất cả", "Đơn mới", "Chờ thanh toán", "Đã thanh toán", "Đã xác nhận",
-    "Đang chuẩn bị", "Chờ gửi ship", "Đã gửi cho ship", "Đang giao",
-    "Giao thành công", "Giao thất bại", "Đã hủy"
+    "Tất cả", "Chờ xử lý", "Đang chuẩn bị", "Đang giao", "Hoàn thành", "Đã hủy"
   ];
 
   const fetchStats = async () => {
@@ -57,7 +56,8 @@ export default function AdminOrdersPage() {
         searchTerm,
         orderStatus: filterTab !== "Tất cả" ? filterTab : orderStatus,
         paymentStatus,
-        paymentMethod
+        paymentMethod,
+        filterDate
       });
       const res = await axios.get(`http://localhost:5000/api/orders?${queryParams.toString()}`, { withCredentials: true });
       if (res.data.success) {
@@ -84,11 +84,11 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     // Reset page to 1 when filters change
     setPage(1);
-  }, [filterTab, searchTerm, paymentMethod, paymentStatus, orderStatus]);
+  }, [filterTab, searchTerm, paymentMethod, paymentStatus, orderStatus, filterDate]);
 
   useEffect(() => {
     fetchOrders();
-  }, [page, filterTab, searchTerm, paymentMethod, paymentStatus, orderStatus]);
+  }, [page, filterTab, searchTerm, paymentMethod, paymentStatus, orderStatus, filterDate]);
 
   // Payment Maps
   const mapPaymentStatus = (status) => {
@@ -111,14 +111,6 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-8 max-w-[1400px] mx-auto w-full">
-      {/* PAGE TITLE & CTA */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-headline-lg font-headline-lg text-primary italic">Quản Lý Đơn Hàng Online</h2>
-          <p className="text-body-md text-on-surface-variant mt-1">Theo dõi và xử lý quy trình vận hành đơn hàng từ đặt hàng đến giao hàng.</p>
-        </div>
-      </div>
-
       {/* OVERVIEW CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Orders */}
@@ -225,15 +217,29 @@ export default function AdminOrdersPage() {
           >
             <option>Trạng thái ĐH</option>
             <option>Tất cả</option>
-            <option>Đơn mới</option>
+            <option>Chờ xử lý</option>
             <option>Đang chuẩn bị</option>
             <option>Đang giao</option>
             <option>Hoàn thành</option>
             <option>Đã hủy</option>
           </select>
-          <div className="flex items-center bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md gap-2 cursor-pointer hover:border-primary/50 transition-colors">
-            <span className="material-symbols-outlined text-[18px]">calendar_month</span>
-            <span>01/10/2023 - 31/10/2023</span>
+          <div className="flex items-center gap-2">
+            <input 
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-1 focus:ring-primary outline-none text-on-surface"
+              title="Lọc theo ngày tạo đơn"
+            />
+            {filterDate && (
+              <button 
+                onClick={() => setFilterDate("")}
+                className="w-9 h-9 flex items-center justify-center rounded-lg bg-error-container/20 text-error hover:bg-error-container/50 transition-colors"
+                title="Xóa bộ lọc ngày"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
