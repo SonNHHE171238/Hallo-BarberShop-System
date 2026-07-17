@@ -14,12 +14,19 @@ const defaultVoucherForm = {
   usageLimit: 100,
   usageLimitPerUser: 1,
   isActive: true,
+  voucherType: 'all',
 };
 
 function formatDateForInput(dateStr) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toISOString().slice(0, 16);
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+}
+
+function getLocalDatetimeString(date = new Date()) {
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 }
 
 export default function AdminVouchersPage() {
@@ -91,6 +98,7 @@ export default function AdminVouchersPage() {
       usageLimit: voucher.usageLimit,
       usageLimitPerUser: voucher.usageLimitPerUser || 1,
       isActive: voucher.isActive,
+      voucherType: voucher.voucherType || 'all',
     });
     setFormOpen(true);
   };
@@ -116,6 +124,35 @@ export default function AdminVouchersPage() {
     setFormLoading(true);
 
     try {
+      const discountValueNum = Number(formData.discountValue);
+      if (formData.discountType === 'percentage' && (discountValueNum < 0 || discountValueNum > 100)) {
+        setFormError('Giá trị giảm theo phần trăm chỉ được từ 0 đến 100.');
+        setFormLoading(false);
+        return;
+      }
+
+      const validFromDate = new Date(formData.validFrom);
+      const validUntilDate = new Date(formData.validUntil);
+
+      if (validFromDate >= validUntilDate) {
+        setFormError('Ngày kết thúc phải sau ngày bắt đầu.');
+        setFormLoading(false);
+        return;
+      }
+
+      if (!formData.id && validUntilDate < new Date()) {
+        setFormError('Ngày kết thúc không được ở trong quá khứ.');
+        setFormLoading(false);
+        return;
+      }
+
+      const currentYear = new Date().getFullYear();
+      if (validUntilDate.getFullYear() > currentYear) {
+        setFormError(`Hạn kết thúc không được vượt quá năm hiện tại (${currentYear}).`);
+        setFormLoading(false);
+        return;
+      }
+
       const payload = {
         ...formData,
         code: formData.code.toUpperCase().trim(),
@@ -230,8 +267,8 @@ export default function AdminVouchersPage() {
         <div className="border-t border-outline-variant shrink-0 bg-surface-container-highest/60 p-3 flex justify-between items-center text-sm">
           <div>Trang {page} / {pages} (Tổng {total})</div>
           <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage(page-1)} className="px-3 py-1 bg-surface-container border border-outline-variant rounded disabled:opacity-50">Trước</button>
-            <button disabled={page >= pages} onClick={() => setPage(page+1)} className="px-3 py-1 bg-surface-container border border-outline-variant rounded disabled:opacity-50">Sau</button>
+            <button disabled={page <= 1} onClick={() => { setPage(page-1); loadVouchers({ page: page - 1 }); }} className="px-3 py-1 bg-surface-container border border-outline-variant rounded disabled:opacity-50">Trước</button>
+            <button disabled={page >= pages} onClick={() => { setPage(page+1); loadVouchers({ page: page + 1 }); }} className="px-3 py-1 bg-surface-container border border-outline-variant rounded disabled:opacity-50">Sau</button>
           </div>
         </div>
       </div>
@@ -260,8 +297,17 @@ export default function AdminVouchersPage() {
                 </div>
 
                 <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase">Phạm vi áp dụng</label>
+                  <select name="voucherType" value={formData.voucherType} onChange={handleChange} className="w-full border p-2 rounded text-sm">
+                    <option value="all">Mọi hóa đơn (Cả cắt tóc & mua hàng)</option>
+                    <option value="booking_only">Chỉ áp dụng Đặt lịch cắt tóc</option>
+                    <option value="product_only">Chỉ áp dụng Mua sáp/sản phẩm</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Giá trị giảm</label>
-                  <input name="discountValue" type="number" min="0" value={formData.discountValue} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="discountValue" type="number" min="0" max={formData.discountType === 'percentage' ? "100" : undefined} value={formData.discountValue} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1">
@@ -288,12 +334,12 @@ export default function AdminVouchersPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Từ ngày</label>
-                  <input name="validFrom" type="datetime-local" value={formData.validFrom} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="validFrom" type="datetime-local" min={!formData.id ? getLocalDatetimeString() : undefined} value={formData.validFrom} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Đến ngày</label>
-                  <input name="validUntil" type="datetime-local" value={formData.validUntil} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="validUntil" type="datetime-local" min={formData.validFrom || (!formData.id ? getLocalDatetimeString() : undefined)} max={`${new Date().getFullYear()}-12-31T23:59`} value={formData.validUntil} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1 md:col-span-2 flex items-center gap-2">

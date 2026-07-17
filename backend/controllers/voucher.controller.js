@@ -10,6 +10,26 @@ exports.createVoucher = async (req, res) => {
   try {
     const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive } = req.body;
     
+    if (discountType === 'percentage' && (discountValue < 0 || discountValue > 100)) {
+      return res.status(400).json({ success: false, message: 'Discount percentage must be between 0 and 100' });
+    }
+
+    const validFromDate = new Date(validFrom);
+    const validUntilDate = new Date(validUntil);
+    const currentYear = new Date().getFullYear();
+    
+    if (validUntilDate < new Date()) {
+      return res.status(400).json({ success: false, message: 'Voucher end date cannot be in the past' });
+    }
+    
+    if (validUntilDate.getFullYear() > currentYear) {
+      return res.status(400).json({ success: false, message: `Voucher end date cannot exceed the current year (${currentYear})` });
+    }
+
+    if (validFromDate >= validUntilDate) {
+      return res.status(400).json({ success: false, message: 'Valid until date must be after valid from date' });
+    }
+
     // Check if code already exists
     const existingVoucher = await Voucher.findOne({ code: code.toUpperCase() });
     if (existingVoucher) {
@@ -96,6 +116,24 @@ exports.updateVoucher = async (req, res) => {
     const voucher = await Voucher.findById(req.params.id);
     if (!voucher) {
       return res.status(404).json({ success: false, message: 'Voucher not found' });
+    }
+
+    const newDiscountType = discountType || voucher.discountType;
+    const newDiscountValue = discountValue !== undefined ? discountValue : voucher.discountValue;
+    if (newDiscountType === 'percentage' && (newDiscountValue < 0 || newDiscountValue > 100)) {
+      return res.status(400).json({ success: false, message: 'Discount percentage must be between 0 and 100' });
+    }
+
+    const currentYear = new Date().getFullYear();
+    const checkValidFrom = validFrom ? new Date(validFrom) : voucher.validFrom;
+    const checkValidUntil = validUntil ? new Date(validUntil) : voucher.validUntil;
+
+    if (checkValidUntil.getFullYear() > currentYear) {
+      return res.status(400).json({ success: false, message: `Voucher end date cannot exceed the current year (${currentYear})` });
+    }
+    
+    if (checkValidFrom >= checkValidUntil) {
+      return res.status(400).json({ success: false, message: 'Valid until date must be after valid from date' });
     }
 
     // If changing code, ensure uniqueness

@@ -1,11 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import BlogPreviewModal from "./BlogPreviewModal";
 
-export default function BlogTable({ blogs = [] }) {
+export default function BlogTable({ blogs = [], onDelete, onReview }) {
   const pathname = usePathname();
   const basePath = pathname?.startsWith('/staff') ? '/staff/blogs' : '/admin/blogs';
-  
+  const { user } = useAuth();
+  const [previewBlog, setPreviewBlog] = useState(null);
+
   // Fallback image in case the real image isn't available
   const fallbackImage = "https://lh3.googleusercontent.com/aida-public/AB6AXuACcRy8sgfcI0uj1g_HiiG1AQRCWV3JnXDZEqNaQgfBiGe6Hlao53ZMXkrgHUy5V2lBRsYg4V42e70KxjxHSRo9qdNd5lJQpsvDMMwGWOG_KMdoUhCu1ZSxFBt3p4mSrrITVR-qqLAl68UoqiiA661B5Rs4G6X6GBf5MgODpHq6sRauBGoiipA_iwtpdT5ti4zB772usd9SnU54YzPDkoMoi3bkKxY9BZwJvBHRUZxlv5iKOWajJhL-NYHivZJgGLNsY3Rm6eH8y6f-";
 
@@ -41,6 +45,8 @@ export default function BlogTable({ blogs = [] }) {
                 const authorName = blog.author?.name || "Admin";
                 const authorInitials = authorName.substring(0, 2).toUpperCase();
                 const image = blog.image || fallbackImage;
+                const canEdit = user?.role === 'admin' || blog.author?._id === user?.id;
+                const canDelete = user?.role === 'admin' || (blog.author?._id === user?.id && blog.status === 'rejected');
 
                 return (
                   <tr key={blog._id} className="table-row-hover group">
@@ -77,15 +83,37 @@ export default function BlogTable({ blogs = [] }) {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button className="p-1.5 rounded hover:bg-primary/20 text-on-surface-variant hover:text-primary transition-all">
+                        <button onClick={() => setPreviewBlog(blog)} className="p-1.5 rounded hover:bg-primary/20 text-on-surface-variant hover:text-primary transition-all flex items-center justify-center" title="Xem trước">
                           <span className="material-symbols-outlined text-[20px]">visibility</span>
                         </button>
-                        <Link href={`${basePath}/edit/${blog._id}`} className="p-1.5 rounded hover:bg-blue-500/20 text-on-surface-variant hover:text-blue-400 transition-all flex items-center justify-center">
-                          <span className="material-symbols-outlined text-[20px]">edit</span>
-                        </Link>
-                        <button className="p-1.5 rounded hover:bg-error/20 text-on-surface-variant hover:text-error transition-all">
-                          <span className="material-symbols-outlined text-[20px]">delete</span>
-                        </button>
+                        {user?.role === 'admin' && blog.status === 'pending' && (
+                          <button onClick={() => { if(confirm('Bạn có chắc chắn duyệt bài viết này?')) onReview && onReview(blog._id, 'approved'); }} className="p-1.5 rounded hover:bg-green-500/20 text-on-surface-variant hover:text-green-500 transition-all flex items-center justify-center" title="Duyệt bài">
+                            <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                          </button>
+                        )}
+                        {user?.role === 'admin' && blog.status === 'pending' && (
+                          <button onClick={() => { const reason = prompt('Nhập lý do từ chối:'); if(reason !== null) onReview && onReview(blog._id, 'rejected', reason); }} className="p-1.5 rounded hover:bg-error/20 text-on-surface-variant hover:text-error transition-all flex items-center justify-center" title="Từ chối">
+                            <span className="material-symbols-outlined text-[20px]">cancel</span>
+                          </button>
+                        )}
+                        {canEdit ? (
+                          <Link href={`${basePath}/edit/${blog._id}`} className="p-1.5 rounded hover:bg-blue-500/20 text-on-surface-variant hover:text-blue-400 transition-all flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[20px]">edit</span>
+                          </Link>
+                        ) : (
+                          <button className="p-1.5 rounded text-on-surface-variant opacity-30 cursor-not-allowed transition-all flex items-center justify-center" title="Chỉ tác giả mới có quyền sửa">
+                            <span className="material-symbols-outlined text-[20px]">edit_off</span>
+                          </button>
+                        )}
+                        {canDelete ? (
+                          <button onClick={() => onDelete && onDelete(blog._id)} className="p-1.5 rounded hover:bg-error/20 text-on-surface-variant hover:text-error transition-all">
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          </button>
+                        ) : (
+                          <button className="p-1.5 rounded text-on-surface-variant opacity-30 cursor-not-allowed transition-all flex items-center justify-center" title="Bạn chỉ được xóa bài của mình khi đã bị từ chối">
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -95,6 +123,11 @@ export default function BlogTable({ blogs = [] }) {
           </tbody>
         </table>
       </div>
+
+      <BlogPreviewModal 
+        blog={previewBlog} 
+        onClose={() => setPreviewBlog(null)} 
+      />
 
       {/* Pagination (Bản nháp tĩnh, sau này gắn logic thực) */}
       {blogs.length > 0 && (

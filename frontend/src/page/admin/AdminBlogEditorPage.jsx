@@ -4,11 +4,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AdminBlogEditorPage({ isEdit = false, blogId = null }) {
   const router = useRouter();
   const pathname = usePathname();
   const basePath = pathname?.startsWith('/staff') ? '/staff/blogs' : '/admin/blogs';
+  const { user } = useAuth();
   
   const [formData, setFormData] = useState({
     title: "",
@@ -37,6 +39,12 @@ export default function AdminBlogEditorPage({ isEdit = false, blogId = null }) {
           if (res.data.success) {
             const blog = res.data.data.find(b => b._id === blogId);
             if (blog) {
+              const canEdit = user?.role === 'admin' || blog.author?._id === user?.id;
+              if (!canEdit) {
+                alert("Bạn không có quyền chỉnh sửa bài viết của người khác!");
+                router.push(basePath);
+                return;
+              }
               setFormData({
                 title: blog.title,
                 content: blog.content,
@@ -58,7 +66,7 @@ export default function AdminBlogEditorPage({ isEdit = false, blogId = null }) {
       };
       fetchBlog();
     }
-  }, [isEdit, blogId, router]);
+  }, [isEdit, blogId, router, user, basePath]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -147,8 +155,10 @@ export default function AdminBlogEditorPage({ isEdit = false, blogId = null }) {
     );
   }
 
+  const isStaff = pathname?.startsWith('/staff');
+
   return (
-    <div className="max-w-container-max mx-auto w-full pb-12">
+    <div className={`max-w-container-max mx-auto w-full pb-12 ${isStaff ? 'px-4 md:px-8 pt-8 md:pt-12' : ''}`}>
       {/* Header Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
         <div>
