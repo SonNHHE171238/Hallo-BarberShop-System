@@ -68,7 +68,7 @@ export default function NextBooking({ appointment }) {
         </div>
         <div className="flex gap-4 w-full sm:w-auto">
           <button onClick={() => setIsRescheduleOpen(true)} className="flex-1 sm:flex-none px-8 py-3 border border-outline text-on-surface font-label-md text-xs uppercase tracking-widest hover:bg-surface-variant transition-colors rounded text-center">Đổi lịch</button>
-          <button className="flex-1 sm:flex-none px-8 py-3 bg-primary-container text-on-primary-container font-label-md text-xs uppercase tracking-widest hover:opacity-90 transition-opacity rounded font-bold" onClick={() => {}}>Chi tiết</button>
+          <button className="flex-1 sm:flex-none px-8 py-3 bg-primary-container text-on-primary-container font-label-md text-xs uppercase tracking-widest hover:opacity-90 transition-opacity rounded font-bold" onClick={() => window.location.href = `/booking/${appointment._id}`}>Chi tiết</button>
         </div>
       </div>
       {isRescheduleOpen && (
