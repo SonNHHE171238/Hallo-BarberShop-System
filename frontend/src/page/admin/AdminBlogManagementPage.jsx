@@ -14,25 +14,42 @@ export default function AdminBlogManagementPage() {
   const [blogs, setBlogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortOption, setSortOption] = useState("newest"); // 'newest', 'oldest', 'a-z'
+  
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchAdminBlogs = async () => {
+      setIsLoading(true);
+      setError(false);
       try {
-        const res = await axios.get("http://localhost:5000/api/blogs/admin", {
+        const res = await axios.get(`http://localhost:5000/api/blogs/admin?page=${page}&limit=10`, {
           withCredentials: true
         });
-        if (res.data.success) {
+        if (res.data.success && res.data.data) {
           const data = res.data.data;
-          setBlogs(Array.isArray(data) ? data : (data?.blogs || []));
+          if (Array.isArray(data)) {
+            setBlogs(data);
+            setTotalPages(1);
+            setTotal(data.length);
+          } else {
+            setBlogs(data.blogs || []);
+            setTotalPages(data.totalPages || 1);
+            setTotal(data.total || 0);
+          }
         }
-      } catch (error) {
-        console.error("Failed to fetch admin blogs:", error);
+      } catch (err) {
+        console.error("Failed to fetch admin blogs:", err);
+        setError(true);
       } finally {
         setIsLoading(false);
       }
     };
     fetchAdminBlogs();
-  }, []);
+  }, [page]);
 
   const handleDelete = async (blogId) => {
     if (!confirm("Bạn có chắc chắn muốn xóa bài viết này?")) return;
