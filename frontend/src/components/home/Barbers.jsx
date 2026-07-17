@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { customerService } from "@/services/customer.service";
 
 export default function Barbers() {
+  const router = useRouter();
   const [barbers, setBarbers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const scrollContainerRef = useRef(null);
@@ -76,7 +78,11 @@ export default function Barbers() {
 
           <div ref={scrollContainerRef} className="flex overflow-x-auto gap-6 pb-8 pt-4 px-4 -mx-4 scroll-hide snap-x snap-mandatory">
             {barbers.map((barber) => (
-              <div key={barber._id} className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-outline-variant w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)] shrink-0 snap-center">
+              <div 
+                key={barber._id} 
+                onClick={() => router.push(`/barber-profile/${barber._id}`)}
+                className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-outline-variant w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)] shrink-0 snap-center cursor-pointer"
+              >
                 <img
                   className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100"
                   alt={barber.userId?.name || "Barber"}

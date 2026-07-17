@@ -207,10 +207,18 @@ exports.applyVoucher = async (req, res) => {
       }
     }
 
-    // Count active locks (holding or redeemed)
+    // Check voucherType
+    if (voucher.voucherType === 'product_only' && (!productIds || productIds.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá này chỉ áp dụng khi mua Sản phẩm' });
+    }
+    if (voucher.voucherType === 'booking_only' && (!serviceIds || serviceIds.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá này chỉ áp dụng cho Dịch vụ cắt tóc' });
+    }
+
+    // Count active locks (holding only)
     const activeLocks = await VoucherLock.countDocuments({
       voucherId: voucher._id,
-      status: { $in: ['holding', 'redeemed'] }
+      status: 'holding'
     });
 
     if (voucher.usedCount + activeLocks >= voucher.usageLimit) {
@@ -320,8 +328,16 @@ exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone
     }
   }
 
+  // Check voucherType
+  if (voucher.voucherType === 'product_only' && (!productIds || productIds.length === 0)) {
+    throw new Error('Mã giảm giá này chỉ áp dụng khi mua Sản phẩm');
+  }
+  if (voucher.voucherType === 'booking_only' && (!serviceIds || serviceIds.length === 0)) {
+    throw new Error('Mã giảm giá này chỉ áp dụng cho Dịch vụ cắt tóc');
+  }
+
   // Check global limit
-  const activeLocks = await VoucherLock.countDocuments({ voucherId: voucher._id, status: { $in: ['holding', 'redeemed'] } });
+  const activeLocks = await VoucherLock.countDocuments({ voucherId: voucher._id, status: 'holding' });
   if (voucher.usedCount + activeLocks >= voucher.usageLimit) {
     throw new Error('Voucher usage limit reached');
   }
@@ -390,7 +406,7 @@ exports.releaseVoucherLock = async (lockId) => {
 
 exports.getMyVouchers = async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id || req.userId;
+    const userId = req.userId || (req.user && (req.user.id || req.user._id));
     if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
@@ -409,7 +425,10 @@ exports.getMyVouchers = async (req, res) => {
 
     const validVouchers = [];
     for (const v of vouchers) {
-      const activeLocks = await VoucherLock.countDocuments({ voucherId: v._id, status: { $in: ['holding', 'redeemed'] } });
+      const activeLocks = await VoucherLock.countDocuments({
+        voucherId: v._id,
+        status: 'holding'
+      });
       if (v.usedCount + activeLocks >= v.usageLimit) {
         continue;
       }
@@ -426,6 +445,62 @@ exports.getMyVouchers = async (req, res) => {
     return res.status(200).json({ success: true, data: validVouchers });
   } catch (error) {
     console.error('Error fetching my vouchers:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Get all public active vouchers
+exports.getPublicVouchers = async (req, res) => {
+  try {
+    const now = new Date();
+    // Only fetch vouchers that don't have applicableUsers restrictions (or size 0), are active and valid
+    const vouchers = await Voucher.find({
+      isActive: true,
+      validUntil: { $gte: now },
+      $or: [
+        { applicableUsers: { $size: 0 } },
+        { applicableUsers: { $exists: false } }
+      ]
+    }).select('code discountType discountValue minOrderValue maxDiscountAmount validUntil usageLimit usedCount voucherType').sort({ validUntil: 1 });
+
+    return res.status(200).json({ success: true, data: vouchers });
+  } catch (error) {
+    console.error('Error fetching public vouchers:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Save a voucher to user profile
+exports.saveVoucher = async (req, res) => {
+  try {
+    const userId = req.userId || (req.user && (req.user.id || req.user._id));
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    const { voucherId } = req.body;
+    if (!voucherId) {
+      return res.status(400).json({ success: false, message: 'Voucher ID is required' });
+    }
+
+    const User = require('../models/user.model');
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if already saved
+    if (user.savedVouchers && user.savedVouchers.includes(voucherId)) {
+      return res.status(400).json({ success: false, message: 'Voucher already saved' });
+    }
+
+    if (!user.savedVouchers) user.savedVouchers = [];
+    user.savedVouchers.push(voucherId);
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Voucher saved successfully' });
+  } catch (error) {
+    console.error('Error saving voucher:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };

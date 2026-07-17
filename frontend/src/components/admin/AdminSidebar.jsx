@@ -10,6 +10,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
 
   const navItems = [
     { name: 'Tổng quan', href: '/admin/dashboard', icon: 'dashboard' },
+    { name: 'Quản lý Blog', href: '/admin/blogs', icon: 'description' },
     { name: 'Thu ngân (POS)', href: '/admin/pos', icon: 'point_of_sale' },
     { name: 'Tài khoản', href: '/admin/accounts', icon: 'manage_accounts' },
     { name: 'Lịch hẹn', href: '/admin/bookings', icon: 'calendar_month' },

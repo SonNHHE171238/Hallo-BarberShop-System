@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from "@/context/AuthContext";
@@ -12,8 +12,20 @@ import { voucherService } from "@/services/voucher.service";
 export default function CheckoutPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Auto-fill voucher from URL
+  useEffect(() => {
+    const code = searchParams.get('voucherCode') || localStorage.getItem('auto_voucher');
+    if (code) {
+      setVoucherCodeInput(code);
+      if (localStorage.getItem('auto_voucher')) {
+        localStorage.removeItem('auto_voucher');
+      }
+    }
+  }, [searchParams]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -68,10 +80,11 @@ export default function CheckoutPage() {
     setApplyingVoucher(true);
     setVoucherError("");
     try {
-      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal + shippingFee, formData.phone);
-      if (res) {
-        setAppliedVoucher(res.code);
-        setDiscountAmount(res.discountAmount);
+      const productIds = cartItems.map(item => item.productId._id);
+      const res = await voucherService.applyVoucher(voucherCodeInput.trim(), subTotal + shippingFee, formData.phone, productIds, []);
+      if (res.success) {
+        setAppliedVoucher(res.data.code);
+        setDiscountAmount(res.data.discountAmount);
         setVoucherError("");
       }
     } catch (err) {

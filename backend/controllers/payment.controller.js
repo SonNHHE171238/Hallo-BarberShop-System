@@ -57,7 +57,10 @@ exports.createPaymentLink = async (req, res, next) => {
       paymentLinkId: paymentLinkRes.paymentLinkId,
       qrCode: paymentLinkRes.qrCode, // Chuỗi text QR để gen ảnh tại client
       orderCode: orderCode,
-      amount: amountToPay
+      amount: amountToPay,
+      accountName: paymentLinkRes.accountName,
+      accountNumber: paymentLinkRes.accountNumber,
+      bin: paymentLinkRes.bin
     });
   } catch (error) {
     console.error("Error creating payment link:", error);
@@ -117,8 +120,6 @@ exports.payosWebhook = async (req, res, next) => {
           booking.paymentStatus = "partial_paid";
         }
         
-        booking.status = "completed"; 
-        booking.completedAt = new Date();
         await booking.save();
 
 

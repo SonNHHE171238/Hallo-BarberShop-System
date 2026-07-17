@@ -286,98 +286,94 @@ exports.processCreateBooking = async ({
  * @returns {Array} Mảng các khung giờ { time, available, reason }
  */
 exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
-  const BarberAbsence = require("../models/barber-absence.model");
-  const Booking = require("../models/booking.model");
+  let resultSlots = [];
 
-  // Check if barber is absent all day
-  const requestedDateTime = new Date(`${date}T12:00:00`);
-  const isAbsent = await BarberAbsence.isBarberAbsent(
-    barberId,
-    requestedDateTime,
-  );
-  if (isAbsent) {
-    return []; // Trả về mảng rỗng nếu nghỉ cả ngày
-  }
-
-  // Lấy các booking trong ngày (chuyển sang UTC để match database)
-  const startDate = new Date(`${date}T00:00:00+07:00`); // Vietnam Time
-  const endDate = new Date(`${date}T23:59:59+07:00`);
-
-  const conflictingBookings = await Booking.find({
-    barberId,
-    bookingDate: { $gte: startDate, $lt: endDate },
-    status: { $in: ["pending", "confirmed"] },
-  });
-
-  conflictingBookings.sort(
-    (a, b) => new Date(a.bookingDate) - new Date(b.bookingDate),
-  );
-
-  // Hàm check đụng lịch
-  const checkOverlap = (start, end) => {
-    return conflictingBookings.some((booking) => {
-      const bStart = new Date(booking.bookingDate).getTime();
-      const bEnd = bStart + booking.durationMinutes * 60000;
-      return start.getTime() < bEnd && end.getTime() > bStart;
-    });
-  };
-
-  const baseSlots = [
-    "09:00",
-    "10:00",
-    "11:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-    "19:00",
-  ];
-  const resultSlots = [];
-
-  // Bước 1: Quét các base slots
-  for (const time of baseSlots) {
-    const slotStart = new Date(`${date}T${time}:00+07:00`);
-    const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-
-    let isAvailable = true;
-    let reason = null;
-
-    if (checkOverlap(slotStart, slotEnd)) {
-      isAvailable = false;
-      reason = "Khung giờ đã có khách đặt";
+  if (barberId === "auto" || barberId === "random") {
+    // Tạm thời nếu chọn thợ tự động, coi như thợ luôn trống lịch (hệ thống sẽ auto-assign sau)
+    resultSlots = [
+      "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
+    ].map(time => ({ time, available: true, reason: null }));
+  } else {
+    // Check if barber is absent all day
+    const requestedDateTime = new Date(`${date}T12:00:00`);
+    const isAbsent = await BarberAbsence.isBarberAbsent(
+      barberId,
+      requestedDateTime,
+    );
+    if (isAbsent) {
+      return []; // Trả về mảng rỗng nếu nghỉ cả ngày
     }
 
-    resultSlots.push({ time, available: isAvailable, reason });
-  }
+    // Lấy các booking trong ngày (chuyển sang UTC để match database)
+    const startDate = new Date(`${date}T00:00:00+07:00`); // Vietnam Time
+    const endDate = new Date(`${date}T23:59:59+07:00`);
 
-  // Bước 2: Quét các khoảng hở (Gap Packing)
-  for (const booking of conflictingBookings) {
-    const bEnd = new Date(
-      new Date(booking.bookingDate).getTime() + booking.durationMinutes * 60000,
+    const conflictingBookings = await Booking.find({
+      barberId,
+      bookingDate: { $gte: startDate, $lt: endDate },
+      status: { $in: ["pending", "confirmed"] },
+    });
+
+    conflictingBookings.sort(
+      (a, b) => new Date(a.bookingDate) - new Date(b.bookingDate),
     );
 
-    // Chuyển bEnd sang giờ Việt Nam để tính toán
-    const localTime = new Date(
-      bEnd.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }),
-    );
-    const hours = localTime.getHours();
-    const mins = localTime.getMinutes();
-    const timeStr = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+    // Hàm check đụng lịch
+    const checkOverlap = (start, end) => {
+      return conflictingBookings.some((booking) => {
+        const bStart = new Date(booking.bookingDate).getTime();
+        const bEnd = bStart + booking.durationMinutes * 60000;
+        return start.getTime() < bEnd && end.getTime() > bStart;
+      });
+    };
 
-    // Chỉ tính nếu nằm trong giờ làm việc và không phải giờ nghỉ trưa
-    if (hours >= 9 && hours < 20 && hours !== 12) {
-      // Ràng buộc nếu endtime vượt quá 19:00 (ca cuối) thì bỏ
-      if (hours === 19 && mins > 0) continue;
+    const baseSlots = [
+      "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
+    ];
 
-      const slotStart = bEnd;
+    // Bước 1: Quét các base slots
+    for (const time of baseSlots) {
+      const slotStart = new Date(`${date}T${time}:00+07:00`);
       const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
 
-      if (!checkOverlap(slotStart, slotEnd)) {
-        // Kiểm tra xem đã có trong resultSlots chưa
-        if (!resultSlots.some((s) => s.time === timeStr)) {
-          resultSlots.push({ time: timeStr, available: true, reason: null });
+      let isAvailable = true;
+      let reason = null;
+
+      if (checkOverlap(slotStart, slotEnd)) {
+        isAvailable = false;
+        reason = "Khung giờ đã có khách đặt";
+      }
+
+      resultSlots.push({ time, available: isAvailable, reason });
+    }
+
+    // Bước 2: Quét các khoảng hở (Gap Packing)
+    for (const booking of conflictingBookings) {
+      const bEnd = new Date(
+        new Date(booking.bookingDate).getTime() + booking.durationMinutes * 60000,
+      );
+
+      // Chuyển bEnd sang giờ Việt Nam để tính toán
+      const localTime = new Date(
+        bEnd.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }),
+      );
+      const hours = localTime.getHours();
+      const mins = localTime.getMinutes();
+      const timeStr = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+
+      // Chỉ tính nếu nằm trong giờ làm việc và không phải giờ nghỉ trưa
+      if (hours >= 9 && hours < 20 && hours !== 12) {
+        // Ràng buộc nếu endtime vượt quá 19:00 (ca cuối) thì bỏ
+        if (hours === 19 && mins > 0) continue;
+
+        const slotStart = bEnd;
+        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+
+        if (!checkOverlap(slotStart, slotEnd)) {
+          // Kiểm tra xem đã có trong resultSlots chưa
+          if (!resultSlots.some((s) => s.time === timeStr)) {
+            resultSlots.push({ time: timeStr, available: true, reason: null });
+          }
         }
       }
     }

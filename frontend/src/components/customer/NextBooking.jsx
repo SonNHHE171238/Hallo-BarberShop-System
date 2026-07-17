@@ -7,7 +7,7 @@ export default function NextBooking({ appointment }) {
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   if (!appointment) {
     return (
-      <div className="col-span-12 lg:col-span-8 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-center items-center text-center glow-accent relative overflow-hidden group">
+      <div className="col-span-12 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-center items-center text-center glow-accent relative overflow-hidden group">
         <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4 opacity-50">calendar_today</span>
         <h2 className="font-headline-md text-2xl text-on-surface mb-2">Bạn chưa có lịch hẹn nào</h2>
         <p className="font-body-md text-on-surface-variant mb-6">Hãy đặt một lịch hẹn để trải nghiệm dịch vụ chăm sóc tóc chuyên nghiệp của chúng tôi.</p>
@@ -33,7 +33,7 @@ export default function NextBooking({ appointment }) {
   const statusInfo = statusMap[appointment.status] || statusMap.pending;
 
   return (
-    <div className="col-span-12 lg:col-span-8 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-between glow-accent relative overflow-hidden group">
+    <div className="col-span-12 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-between glow-accent relative overflow-hidden group">
       <div className="absolute right-0 top-0 w-32 h-32 bg-primary-container/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 z-10 relative">
