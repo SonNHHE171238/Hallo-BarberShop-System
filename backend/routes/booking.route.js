@@ -18,6 +18,7 @@ const {
 
 // Test endpoints
 router.post('/test/booking-flow-auto-assign', bookingUpdateController.testBookingFlowAutoAssign);
+router.post('/pre-check', bookingCreateController.preCheckBooking);
 
 // Booking CRUD operations
 router.post('/', authenticate, bookingCreateController.createBooking);
@@ -39,6 +40,13 @@ router.post('/walk-in', authenticate, authorizeRoles('admin'), bookingCreateCont
 
 // Parameterized routes must come last
 router.get('/lookup/:phone', bookingReadController.lookupBookingsByPhone);
+router.get('/:id/payment-status', bookingReadController.getBookingPaymentStatus);
+
+// Guest specific detail, cancel, reschedule routes (require phone verification in query/body)
+router.get('/:id/guest', bookingReadController.getGuestBookingDetail);
+router.put('/:id/guest/cancel', bookingUpdateController.guestCancelBooking);
+router.put('/:id/guest/reschedule', bookingUpdateController.guestRescheduleBooking);
+
 router.get('/:id', authenticate, bookingReadController.getBookingDetail);
 
 // Admin-only booking management

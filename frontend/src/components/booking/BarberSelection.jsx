@@ -63,9 +63,9 @@ export default function BarberSelection({ selectedBarber, setSelectedBarber }) {
     setSelectedBarber({ 
       ...barber, 
       id: barber._id,
-      name: barber.userId?.name || "Barber",
-      title: barber.specialties?.[0] || "Stylist",
-      experience: `${barber.experienceYears} năm kinh nghiệm`
+      name: barber.name || barber.userId?.name || "Barber",
+      title: barber.title || barber.specialties?.[0] || "Stylist",
+      experience: barber.experienceYears ? `${barber.experienceYears} năm kinh nghiệm` : "Đang cập nhật"
     });
     setSearchTerm("");
     setIsFocus(false);

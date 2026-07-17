@@ -98,10 +98,22 @@ export default function Navbar() {
             <div className="absolute top-full left-0 w-48 bg-surface-container-high border border-outline-variant rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden flex flex-col mt-2">
               <Link href="/#about" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Về chúng tôi</Link>
               <Link href="/#services" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Dịch vụ</Link>
-              <Link href="/#deals" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Khuyến mãi</Link>
+              <Link href="/vouchers" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Khuyến mãi</Link>
               <Link href="/#team" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors">Đội ngũ</Link>
             </div>
           </div>
+
+          <Link 
+            href="/vouchers" 
+            onClick={() => setActiveHash("")}
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/vouchers" 
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
+          >
+            Khuyến mãi
+          </Link>
 
           <Link 
             href="/shop" 
@@ -135,9 +147,9 @@ export default function Navbar() {
             Blog & Tin tức
           </Link>
           <Link 
-            href="/lookup/orders" 
+            href={(mounted && user) ? "/customer/orders" : "/lookup/orders"} 
             className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname.startsWith("/lookup/orders")
+              pathname.startsWith("/lookup/orders") || pathname.startsWith("/customer/orders")
                 ? "text-primary font-bold border-b-2 border-primary pb-1" 
                 : "text-on-surface-variant hover:text-primary transition-colors duration-200"
             }`}
@@ -238,7 +250,7 @@ export default function Navbar() {
           <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
           <Link href={(mounted && user) ? "/customer/history" : "/lookup/bookings"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/lookup/bookings" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
           <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/blog" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Blog & Tin tức</Link>
-          <Link href="/lookup/orders" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname.startsWith("/lookup/orders") ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Đơn hàng</Link>
+          <Link href={(mounted && user) ? "/customer/orders" : "/lookup/orders"} onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname.startsWith("/lookup/orders") || pathname.startsWith("/customer/orders") ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Đơn hàng</Link>
           <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
             {(mounted && user) ? (
               <>

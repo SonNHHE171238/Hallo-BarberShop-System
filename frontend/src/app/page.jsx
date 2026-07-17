@@ -1,6 +1,5 @@
 import React from "react";
 import HomePage from "@/page/home/HomePage";
-import ChatbotWidget from "@/components/chat/ChatbotWidget";
 
 export const metadata = {
   title: "HALLO BARBER | High-Tech Grooming",
@@ -11,7 +10,6 @@ export default function HomeRoute() {
   return (
     <>
       <HomePage />
-      <ChatbotWidget />
     </>
   );
 }

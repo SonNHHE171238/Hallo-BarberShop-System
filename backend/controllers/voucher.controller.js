@@ -144,7 +144,7 @@ exports.deleteVoucher = async (req, res) => {
 // Apply a voucher (validate and calculate discount)
 exports.applyVoucher = async (req, res) => {
   try {
-    const { code, totalAmount } = req.body;
+    const { code, totalAmount, productIds = [], serviceIds = [] } = req.body;
     let userId = null;
     
     // Attempt to extract userId from token if provided
@@ -179,10 +179,46 @@ exports.applyVoucher = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Voucher has expired' });
     }
 
-    // Count active locks (holding or redeemed)
+    // Check applicableUsers
+    if (voucher.applicableUsers && voucher.applicableUsers.length > 0) {
+      if (!userId || !voucher.applicableUsers.some(uid => uid.toString() === userId.toString())) {
+        return res.status(403).json({ success: false, message: 'This voucher is not applicable to your account' });
+      }
+    }
+
+    // Check applicable products and services
+    const hasProductRestriction = voucher.applicableProducts && voucher.applicableProducts.length > 0;
+    const hasServiceRestriction = voucher.applicableServices && voucher.applicableServices.length > 0;
+
+    if (hasProductRestriction || hasServiceRestriction) {
+      let isProductValid = false;
+      let isServiceValid = false;
+
+      if (hasProductRestriction && productIds.length > 0) {
+        isProductValid = productIds.some(pid => voucher.applicableProducts.some(vpid => vpid.toString() === pid.toString()));
+      }
+
+      if (hasServiceRestriction && serviceIds.length > 0) {
+        isServiceValid = serviceIds.some(sid => voucher.applicableServices.some(vsid => vsid.toString() === sid.toString()));
+      }
+
+      if (!isProductValid && !isServiceValid) {
+        return res.status(400).json({ success: false, message: 'This voucher cannot be applied to the selected items' });
+      }
+    }
+
+    // Check voucherType
+    if (voucher.voucherType === 'product_only' && (!productIds || productIds.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá này chỉ áp dụng khi mua Sản phẩm' });
+    }
+    if (voucher.voucherType === 'booking_only' && (!serviceIds || serviceIds.length === 0)) {
+      return res.status(400).json({ success: false, message: 'Mã giảm giá này chỉ áp dụng cho Dịch vụ cắt tóc' });
+    }
+
+    // Count active locks (holding only)
     const activeLocks = await VoucherLock.countDocuments({
       voucherId: voucher._id,
-      status: { $in: ['holding', 'redeemed'] }
+      status: 'holding'
     });
 
     if (voucher.usedCount + activeLocks >= voucher.usageLimit) {
@@ -254,7 +290,7 @@ exports.applyVoucher = async (req, res) => {
 };
 
 // Helper methods for internal use by Booking/Order controllers
-exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone) => {
+exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone, productIds = [], serviceIds = []) => {
   if (!code) return null;
   const voucher = await Voucher.findOne({ code: code.toUpperCase(), isActive: true });
   if (!voucher) throw new Error('Invalid voucher code');
@@ -264,8 +300,44 @@ exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone
   if (now > voucher.validUntil) throw new Error('Voucher has expired');
   if (totalAmount < voucher.minOrderValue) throw new Error(`Minimum order value of ${voucher.minOrderValue} required`);
 
+  // Check applicableUsers
+  if (voucher.applicableUsers && voucher.applicableUsers.length > 0) {
+    if (!userId || !voucher.applicableUsers.some(uid => uid.toString() === userId.toString())) {
+      throw new Error('This voucher is not applicable to your account');
+    }
+  }
+
+  // Check applicable products and services
+  const hasProductRestriction = voucher.applicableProducts && voucher.applicableProducts.length > 0;
+  const hasServiceRestriction = voucher.applicableServices && voucher.applicableServices.length > 0;
+
+  if (hasProductRestriction || hasServiceRestriction) {
+    let isProductValid = false;
+    let isServiceValid = false;
+
+    if (hasProductRestriction && productIds.length > 0) {
+      isProductValid = productIds.some(pid => voucher.applicableProducts.some(vpid => vpid.toString() === pid.toString()));
+    }
+
+    if (hasServiceRestriction && serviceIds.length > 0) {
+      isServiceValid = serviceIds.some(sid => voucher.applicableServices.some(vsid => vsid.toString() === sid.toString()));
+    }
+
+    if (!isProductValid && !isServiceValid) {
+      throw new Error('This voucher cannot be applied to the selected items');
+    }
+  }
+
+  // Check voucherType
+  if (voucher.voucherType === 'product_only' && (!productIds || productIds.length === 0)) {
+    throw new Error('Mã giảm giá này chỉ áp dụng khi mua Sản phẩm');
+  }
+  if (voucher.voucherType === 'booking_only' && (!serviceIds || serviceIds.length === 0)) {
+    throw new Error('Mã giảm giá này chỉ áp dụng cho Dịch vụ cắt tóc');
+  }
+
   // Check global limit
-  const activeLocks = await VoucherLock.countDocuments({ voucherId: voucher._id, status: { $in: ['holding', 'redeemed'] } });
+  const activeLocks = await VoucherLock.countDocuments({ voucherId: voucher._id, status: 'holding' });
   if (voucher.usedCount + activeLocks >= voucher.usageLimit) {
     throw new Error('Voucher usage limit reached');
   }
@@ -322,5 +394,106 @@ exports.releaseVoucherLock = async (lockId) => {
   if (lock && lock.status === 'holding') {
     lock.status = 'released';
     await lock.save();
+  }
+};
+
+exports.getMyVouchers = async (req, res) => {
+  try {
+    const userId = req.userId || (req.user && (req.user.id || req.user._id));
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const now = new Date();
+
+    const vouchers = await Voucher.find({
+      isActive: true,
+      validUntil: { $gte: now },
+      $or: [
+        { applicableUsers: { $size: 0 } },
+        { applicableUsers: { $exists: false } },
+        { applicableUsers: userId }
+      ]
+    }).sort({ validUntil: 1 });
+
+    const validVouchers = [];
+    for (const v of vouchers) {
+      const activeLocks = await VoucherLock.countDocuments({
+        voucherId: v._id,
+        status: 'holding'
+      });
+      if (v.usedCount + activeLocks >= v.usageLimit) {
+        continue;
+      }
+      
+      const orderUsages = await Order.countDocuments({ userId: userId, voucherCode: v.code, status: { $ne: 'cancelled' } });
+      const bookingUsages = await Booking.countDocuments({ customerId: userId, voucherCode: v.code, status: { $nin: ['cancelled', 'rejected'] } });
+      const totalUserUsages = orderUsages + bookingUsages;
+      
+      if (totalUserUsages < v.usageLimitPerUser) {
+        validVouchers.push(v);
+      }
+    }
+
+    return res.status(200).json({ success: true, data: validVouchers });
+  } catch (error) {
+    console.error('Error fetching my vouchers:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Get all public active vouchers
+exports.getPublicVouchers = async (req, res) => {
+  try {
+    const now = new Date();
+    // Only fetch vouchers that don't have applicableUsers restrictions (or size 0), are active and valid
+    const vouchers = await Voucher.find({
+      isActive: true,
+      validUntil: { $gte: now },
+      $or: [
+        { applicableUsers: { $size: 0 } },
+        { applicableUsers: { $exists: false } }
+      ]
+    }).select('code discountType discountValue minOrderValue maxDiscountAmount validUntil usageLimit usedCount voucherType').sort({ validUntil: 1 });
+
+    return res.status(200).json({ success: true, data: vouchers });
+  } catch (error) {
+    console.error('Error fetching public vouchers:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Save a voucher to user profile
+exports.saveVoucher = async (req, res) => {
+  try {
+    const userId = req.userId || (req.user && (req.user.id || req.user._id));
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    const { voucherId } = req.body;
+    if (!voucherId) {
+      return res.status(400).json({ success: false, message: 'Voucher ID is required' });
+    }
+
+    const User = require('../models/user.model');
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if already saved
+    if (user.savedVouchers && user.savedVouchers.includes(voucherId)) {
+      return res.status(400).json({ success: false, message: 'Voucher already saved' });
+    }
+
+    if (!user.savedVouchers) user.savedVouchers = [];
+    user.savedVouchers.push(voucherId);
+    await user.save();
+
+    return res.status(200).json({ success: true, message: 'Voucher saved successfully' });
+  } catch (error) {
+    console.error('Error saving voucher:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 };

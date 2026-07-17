@@ -9,6 +9,11 @@ const voucherSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+    voucherType: {
+      type: String,
+      enum: ['all', 'product_only', 'booking_only'],
+      default: 'all',
+    },
     discountType: {
       type: String,
       enum: ['percentage', 'fixed_amount'],
@@ -56,6 +61,24 @@ const voucherSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    applicableProducts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+      }
+    ],
+    applicableServices: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Service',
+      }
+    ],
+    applicableUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      }
+    ],
   },
   { timestamps: true }
 );

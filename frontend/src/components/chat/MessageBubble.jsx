@@ -108,6 +108,27 @@ export default function MessageBubble({
     )
   }
 
+  const renderContent = (content) => {
+    if (!content) return null;
+    const imageRegex = /!\[.*?\]\((.*?)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = imageRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(<span key={`text-${lastIndex}`}>{content.slice(lastIndex, match.index)}</span>);
+      }
+      parts.push(
+        <img key={`img-${match.index}`} src={match[1]} alt="AI Image" className="max-w-full rounded-lg mt-2 mb-2" />
+      );
+      lastIndex = imageRegex.lastIndex;
+    }
+    if (lastIndex < content.length) {
+      parts.push(<span key={`text-${lastIndex}`}>{content.slice(lastIndex)}</span>);
+    }
+    return parts;
+  };
+
   return (
     <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -122,7 +143,7 @@ export default function MessageBubble({
         {msg.image && (
           <img src={msg.image} alt="User Upload" className="max-w-full rounded-lg object-contain" />
         )}
-        {msg.content && <span>{msg.content}</span>}
+        {renderContent(msg.content)}
       </div>
     </div>
   );

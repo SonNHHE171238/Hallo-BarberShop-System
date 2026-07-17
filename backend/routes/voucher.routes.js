@@ -20,6 +20,13 @@ const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware
 
 router.post('/apply', voucherController.applyVoucher);
 
+// Public Vouchers
+router.get('/public', voucherController.getPublicVouchers);
+
+// Authenticated Customer Route
+router.get('/my-vouchers', authenticate, voucherController.getMyVouchers);
+router.post('/save', authenticate, voucherController.saveVoucher);
+
 // Admin routes
 router.use(authenticate, authorizeRoles('admin')); // Protect all routes below
 

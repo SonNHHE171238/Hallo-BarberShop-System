@@ -5,7 +5,12 @@ const noShowSchema = new Schema({
     customerId: {
         type: Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false
+    },
+    customerPhone: {
+        type: String,
+        required: true,
+        trim: true
     },
     bookingId: {
         type: Schema.Types.ObjectId,
@@ -73,19 +78,39 @@ const noShowSchema = new Schema({
 // Indexes for efficient querying
 noShowSchema.index({ customerId: 1, createdAt: -1 });
 noShowSchema.index({ customerId: 1, isExcused: 1 });
+noShowSchema.index({ customerPhone: 1, createdAt: -1 });
+noShowSchema.index({ customerPhone: 1, isExcused: 1 });
 noShowSchema.index({ barberId: 1, createdAt: -1 });
 
 // Static method to get customer's no-show count
 noShowSchema.statics.getCustomerNoShowCount = async function(customerId) {
+    if (!customerId) return 0;
     return await this.countDocuments({
         customerId,
         isExcused: false // Only count non-excused no-shows
     });
 };
 
+// Static method to get customer's no-show count by phone
+noShowSchema.statics.getNoShowCountByPhone = async function(customerPhone) {
+    if (!customerPhone) return 0;
+    return await this.countDocuments({
+        customerPhone,
+        isExcused: false // Only count non-excused no-shows
+    });
+};
+
 // Static method to check if customer is blocked from booking
 noShowSchema.statics.isCustomerBlocked = async function(customerId, limit = 3) {
+    if (!customerId) return false;
     const count = await this.getCustomerNoShowCount(customerId);
+    return count >= limit;
+};
+
+// Static method to check if customer is blocked from booking by phone
+noShowSchema.statics.isCustomerBlockedByPhone = async function(customerPhone, limit = 3) {
+    if (!customerPhone) return false;
+    const count = await this.getNoShowCountByPhone(customerPhone);
     return count >= limit;
 };
 
@@ -106,10 +131,42 @@ noShowSchema.statics.getCustomerHistory = async function(customerId, limit = 10)
         .limit(limit);
 };
 
+// Static method to get customer's no-show history by phone
+noShowSchema.statics.getCustomerHistoryByPhone = async function(customerPhone, limit = 10) {
+    return await this.find({ customerPhone })
+        .populate('bookingId', 'bookingDate status')
+        .populate('barberId', 'userId')
+        .populate('serviceId', 'name')
+        .populate({
+            path: 'barberId',
+            populate: {
+                path: 'userId',
+                select: 'name'
+            }
+        })
+        .sort({ createdAt: -1 })
+        .limit(limit);
+};
+
 // Static method to reset customer's no-show count (admin function)
 noShowSchema.statics.resetCustomerNoShows = async function(customerId, adminId, reason) {
     const result = await this.updateMany(
         { customerId, isExcused: false },
+        {
+            isExcused: true,
+            excusedBy: adminId,
+            excusedReason: reason,
+            excusedDate: new Date()
+        }
+    );
+
+    return result;
+};
+
+// Static method to reset customer's no-show count by phone (admin function)
+noShowSchema.statics.resetCustomerNoShowsByPhone = async function(customerPhone, adminId, reason) {
+    const result = await this.updateMany(
+        { customerPhone, isExcused: false },
         {
             isExcused: true,
             excusedBy: adminId,

@@ -6,20 +6,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
+import { formatPrice, formatDate } from "@/utils/formatters";
+import { getOrderStatusConfig } from "@/constants/statusMaps";
 
-const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-const formatDate = (dateStr) => {
-  const d = new Date(dateStr);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} - ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-};
-
-const orderStatusMap = {
-  'pending': { label: 'Đơn mới', color: 'text-primary border-primary bg-primary/10' },
-  'processing': { label: 'Đang chuẩn bị', color: 'text-secondary border-secondary bg-secondary/10' },
-  'shipped': { label: 'Đang giao hàng', color: 'text-tertiary border-tertiary bg-tertiary/10' },
-  'completed': { label: 'Hoàn thành', color: 'text-success border-success bg-success/10' },
-  'cancelled': { label: 'Đã hủy', color: 'text-error border-error bg-error/10' }
-};
 
 function GuestOrderHistoryContent() {
   const searchParams = useSearchParams();
@@ -142,7 +131,7 @@ function GuestOrderHistoryContent() {
           </div>
         ) : (
           results.map((order, idx) => {
-            const statusInfo = orderStatusMap[order.status] || { label: order.status, color: 'text-outline border-outline bg-surface-container' };
+            const statusInfo = getOrderStatusConfig(order.status);
             return (
               <div key={idx} className="bg-surface-container border border-outline-variant p-6 md:p-8 rounded-2xl flex flex-col md:flex-row items-center gap-8 relative overflow-hidden transition-all duration-300 ease-out">
                 <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 w-full items-center">

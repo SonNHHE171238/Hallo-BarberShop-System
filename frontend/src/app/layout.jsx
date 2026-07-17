@@ -2,6 +2,7 @@ import { Playfair_Display, Montserrat, Hanken_Grotesk, JetBrains_Mono } from 'ne
 import "./globals.css";
 import { Providers } from './providers';
 import { Toaster } from 'react-hot-toast';
+import ChatbotWidget from "@/components/chat/ChatbotWidget";
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair-display",
@@ -36,6 +37,7 @@ export default function RootLayout({ children }) {
               },
             }}
           />
+          <ChatbotWidget />
         </Providers>
       </body>
     </html>

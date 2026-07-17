@@ -3,6 +3,10 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { adminBarberService } from "@/services/adminBarber.service";
+import { adminAccountService } from '@/services/adminAccount.service';
+import toast from 'react-hot-toast';
+import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
+import BarberUpcomingBookingsModal from '@/components/admin/accounts/BarberUpcomingBookingsModal';
 
 // MOCK DATA
 const mockStaff = [
@@ -97,63 +101,112 @@ export default function AdminStaffPage() {
   const [staffList, setStaffList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Modal States
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState(null);
+  const [bookingsModalOpen, setBookingsModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const fetchStaff = async () => {
+    try {
+      const response = await adminBarberService.getAllAdminBarbers();
+      
+      const apiBarbers = response.barbers.map(item => {
+        const b = item.barber || {};
+        const u = item.user || {};
+        const bId = String(b._id || b.id || "000000");
+        const uId = String(u._id || u.id || "000000");
+        return {
+          id: bId.length > 6 ? bId.substring(bId.length - 6).toUpperCase() : bId.toUpperCase(),
+          fullId: uId,
+          barberId: bId,
+          name: u.name,
+          role: b.experienceYears >= 5 ? "Master Barber" : "Junior Barber",
+          type: "barber",
+          avatar: u.avatarUrl,
+          rating: b.rating || b.averageRating || 5.0, 
+          reviews: b.reviewCount || 0,
+          revenue: "-",
+          status: u.status,
+          isDeleted: u.isDeleted,
+          shift: `${b.preferredWorkingHours?.start || '08:00'} - ${b.preferredWorkingHours?.end || '20:00'}`,
+          email: u.email,
+          phone: u.phone || "Chưa cập nhật"
+        };
+      });
+
+      const apiStaffs = (response.staffs || []).map(u => {
+        const uId = String(u._id || u.id || "000000");
+        return {
+          id: uId.length > 6 ? uId.substring(uId.length - 6).toUpperCase() : uId.toUpperCase(),
+          fullId: uId,
+          name: u.name,
+          role: "Lễ tân",
+          type: "staff",
+          avatar: u.avatarUrl,
+          rating: null,
+          reviews: null,
+          revenue: "-",
+          status: u.status,
+          isDeleted: u.isDeleted,
+          shift: "Ca Hành Chính",
+          email: u.email,
+          phone: u.phone || "Chưa cập nhật"
+        };
+      });
+
+      setStaffList([...apiBarbers, ...apiStaffs]);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách nhân viên:", error);
+      setStaffList([]); 
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStaff = async () => {
-      try {
-        const response = await adminBarberService.getAllAdminBarbers();
-        
-        // Chuyển đổi dữ liệu từ API sang format của bảng
-        const apiBarbers = response.barbers.map(item => {
-          const b = item.barber || {};
-          const u = item.user || {};
-          const bId = String(b._id || b.id || "000000");
-          return {
-            id: bId.length > 6 ? bId.substring(bId.length - 6).toUpperCase() : bId.toUpperCase(),
-            name: u.name,
-            role: b.experienceYears >= 5 ? "Master Barber" : "Junior Barber",
-            type: "barber",
-            avatar: u.avatarUrl,
-            rating: b.rating || b.averageRating || 5.0, 
-            reviews: b.reviewCount || 0,
-            revenue: "-",
-            status: u.status,
-            shift: `${b.preferredWorkingHours?.start || '08:00'} - ${b.preferredWorkingHours?.end || '20:00'}`,
-            email: u.email,
-            phone: u.phone || "Chưa cập nhật"
-          };
-        });
-
-        // Xử lý dữ liệu Staff Khác (nếu có)
-        const apiStaffs = (response.staffs || []).map(u => {
-          const uId = String(u._id || u.id || "000000");
-          return {
-            id: uId.length > 6 ? uId.substring(uId.length - 6).toUpperCase() : uId.toUpperCase(),
-            name: u.name,
-            role: "Lễ tân",
-            type: "staff",
-            avatar: u.avatarUrl,
-            rating: null,
-            reviews: null,
-            revenue: "-",
-            status: u.status,
-            shift: "Ca Hành Chính",
-            email: u.email,
-            phone: u.phone || "Chưa cập nhật"
-          };
-        });
-
-        // Gộp cả 2 danh sách lại để hiển thị
-        setStaffList([...apiBarbers, ...apiStaffs]);
-      } catch (error) {
-        console.error("Lỗi khi tải danh sách nhân viên:", error);
-        setStaffList([]); 
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchStaff();
   }, []);
+
+  const handleInitiateDelete = (staff) => {
+      setAccountToDelete(staff);
+      setConfirmModalOpen(true);
+  };
+
+  const handleConfirmDeleteClick = () => {
+      if (!accountToDelete) return;
+      setConfirmModalOpen(false);
+      if (accountToDelete.type === 'barber') {
+          setBookingsModalOpen(true);
+      } else {
+          executeDelete(accountToDelete.fullId);
+      }
+  };
+
+  const executeDelete = async (accountId) => {
+      setIsDeleting(true);
+      try {
+          await adminAccountService.deleteAccount(accountId);
+          toast.success('Xóa nhân viên thành công');
+          setBookingsModalOpen(false);
+          setAccountToDelete(null);
+          fetchStaff();
+      } catch (error) {
+          toast.error(error.message || 'Có lỗi xảy ra khi xóa');
+      } finally {
+          setIsDeleting(false);
+      }
+  };
+
+  const executeRestore = async (accountId) => {
+      try {
+          await adminAccountService.restoreAccount(accountId);
+          toast.success('Khôi phục nhân viên thành công');
+          fetchStaff();
+      } catch (error) {
+          toast.error(error.message || 'Có lỗi xảy ra khi khôi phục');
+      }
+  };
 
   const filteredStaff = staffList.filter(staff => {
     if (activeTab === "all") return true;
@@ -275,18 +328,39 @@ export default function AdminStaffPage() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                        staff.status === 'active' ? 'text-green-400 bg-green-400/10' : 'text-outline-variant bg-outline-variant/10'
+                        staff.isDeleted ? 'text-red-400 bg-red-400/10' : staff.status === 'active' ? 'text-green-400 bg-green-400/10' : 'text-outline-variant bg-outline-variant/10'
                       }`}>
-                        {staff.status === 'active' ? 'Đang làm' : 'Nghỉ ca'}
+                        {staff.isDeleted ? 'Đã xóa' : staff.status === 'active' ? 'Đang làm' : 'Nghỉ ca'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-on-surface-variant font-label-md">{staff.shift}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-outline hover:text-primary p-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-                        <span className="material-symbols-outlined">edit</span>
-                      </button>
+                      {staff.isDeleted ? (
+                          <button 
+                              onClick={() => executeRestore(staff.fullId)}
+                              className="text-green-500 hover:bg-green-500/10 p-2 rounded transition-colors mr-2 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              title="Khôi phục nhân viên"
+                          >
+                              <span className="material-symbols-outlined">restore</span>
+                          </button>
+                      ) : (
+                          <>
+                              {staff.status !== 'banned' && staff.status !== 'suspended' && (
+                                  <button 
+                                      onClick={() => handleInitiateDelete(staff)}
+                                      className="text-error hover:bg-error/10 p-2 rounded transition-colors mr-2 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                      title="Xóa nhân viên"
+                                  >
+                                      <span className="material-symbols-outlined">delete</span>
+                                  </button>
+                              )}
+                              <button className="text-outline hover:text-primary p-2 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+                                <span className="material-symbols-outlined">edit</span>
+                              </button>
+                          </>
+                      )}
                     </td>
                   </tr>
                   ))
@@ -302,6 +376,21 @@ export default function AdminStaffPage() {
           </button>
         </div>
 
+        <GenericConfirmModal 
+            isOpen={confirmModalOpen}
+            title="Xóa nhân viên"
+            message={`Bạn có chắc chắn muốn xóa nhân viên ${accountToDelete?.name}? Tài khoản sẽ bị khóa và không thể đăng nhập.`}
+            onConfirm={handleConfirmDeleteClick}
+            onCancel={() => setConfirmModalOpen(false)}
+        />
+        {accountToDelete && accountToDelete.type === 'barber' && (
+            <BarberUpcomingBookingsModal 
+                isOpen={bookingsModalOpen}
+                onClose={() => setBookingsModalOpen(false)}
+                barber={{ id: accountToDelete.barberId, name: accountToDelete.name }}
+                onAllResolved={() => executeDelete(accountToDelete.fullId)}
+            />
+        )}
       </div>
     </div>
   );

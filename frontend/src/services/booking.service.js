@@ -182,5 +182,48 @@ export const bookingService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  preCheckBooking: async (phone) => {
+    try {
+      const response = await fetchWithAuth('/bookings/pre-check', {
+        method: 'POST',
+        body: JSON.stringify({ phone })
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Guest actions
+  getGuestBookingDetail: async (id, phone) => {
+    try {
+      return await fetchWithAuth(`/bookings/${id}/guest?phone=${phone}`, { method: 'GET' });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  guestCancelBooking: async (id, phone, reason) => {
+    try {
+      return await fetchWithAuth(`/bookings/${id}/guest/cancel`, {
+        method: 'PUT',
+        body: JSON.stringify({ phone, reason })
+      });
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  guestRescheduleBooking: async (id, data) => {
+    try {
+      return await fetchWithAuth(`/bookings/${id}/guest/reschedule`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 };

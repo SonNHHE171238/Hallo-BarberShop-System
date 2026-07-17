@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import toast from 'react-hot-toast';
+import { usePathname } from 'next/navigation';
 import MessageBubble from "./MessageBubble";
 import QuickActions from "./QuickActions";
 
@@ -25,6 +26,8 @@ export default function ChatbotWidget() {
   const [selectedBarber, setSelectedBarber] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const pathname = usePathname();
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,6 +36,19 @@ export default function ChatbotWidget() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    const handleOpenChat = () => {
+      if (!isOpen) {
+        setIsOpen(true);
+        if (!mode) {
+          setMessages([{ role: "system", content: "Chào bạn! Bạn muốn nhắn tin với nhân viên hay trò chuyện với AI Assistant?" }]);
+        }
+      }
+    };
+    window.addEventListener('open-chatbot', handleOpenChat);
+    return () => window.removeEventListener('open-chatbot', handleOpenChat);
+  }, [isOpen, mode]);
 
   const toggleChat = () => {
     if (!isOpen && !mode) {
@@ -135,6 +151,11 @@ export default function ChatbotWidget() {
     }
   };
 
+
+  // Hide chatbot on admin, staff, and barber dashboards
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/staff') || pathname?.startsWith('/barber')) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-6 right-6 z-50">

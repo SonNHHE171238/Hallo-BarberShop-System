@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
     resetTokenHash: { type: String, select: false },
     resetTokenExpires: { type: Date },
     isDeleted: { type: Boolean, default: false },
+    savedVouchers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Voucher' }],
   },
   { 
     timestamps: true,

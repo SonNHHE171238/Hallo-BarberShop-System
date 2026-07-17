@@ -120,7 +120,8 @@ const staffController = {
           path: 'barberId',
           populate: { path: 'userId', select: 'name' }
         })
-        .populate('services', 'name price durationMinutes');
+        .populate('services', 'name price durationMinutes')
+        .populate('products.productId', 'name price image');
       
       if (!booking) {
         const err = new Error('Booking not found');
@@ -135,13 +136,15 @@ const staffController = {
         customerType: booking.bookingType === 'guest' ? 'Khách Vãng Lai' : 'Thành Viên',
         barberName: booking.barberId?.userId?.name || 'Auto',
         serviceName: booking.services?.map(s => s.name).join(', ') || 'Chưa chọn',
+        services: booking.services,
+        products: booking.products,
         totalPrice: booking.totalPrice,
         amountPaid: booking.amountPaid || 0,
         paymentStatus: booking.paymentStatus,
         status: booking.status,
-        services: booking.services,
-        date: booking.bookingDate,
-        time: booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }) : 'N/A',
+        date: booking.bookingDate.toLocaleDateString('vi-VN'),
+        time: booking.bookingDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        rawDate: booking.bookingDate
       };
 
       return res.status(200).json({ success: true, message: 'Lấy thông tin lịch hẹn thành công', data: formattedBooking });
@@ -172,6 +175,38 @@ const staffController = {
       return res.status(200).json({
         success: true,
         data: customer
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  addItemsToBooking: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const payload = req.body; // { newServices, newProducts }
+      const updatedBooking = await staffDashboardService.addItemsToBooking(id, payload);
+      
+      res.status(200).json({
+        success: true,
+        data: updatedBooking,
+        message: 'Thêm sản phẩm/dịch vụ thành công'
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  removeItemFromBooking: async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const { itemType, itemId } = req.body;
+      const updatedBooking = await staffDashboardService.removeItemFromBooking(id, { itemType, itemId });
+      
+      res.status(200).json({
+        success: true,
+        data: updatedBooking,
+        message: 'Đã xoá thành công'
       });
     } catch (error) {
       next(error);

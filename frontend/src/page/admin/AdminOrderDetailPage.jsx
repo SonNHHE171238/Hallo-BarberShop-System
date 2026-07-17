@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { formatPrice, formatDateTime } from "@/utils/formatters";
+import { getOrderStatusConfig } from "@/constants/statusMaps";
 
 export default function AdminOrderDetailPage({ orderId }) {
   const [order, setOrder] = useState(null);
@@ -83,17 +85,7 @@ export default function AdminOrderDetailPage({ orderId }) {
 
   if (!order) return <div className="p-8 text-center">Không tìm thấy đơn hàng</div>;
 
-  // Format Helpers
-  const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-  const formatDate = (dateString) => {
-    const d = new Date(dateString);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, '0');
-    const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${mins}`;
-  };
+  // Format Helpers (Imported from utils)
 
   const getPaymentMethod = (method) => {
     if (method === 'cod') return "Thanh toán khi nhận hàng (COD)";
@@ -172,7 +164,7 @@ export default function AdminOrderDetailPage({ orderId }) {
           </div>
           <div className="space-y-1">
             <p className="text-[10px] uppercase tracking-widest text-outline">Ngày tạo</p>
-            <p className="text-[14px] text-on-surface font-medium">{formatDate(order.createdAt)}</p>
+            <p className="text-[14px] text-on-surface font-medium">{formatDateTime(order.createdAt)}</p>
           </div>
           <div className="space-y-1">
             <p className="text-[10px] uppercase tracking-widest text-outline">Khách hàng</p>
@@ -302,7 +294,7 @@ export default function AdminOrderDetailPage({ orderId }) {
                     <div className="flex-1 -mt-1">
                       <div className="flex justify-between items-start">
                         <p className={`font-semibold ${idx === 0 ? 'text-primary' : 'text-on-surface'}`}>{log.action}</p>
-                        <span className="font-label-md text-[11px] text-outline uppercase">{formatDate(log.timestamp)}</span>
+                        <span className="font-label-md text-[11px] text-outline uppercase">{formatDateTime(log.timestamp)}</span>
                       </div>
                       {log.note && (
                         <p className="mt-2 text-[12px] italic text-outline bg-white/[0.03] p-3 border-l-2 border-primary/30">

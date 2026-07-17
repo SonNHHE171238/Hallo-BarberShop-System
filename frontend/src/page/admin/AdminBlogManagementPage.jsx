@@ -1,0 +1,69 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import BlogTableFilter from "@/components/admin/blog/BlogTableFilter";
+import BlogTable from "@/components/admin/blog/BlogTable";
+
+export default function AdminBlogManagementPage() {
+  const pathname = usePathname();
+  const basePath = pathname?.startsWith('/staff') ? '/staff/blogs' : '/admin/blogs';
+  
+  const [blogs, setBlogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sortOption, setSortOption] = useState("newest"); // 'newest', 'oldest', 'a-z'
+
+  useEffect(() => {
+    const fetchAdminBlogs = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/blogs/admin", {
+          withCredentials: true
+        });
+        if (res.data.success) {
+          setBlogs(res.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch admin blogs:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAdminBlogs();
+  }, []);
+
+  // Handle Sorting
+  const sortedBlogs = [...blogs].sort((a, b) => {
+    if (sortOption === "newest") return new Date(b.createdAt) - new Date(a.createdAt);
+    if (sortOption === "oldest") return new Date(a.createdAt) - new Date(b.createdAt);
+    if (sortOption === "a-z") return a.title.localeCompare(b.title);
+    return 0;
+  });
+
+  return (
+    <div className="max-w-container-max mx-auto w-full pb-12">
+      {/* Page Header Area */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div>
+          <h2 className="serif-header text-4xl md:text-5xl text-primary font-bold mb-2">Danh sách bài viết</h2>
+          <p className="text-on-surface-variant font-body-lg">Quản lý và cập nhật nội dung tin tức cho hệ thống Hallo Barber.</p>
+        </div>
+        <Link href={`${basePath}/create`} className="bg-primary text-on-primary px-8 py-4 font-bold flex items-center gap-3 hover:bg-primary-container hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 group">
+          <span className="material-symbols-outlined group-hover:rotate-90 transition-transform">add</span>
+          TẠO BÀI VIẾT MỚI
+        </Link>
+      </div>
+
+      <BlogTableFilter sortOption={sortOption} setSortOption={setSortOption} />
+      
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        <BlogTable blogs={sortedBlogs} />
+      )}
+    </div>
+  );
+}

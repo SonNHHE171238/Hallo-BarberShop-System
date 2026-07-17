@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import Link from 'next/link';
+import RescheduleModal from './RescheduleModal';
 
 export default function NextBooking({ appointment }) {
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   if (!appointment) {
     return (
-      <div className="col-span-12 lg:col-span-8 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-center items-center text-center glow-accent relative overflow-hidden group">
+      <div className="col-span-12 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-center items-center text-center glow-accent relative overflow-hidden group">
         <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4 opacity-50">calendar_today</span>
         <h2 className="font-headline-md text-2xl text-on-surface mb-2">Bạn chưa có lịch hẹn nào</h2>
         <p className="font-body-md text-on-surface-variant mb-6">Hãy đặt một lịch hẹn để trải nghiệm dịch vụ chăm sóc tóc chuyên nghiệp của chúng tôi.</p>
@@ -31,7 +33,7 @@ export default function NextBooking({ appointment }) {
   const statusInfo = statusMap[appointment.status] || statusMap.pending;
 
   return (
-    <div className="col-span-12 lg:col-span-8 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-between glow-accent relative overflow-hidden group">
+    <div className="col-span-12 bg-surface-container-low border border-outline-variant rounded-lg p-8 flex flex-col justify-between glow-accent relative overflow-hidden group">
       <div className="absolute right-0 top-0 w-32 h-32 bg-primary-container/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 z-10 relative">
@@ -65,10 +67,20 @@ export default function NextBooking({ appointment }) {
           </div>
         </div>
         <div className="flex gap-4 w-full sm:w-auto">
-          <Link href="/booking" className="flex-1 sm:flex-none px-8 py-3 border border-outline text-on-surface font-label-md text-xs uppercase tracking-widest hover:bg-surface-variant transition-colors rounded text-center">Đổi lịch</Link>
+          <button onClick={() => setIsRescheduleOpen(true)} className="flex-1 sm:flex-none px-8 py-3 border border-outline text-on-surface font-label-md text-xs uppercase tracking-widest hover:bg-surface-variant transition-colors rounded text-center">Đổi lịch</button>
           <button className="flex-1 sm:flex-none px-8 py-3 bg-primary-container text-on-primary-container font-label-md text-xs uppercase tracking-widest hover:opacity-90 transition-opacity rounded font-bold" onClick={() => {}}>Chi tiết</button>
         </div>
       </div>
+      {isRescheduleOpen && (
+        <RescheduleModal
+          booking={appointment}
+          onClose={() => setIsRescheduleOpen(false)}
+          onSuccess={() => {
+            setIsRescheduleOpen(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

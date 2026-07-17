@@ -158,6 +158,7 @@ const bookAppointment = async (args) => {
 
     await newBooking.save();
 
+    const formattedDate = bookingDate.split('-').reverse().join('/');
     return JSON.stringify({ 
       success: true, 
       message: "Đặt lịch thành công", 
@@ -167,7 +168,7 @@ const bookAppointment = async (args) => {
         customerPhone: cleanPhone,
         serviceNames: services.map(s => s.name),
         barberName: assignedBarberName,
-        time: `${startTime} ngày ${bookingDate}`,
+        time: `${startTime} ngày ${formattedDate}`,
         totalPrice: totalPrice
       }
     });
@@ -245,6 +246,7 @@ const updateAppointment = async (args) => {
     
     await existingBooking.save();
 
+    const formattedDate = bookingDate.split('-').reverse().join('/');
     return JSON.stringify({ 
       success: true, 
       message: "Cập nhật lịch thành công", 
@@ -254,7 +256,7 @@ const updateAppointment = async (args) => {
         customerPhone: cleanPhone,
         serviceNames: services.map(s => s.name),
         barberName: assignedBarberName,
-        time: `${startTime} ngày ${bookingDate}`,
+        time: `${startTime} ngày ${formattedDate}`,
         totalPrice: totalPrice
       }
     });
@@ -367,9 +369,53 @@ const lookupAppointments = async (args) => {
   }
 };
 
+const lookupOrders = async (args) => {
+  try {
+    const { customerPhone } = args;
+    if (!isValidPhone(customerPhone)) {
+      return JSON.stringify({ success: false, reason: "Số điện thoại không hợp lệ. Vui lòng cung cấp số điện thoại Việt Nam hợp lệ (ví dụ: 0987654321)." });
+    }
+    const cleanPhone = customerPhone.replace(/\s+/g, '');
+    const orders = await Order.find({ customerPhone: cleanPhone }).sort({ createdAt: -1 }).limit(5);
+
+    if (!orders || orders.length === 0) {
+      return JSON.stringify({ success: false, reason: `Không tìm thấy đơn hàng nào cho số điện thoại ${cleanPhone}.` });
+    }
+
+    const orderList = orders.map(o => {
+      const dateStr = o.createdAt.toISOString().split("T")[0];
+      const timeStr = o.createdAt.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+      const statusMap = {
+        'PENDING': 'Đang chờ xử lý',
+        'PROCESSING': 'Đang xử lý',
+        'SHIPPED': 'Đang giao hàng',
+        'DELIVERED': 'Đã giao thành công',
+        'CANCELLED': 'Đã hủy'
+      };
+      return `- Mã đơn hàng: ${o.orderCode || o._id.toString().slice(-6).toUpperCase()}\n  Ngày đặt: ${timeStr} ${dateStr}\n  Tổng tiền: ${o.totalAmount} VNĐ\n  Trạng thái: ${statusMap[o.status] || o.status}\n  Thanh toán: ${o.paymentMethod}`;
+    }).join("\n\n");
+
+    return JSON.stringify({ 
+      success: true, 
+      message: `Đây là 5 đơn hàng gần nhất của bạn (SĐT: ${cleanPhone}):\n\n${orderList}` 
+    });
+  } catch (error) {
+    console.error("Error in lookupOrders tool:", error);
+    return JSON.stringify({ success: false, reason: "Lỗi hệ thống khi tra cứu đơn hàng: " + error.message });
+  }
+};
+
+const escapeRegExp = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 const placeOrder = async (args) => {
   try {
-    const { customerName, customerPhone, shippingAddress, items, paymentMethod } = args;
+    const { customerName, customerPhone, shippingAddress, items, paymentMethod, internalNote } = args;
+
+    if (!customerName || customerName.trim() === '') {
+      return JSON.stringify({ success: false, reason: "Tên người nhận bị thiếu. Vui lòng cung cấp đầy đủ tên người nhận hàng." });
+    }
 
     if (!isValidPhone(customerPhone)) {
       return JSON.stringify({ success: false, reason: "Số điện thoại không hợp lệ. Vui lòng cung cấp số điện thoại Việt Nam hợp lệ (ví dụ: 0987654321)." });
@@ -389,7 +435,7 @@ const placeOrder = async (args) => {
 
     // Verify stock and calculate total
     for (const item of items) {
-      const product = await Product.findOne({ name: { $regex: new RegExp(`^${item.productName}$`, 'i') } });
+      const product = await Product.findOne({ name: { $regex: new RegExp(`^${escapeRegExp(item.productName)}$`, 'i') } });
       if (!product || !product.isActive) {
         return JSON.stringify({ success: false, reason: `Sản phẩm '${item.productName}' không tồn tại hoặc đã ngừng bán.` });
       }
@@ -406,6 +452,10 @@ const placeOrder = async (args) => {
       totalAmount += product.price * item.quantity;
     }
 
+    if (totalAmount > 3000000) {
+      return JSON.stringify({ success: false, reason: "Tổng giá trị đơn hàng vượt quá giới hạn 3.000.000 VNĐ. Hệ thống không thể nhận đơn hàng COD/Chatbot giá trị lớn như vậy. Vui lòng thanh toán trả trước (PayOS toàn bộ) hoặc giảm số lượng." });
+    }
+
     // Generate unique order code (Number) for PayOS
     const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
 
@@ -416,7 +466,8 @@ const placeOrder = async (args) => {
       items: orderItems,
       totalAmount,
       paymentMethod: paymentMethod === 'payos' ? 'payos' : 'cod',
-      orderCode
+      orderCode,
+      internalNote: internalNote || ""
     });
 
     await newOrder.save();
@@ -440,7 +491,7 @@ const placeOrder = async (args) => {
       const body = {
         orderCode: orderCode,
         amount: totalAmount,
-        description: `Thanh toan don hang chatbot`,
+        description: `TT don hang Chatbot`,
         items: orderItems.map(item => ({
           name: item.name.substring(0, 25), // PayOS name length limit
           quantity: item.quantity,
@@ -451,9 +502,12 @@ const placeOrder = async (args) => {
       };
 
       try {
-        const paymentLinkResponse = await payos.createPaymentLink(body);
+        const paymentLinkResponse = await payos.paymentRequests.create(body);
         paymentUrl = paymentLinkResponse.checkoutUrl;
-        paymentMessage = `Vui lòng click vào đường link sau để thanh toán trực tuyến: ${paymentUrl}`;
+        
+        // Cập nhật để trả về cả Markdown QR
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentLinkResponse.qrCode)}`;
+        paymentMessage = `Vui lòng quét mã QR dưới đây để hoàn tất thanh toán trực tuyến:\n![QR Code](${qrCodeUrl})`;
       } catch (payosError) {
         console.error("Lỗi tạo PayOS link via chatbot:", payosError);
         paymentMessage = "Đã xảy ra lỗi khi tạo link thanh toán online. Bạn vui lòng thanh toán COD khi nhận hàng nhé.";
@@ -512,13 +566,13 @@ const generateBookingPaymentLink = async (args) => {
       cancelUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}`
     };
 
-    const paymentLinkRes = await payos.createPaymentLink(body);
+    const paymentLinkRes = await payos.paymentRequests.create(body);
 
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(paymentLinkRes.qrCode)}`;
 
     return JSON.stringify({
       success: true,
-      message: `Tạo link thanh toán thành công!\n\nSố tiền cần thanh toán: ${amountToPay} VNĐ\nSố tài khoản: ${paymentLinkRes.accountNumber}\nTên tài khoản: ${paymentLinkRes.accountName}\nNội dung chuyển khoản: ${paymentLinkRes.description}\n\nẢnh QR:\n![QR Code](${qrCodeUrl})\n\nLink trực tiếp: ${paymentLinkRes.checkoutUrl}`
+      message: `Tạo link thanh toán thành công!\n\nSố tiền cần thanh toán: ${amountToPay} VNĐ\nSố tài khoản: ${paymentLinkRes.accountNumber}\nTên tài khoản: ${paymentLinkRes.accountName}\nNội dung chuyển khoản: ${paymentLinkRes.description}\n\nẢnh QR:\n![QR Code](${qrCodeUrl})`
     });
 
   } catch (error) {
@@ -611,6 +665,7 @@ const tools = {
   updateAppointment,
   cancelAppointment,
   lookupAppointments,
+  lookupOrders,
   placeOrder,
   generateBookingPaymentLink,
   checkBarberSchedule
@@ -704,6 +759,17 @@ const geminiTools = [{
       }
     },
     {
+      name: "lookupOrders",
+      description: "Tra cứu danh sách các đơn hàng đã mua của khách hàng thông qua số điện thoại.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          customerPhone: { type: "STRING", description: "Số điện thoại của khách hàng (bắt buộc)" }
+        },
+        required: ["customerPhone"]
+      }
+    },
+    {
       name: "getShopProducts",
       description: "Lấy danh sách các sản phẩm đang được bán tại Hallo BarberShop, bao gồm tên sản phẩm, thương hiệu, giá tiền và số lượng tồn kho.",
       parameters: {
@@ -713,7 +779,7 @@ const geminiTools = [{
     },
     {
       name: "placeOrder",
-      description: "Tạo đơn đặt hàng mua sản phẩm từ shop cho khách hàng. Chỉ dùng khi khách hàng chốt muốn mua sản phẩm cụ thể.",
+      description: "Tạo đơn đặt hàng mua sản phẩm. CHÚ Ý: Tuyệt đối không tự ý chọn bừa sản phẩm nếu tên khách nhập quá chung chung (chỉ ghi tên hãng). BẮT BUỘC phải hỏi lại khách muốn lấy dòng sản phẩm nào cụ thể trước khi gọi tool. Bắt buộc tên sản phẩm phải khớp chính xác 100% với danh sách từ getShopProducts.",
       parameters: {
         type: "OBJECT",
         properties: {
@@ -721,13 +787,14 @@ const geminiTools = [{
           customerPhone: { type: "STRING", description: "Số điện thoại nhận hàng hợp lệ (bắt buộc)" },
           shippingAddress: { type: "STRING", description: "Địa chỉ nhận hàng (bắt buộc)" },
           paymentMethod: { type: "STRING", description: "Phương thức thanh toán: 'cod' hoặc 'payos' (bắt buộc)" },
+          internalNote: { type: "STRING", description: "Ghi chú đặc biệt hoặc yêu cầu từ khách hàng (nếu có)" },
           items: {
             type: "ARRAY",
             description: "Danh sách sản phẩm muốn mua",
             items: {
               type: "OBJECT",
               properties: {
-                productName: { type: "STRING", description: "Tên chính xác của sản phẩm theo list" },
+                productName: { type: "STRING", description: "Tên chính xác tuyệt đối của sản phẩm theo danh sách kho (không được tự chế ra tên khác)" },
                 quantity: { type: "INTEGER", description: "Số lượng mua" }
               },
               required: ["productName", "quantity"]

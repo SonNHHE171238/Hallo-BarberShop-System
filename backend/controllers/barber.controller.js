@@ -20,6 +20,11 @@ exports.getActiveBarbers = async (req, res, next) => {
 exports.getBarberAbsences = async (req, res, next) => {
   try {
     const { id } = req.params;
+    
+    if (id === 'auto' || id === 'random') {
+      return sendSuccess(res, 200, 'Barber absences retrieved', { absentDates: [] });
+    }
+
     const BarberAbsence = require('../models/barber-absence.model');
     
     // Get all approved absences for this barber

@@ -164,3 +164,61 @@ exports.sendBookingConfirmationEmail = async (to, bookingDetails) => {
     return false;
   }
 };
+
+exports.sendBookingReassignmentEmail = async (to, bookingDetails) => {
+  const transport = getTransporter();
+  if (!transport) {
+    console.error('Email is not configured. Cannot send reassignment email.');
+    return false;
+  }
+
+  const from = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+  const { customerName, serviceName, newBarberName, oldBarberName, bookingDate, timeSlot } = bookingDetails;
+
+  const dateObj = new Date(bookingDate);
+  const formattedDate = dateObj.toLocaleDateString('vi-VN');
+
+  try {
+    await transport.sendMail({
+      from: `"Hallo Barber" <${from}>`,
+      to,
+      subject: 'Thay đổi thợ cắt tóc cho lịch hẹn tại Hallo Barber',
+      text: [
+        `Xin chào ${customerName},`,
+        '',
+        `Lịch hẹn của bạn vào lúc ${timeSlot} ngày ${formattedDate} đã được chuyển sang thợ cắt tóc mới do thợ cắt tóc ${oldBarberName} có việc bận đột xuất.`,
+        '',
+        'Thông tin lịch hẹn cập nhật:',
+        `Dịch vụ: ${serviceName}`,
+        `Thợ cắt mới: ${newBarberName}`,
+        `Ngày: ${formattedDate}`,
+        `Giờ: ${timeSlot}`,
+        '',
+        'Vui lòng đến đúng giờ để được phục vụ tốt nhất.',
+        'Xin lỗi bạn vì sự bất tiện này.',
+        '',
+        'Trân trọng,',
+        'Hallo Barber',
+      ].join('\n'),
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+          <h2 style="color: #c9a227; text-align: center;">Cập nhật lịch hẹn</h2>
+          <p>Xin chào <strong>${customerName}</strong>,</p>
+          <p>Lịch hẹn của bạn đã được chuyển sang thợ cắt tóc mới do thợ cắt tóc <strong>${oldBarberName}</strong> có việc bận đột xuất.</p>
+          <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Dịch vụ:</strong> ${serviceName}</p>
+            <p style="margin: 5px 0;"><strong>Thợ cắt mới:</strong> <span style="color: #c9a227; font-weight: bold;">${newBarberName}</span></p>
+            <p style="margin: 5px 0;"><strong>Ngày:</strong> ${formattedDate}</p>
+            <p style="margin: 5px 0;"><strong>Giờ:</strong> ${timeSlot}</p>
+          </div>
+          <p>Vui lòng đến đúng giờ để chúng tôi có thể phục vụ bạn chu đáo nhất. Xin lỗi bạn vì sự bất tiện này.</p>
+          <p style="margin-top: 30px;">Trân trọng,<br/><strong>Hallo Barber</strong></p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error('Lỗi khi gửi email báo chuyển lịch:', error);
+    return false;
+  }
+};

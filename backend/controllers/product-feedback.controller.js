@@ -70,9 +70,10 @@ exports.createFeedback = async (req, res) => {
       });
     }
 
-    // 4. Tặng điểm Loyalty (Chỉ dành cho User có tài khoản)
+    // 4. Tặng điểm Loyalty và Sinh Voucher (Chỉ dành cho User có tài khoản)
     let pointsEarned = 0;
     let totalPoints = 0;
+    let rewardVoucherCode = null;
     
     if (order.userId) {
       pointsEarned = 50;
@@ -82,16 +83,40 @@ exports.createFeedback = async (req, res) => {
         { new: true }
       );
       if (user) totalPoints = user.loyaltyPoints;
+
+      // Sinh Voucher thưởng
+      const Voucher = require('../models/voucher.model');
+      const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+      rewardVoucherCode = `GIFT-PR-${randomStr}`;
+      
+      const validFrom = new Date();
+      const validUntil = new Date(validFrom.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 ngày
+      
+      await Voucher.create({
+        code: rewardVoucherCode,
+        voucherType: 'product_only',
+        discountType: 'percentage',
+        discountValue: 10,
+        maxDiscountAmount: 50000,
+        minOrderValue: 0,
+        validFrom,
+        validUntil,
+        usageLimit: 1,
+        usageLimitPerUser: 1,
+        applicableUsers: [order.userId],
+        isActive: true
+      });
     }
 
     return res.status(201).json({
       success: true,
       message: pointsEarned > 0 
-        ? "Gửi đánh giá thành công! Bạn được cộng 50 điểm." 
+        ? "Gửi đánh giá thành công! Bạn được cộng 50 điểm và 1 Voucher quà tặng." 
         : "Gửi đánh giá thành công! Cảm ơn bạn.",
       data: {
         pointsEarned,
-        totalPoints
+        totalPoints,
+        rewardVoucherCode
       }
     });
 

@@ -147,9 +147,10 @@ exports.createFeedback = async (req, res) => {
       });
     }
 
-    // 3. Xử lý cộng điểm Loyalty nếu là Customer
+    // 3. Xử lý cộng điểm Loyalty và Sinh Voucher nếu là Customer
     let pointsEarned = 0;
     let totalPoints = 0;
+    let rewardVoucherCode = null;
 
     if (booking.bookingType === "user" && booking.customerId) {
       pointsEarned = 50; // Tặng 50 điểm
@@ -161,6 +162,29 @@ exports.createFeedback = async (req, res) => {
       if (user) {
         totalPoints = user.loyaltyPoints;
       }
+
+      // Sinh Voucher thưởng
+      const Voucher = require('../models/voucher.model');
+      const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+      rewardVoucherCode = `GIFT-BK-${randomStr}`;
+      
+      const validFrom = new Date();
+      const validUntil = new Date(validFrom.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 ngày
+      
+      await Voucher.create({
+        code: rewardVoucherCode,
+        voucherType: 'booking_only',
+        discountType: 'percentage',
+        discountValue: 10,
+        maxDiscountAmount: 50000,
+        minOrderValue: 0,
+        validFrom,
+        validUntil,
+        usageLimit: 1,
+        usageLimitPerUser: 1,
+        applicableUsers: [booking.customerId],
+        isActive: true
+      });
     }
 
     return res.status(201).json({
@@ -168,7 +192,8 @@ exports.createFeedback = async (req, res) => {
       message: "Gửi đánh giá thành công!",
       data: {
         pointsEarned,
-        totalPoints
+        totalPoints,
+        rewardVoucherCode
       }
     });
 
