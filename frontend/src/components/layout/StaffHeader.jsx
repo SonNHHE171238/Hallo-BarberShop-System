@@ -18,9 +18,7 @@ export default function StaffHeader() {
     { name: "Lịch hẹn", href: "/staff/bookings" },
     { name: "POS", href: "/staff/pos" },
     { name: "Blog", href: "/staff/blogs" },
-    { name: "Nhân sự", href: "/staff/employees" },
     { name: "Kho hàng", href: "/staff/inventory" },
-    { name: "Khách hàng", href: "/staff/customers" },
   ];
 
   return (

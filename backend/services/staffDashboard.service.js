@@ -153,14 +153,16 @@ const staffDashboardService = {
   getAppointmentsList: async ({ date, barberId, status }) => {
     const query = {};
 
-    if (date && date !== 'all') {
+    if (date && date !== 'all' && date !== 'null' && date !== 'undefined') {
       const targetDate = new Date(date);
-      const start = new Date(targetDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(targetDate);
-      end.setHours(23, 59, 59, 999);
-      
-      query.bookingDate = { $gte: start, $lte: end };
+      if (!isNaN(targetDate.getTime())) {
+        const start = new Date(targetDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(targetDate);
+        end.setHours(23, 59, 59, 999);
+        
+        query.bookingDate = { $gte: start, $lte: end };
+      }
     }
 
     if (barberId && barberId !== 'all') {
@@ -247,17 +249,20 @@ const staffDashboardService = {
     // Check if there are future/past bookings beyond this date
     let hasFutureBookings = true;
     let hasPastBookings = true;
-    if (date) {
-      const start = new Date(date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(23, 59, 59, 999);
-      
-      const futureCount = await Booking.countDocuments({ bookingDate: { $gt: end } });
-      hasFutureBookings = futureCount > 0;
-      
-      const pastCount = await Booking.countDocuments({ bookingDate: { $lt: start } });
-      hasPastBookings = pastCount > 0;
+    if (date && date !== 'all' && date !== 'null' && date !== 'undefined') {
+      const targetDate = new Date(date);
+      if (!isNaN(targetDate.getTime())) {
+        const start = new Date(targetDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(targetDate);
+        end.setHours(23, 59, 59, 999);
+        
+        const futureCount = await Booking.countDocuments({ bookingDate: { $gt: end } });
+        hasFutureBookings = futureCount > 0;
+        
+        const pastCount = await Booking.countDocuments({ bookingDate: { $lt: start } });
+        hasPastBookings = pastCount > 0;
+      }
     }
 
     return {

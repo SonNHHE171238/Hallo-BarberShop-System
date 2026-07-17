@@ -8,5 +8,7 @@ router.post("/create-link", optionalAuthenticate, paymentController.createPaymen
 
 // Đón webhook từ PayOS (không dùng authenticate vì đây là server-to-server)
 router.post("/webhook", paymentController.payosWebhook);
+// Lấy thông tin link thanh toán
+router.get("/link-info/:orderCode", paymentController.getPaymentLinkInfo);
 
 module.exports = router;

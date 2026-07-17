@@ -22,8 +22,15 @@ function GuestOrderHistoryContent() {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchInput && searchInput.length >= 9) {
-      router.push(`/lookup/orders?phone=${searchInput}`);
+    const q = searchInput.trim();
+    if (q.length >= 6) {
+      if (q.startsWith('0') && q.length >= 9) {
+        // Có vẻ là số điện thoại
+        router.push(`/lookup/orders?phone=${q}`);
+      } else {
+        // Là mã đơn hàng
+        router.push(`/shop/orders/${q}`);
+      }
     }
   };
 
@@ -60,20 +67,20 @@ function GuestOrderHistoryContent() {
           <div className="text-center mb-12">
             <h1 className="font-headline-lg text-headline-lg md:text-5xl text-primary mb-4 tracking-tight italic">Tra cứu đơn hàng</h1>
             <p className="text-on-surface-variant font-body-lg text-body-lg max-w-md mx-auto">
-              Nhập số điện thoại bạn đã dùng để kiểm tra thông tin các đơn hàng đã đặt tại Hallo Barber.
+              Nhập số điện thoại hoặc mã đơn hàng để kiểm tra thông tin các đơn hàng đã đặt tại Hallo Barber.
             </p>
           </div>
           <div className="bg-surface-container border border-outline-variant p-8 md:p-12 rounded-xl shadow-2xl relative mx-auto max-w-xl">
             <form onSubmit={handleSearch} className="relative flex flex-col gap-6">
               <div className="flex flex-col gap-2">
-                <label className="font-label-md text-label-md text-primary uppercase tracking-widest" htmlFor="phone">Số điện thoại</label>
+                <label className="font-label-md text-label-md text-primary uppercase tracking-widest" htmlFor="phone">Số điện thoại hoặc Mã đơn</label>
                 <div className="relative group/input">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within/input:text-primary transition-colors">call</span>
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within/input:text-primary transition-colors">search</span>
                   <input 
                     className="w-full bg-surface-container-low border border-outline-variant text-on-surface py-4 pl-12 pr-4 rounded-lg focus:outline-none focus:border-primary transition-all duration-300 font-body-md text-body-md placeholder:text-outline/50" 
                     id="phone" 
-                    placeholder="Nhập số điện thoại của bạn" 
-                    type="tel"
+                    placeholder="VD: 0901234567 hoặc 54405697" 
+                    type="text"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                   />
