@@ -15,6 +15,7 @@ export default function CheckoutSuccessPage() {
   const totalAmount = searchParams.get('total') 
     ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(searchParams.get('total')) 
     : "1.250.000₫";
+  const isPaid = searchParams.get('paid') === 'true';
 
   // Ngày giao dự kiến (2 ngày sau)
   const deliveryDate = new Date();
@@ -81,10 +82,13 @@ export default function CheckoutSuccessPage() {
             </span>
           </div>
           <h2 className="font-headline-lg text-headline-lg text-primary gold-glow mb-4 tracking-tight uppercase">
-            CẢM ƠN BẠN ĐÃ MUA SẮM!
+            {isPaid ? "THANH TOÁN THÀNH CÔNG!" : "CẢM ƠN BẠN ĐÃ MUA SẮM!"}
           </h2>
           <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-12">
-            Đơn hàng của bạn đã được tiếp nhận và đang trong quá trình xử lý. Chúng tôi sẽ thông báo cho bạn ngay khi kiện hàng được gửi đi.
+            {isPaid 
+              ? "Hệ thống đã nhận được tiền thanh toán của bạn. Đơn hàng đang được chuẩn bị và sẽ sớm được giao đến bạn."
+              : "Đơn hàng của bạn đã được tiếp nhận và đang trong quá trình xử lý. Chúng tôi sẽ thông báo cho bạn ngay khi kiện hàng được gửi đi."
+            }
           </p>
 
           {/* Layout Grid: Bento Style */}
@@ -101,6 +105,12 @@ export default function CheckoutSuccessPage() {
                     <span className="font-label-md text-label-md text-on-surface-variant">MÃ ĐƠN HÀNG</span>
                     <span className="font-label-md text-label-md text-on-surface font-bold tracking-widest uppercase">#{orderCode}</span>
                   </div>
+                  {isPaid && (
+                    <div className="flex justify-between items-center border-b border-outline-variant/30 pb-3">
+                      <span className="font-label-md text-label-md text-on-surface-variant">TRẠNG THÁI</span>
+                      <span className="font-label-md text-label-md text-success font-bold tracking-widest uppercase">ĐÃ THANH TOÁN</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center border-b border-outline-variant/30 pb-3">
                     <span className="font-label-md text-label-md text-on-surface-variant">DỰ KIẾN GIAO HÀNG</span>
                     <span className="font-label-md text-label-md text-on-surface">{formattedDate}</span>

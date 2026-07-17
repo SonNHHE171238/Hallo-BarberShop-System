@@ -78,6 +78,9 @@ const orderSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    previousOrderCodes: [{
+      type: Number
+    }],
     internalNote: {
       type: String,
       default: '',

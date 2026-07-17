@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import BlogPreviewModal from "./BlogPreviewModal";
 
-export default function BlogTable({ blogs = [], onDelete, onReview }) {
+export default function BlogTable({ blogs = [], page = 1, totalPages = 1, total = 0, onPageChange, error, onDelete, onReview }) {
   const pathname = usePathname();
   const basePath = pathname?.startsWith('/staff') ? '/staff/blogs' : '/admin/blogs';
   const { user } = useAuth();
@@ -20,17 +20,23 @@ export default function BlogTable({ blogs = [], onDelete, onReview }) {
           <thead className="bg-surface-container-high border-b border-outline-variant/30">
             <tr>
               <th className="px-6 py-4 font-label-md text-xs text-primary uppercase tracking-wider">Bài viết</th>
-              <th className="px-6 py-4 font-label-md text-xs text-primary uppercase tracking-wider">Tác giả</th>
+              <th className="px-6 py-4 font-label-md text-xs text-primary uppercase tracking-wider">Người viết</th>
               <th className="px-6 py-4 font-label-md text-xs text-primary uppercase tracking-wider">Trạng thái</th>
               <th className="px-6 py-4 font-label-md text-xs text-primary uppercase tracking-wider">Ngày tạo</th>
               <th className="px-6 py-4 font-label-md text-xs text-primary uppercase tracking-wider text-right">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/20">
-            {blogs.length === 0 ? (
+            {error ? (
+              <tr>
+                <td colSpan="5" className="px-6 py-8 text-center text-error font-body-md">
+                  Lỗi tải dữ liệu. Vui lòng thử lại sau.
+                </td>
+              </tr>
+            ) : blogs.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-6 py-8 text-center text-on-surface-variant">
-                  Chưa có bài viết nào.
+                  Không có dữ liệu.
                 </td>
               </tr>
             ) : (
@@ -129,16 +135,38 @@ export default function BlogTable({ blogs = [], onDelete, onReview }) {
         onClose={() => setPreviewBlog(null)} 
       />
 
-      {/* Pagination (Bản nháp tĩnh, sau này gắn logic thực) */}
-      {blogs.length > 0 && (
+      {/* Pagination */}
+      {totalPages > 1 && (
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mt-8 px-2">
-          <p className="text-sm text-on-surface-variant">Hiển thị {blogs.length} bài viết</p>
+          <p className="text-sm text-on-surface-variant">Hiển thị {blogs.length} trên tổng {total} bài viết</p>
           <div className="flex items-center gap-2">
-            <button className="w-10 h-10 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-all">
+            <button 
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="w-10 h-10 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-all disabled:opacity-50 disabled:hover:border-outline-variant disabled:hover:text-on-surface-variant"
+            >
               <span className="material-symbols-outlined">chevron_left</span>
             </button>
-            <button className="w-10 h-10 flex items-center justify-center rounded border border-primary bg-primary/10 text-primary font-bold">1</button>
-            <button className="w-10 h-10 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-all">
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => onPageChange(p)}
+                className={`w-10 h-10 flex items-center justify-center rounded border transition-all ${
+                  page === p
+                    ? "border-primary bg-primary/10 text-primary font-bold"
+                    : "border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+
+            <button 
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="w-10 h-10 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-all disabled:opacity-50 disabled:hover:border-outline-variant disabled:hover:text-on-surface-variant"
+            >
               <span className="material-symbols-outlined">chevron_right</span>
             </button>
           </div>

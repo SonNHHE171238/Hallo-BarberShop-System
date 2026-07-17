@@ -173,6 +173,7 @@ exports.getBlogBySlug = async (req, res) => {
 // GET admin/staff blogs
 exports.getAdminBlogs = async (req, res) => {
   try {
+    const { page = 1, limit = 10 } = req.query;
     let query = {};
     const role = req.role;
     
@@ -186,11 +187,24 @@ exports.getAdminBlogs = async (req, res) => {
       };
     } // Admin sees all (query = {})
 
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Blog.countDocuments(query);
+
     const blogs = await Blog.find(query)
       .populate('author', 'name role')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
       
-    return res.status(200).json({ success: true, data: blogs });
+    return res.status(200).json({ 
+      success: true, 
+      data: {
+        blogs,
+        total,
+        page: parseInt(page),
+        totalPages: Math.ceil(total / parseInt(limit))
+      } 
+    });
   } catch (error) {
     console.error('Error fetching admin blogs:', error);
     return res.status(500).json({ success: false, message: 'Server error' });

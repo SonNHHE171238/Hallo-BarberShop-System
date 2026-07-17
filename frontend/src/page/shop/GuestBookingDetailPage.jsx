@@ -7,7 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import toast from "react-hot-toast";
 import axios from "axios";
-import Image from "next/image";
+import { QRCodeSVG } from 'qrcode.react';
 import { getBookingStatusConfig } from "@/constants/statusMaps";
 import { extractTimeSlot } from "@/utils/formatters";
 
@@ -514,9 +514,9 @@ export default function GuestBookingDetailPage() {
           <div className="bg-surface-container-high rounded-2xl p-8 max-w-md w-full border border-primary shadow-[0_0_40px_rgba(212,175,55,0.15)] flex flex-col items-center relative animate-fade-in">
             <h3 className="font-headline-sm text-primary mb-2 text-center">Thanh toán qua cổng PayOS</h3>
             <p className="font-body-md text-on-surface-variant text-center mb-6">Sử dụng App ngân hàng để quét mã QR</p>
-            <div className="bg-white p-4 rounded-xl border-4 border-primary/20 mb-6">
+            <div className="bg-white p-4 rounded-xl border-4 border-primary/20 mb-6 flex justify-center w-[240px] h-[240px]">
               {payosData.qrCode ? (
-                <Image src={payosData.qrCode} alt="QR Code" width={240} height={240} className="w-full h-auto" />
+                <QRCodeSVG value={payosData.qrCode} size={200} />
               ) : (
                 <div className="w-[240px] h-[240px] flex items-center justify-center bg-gray-100 rounded-lg">
                   <span className="material-symbols-outlined text-4xl text-gray-400">qr_code_2</span>

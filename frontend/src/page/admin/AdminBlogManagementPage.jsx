@@ -14,24 +14,41 @@ export default function AdminBlogManagementPage() {
   const [blogs, setBlogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortOption, setSortOption] = useState("newest"); // 'newest', 'oldest', 'a-z'
+  
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchAdminBlogs = async () => {
+      setIsLoading(true);
+      setError(false);
       try {
-        const res = await axios.get("http://localhost:5000/api/blogs/admin", {
+        const res = await axios.get(`http://localhost:5000/api/blogs/admin?page=${page}&limit=10`, {
           withCredentials: true
         });
-        if (res.data.success) {
-          setBlogs(res.data.data);
+        if (res.data.success && res.data.data) {
+          if (Array.isArray(res.data.data)) {
+            // Backward compatibility if backend isn't fully updated yet
+            setBlogs(res.data.data);
+          } else {
+            setBlogs(res.data.data.blogs || []);
+            setTotalPages(res.data.data.totalPages || 1);
+            setTotal(res.data.data.total || 0);
+          }
         }
-      } catch (error) {
-        console.error("Failed to fetch admin blogs:", error);
+      } catch (err) {
+        console.error("Failed to fetch admin blogs:", err);
+        setError(true);
       } finally {
         setIsLoading(false);
       }
     };
     fetchAdminBlogs();
-  }, []);
+  }, [page]);
 
   const handleDelete = async (blogId) => {
     if (!confirm("Bạn có chắc chắn muốn xóa bài viết này?")) return;
@@ -78,12 +95,11 @@ export default function AdminBlogManagementPage() {
   const isStaff = pathname?.startsWith('/staff');
 
   return (
-    <div className={`max-w-container-max mx-auto w-full pb-12 ${isStaff ? 'px-4 md:px-8 pt-8 md:pt-12' : ''}`}>
+    <div className={`max-w-container-max mx-auto w-full pb-12 ${isStaff ? 'px-4 md:px-8 pt-8 md:pt-12' : 'pt-8'}`}>
       {/* Page Header Area */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
           <h2 className="serif-header text-4xl md:text-5xl text-primary font-bold mb-2">Danh sách bài viết</h2>
-          <p className="text-on-surface-variant font-body-lg">Quản lý và cập nhật nội dung tin tức cho hệ thống Hallo Barber.</p>
         </div>
         <Link href={`${basePath}/create`} className="bg-primary text-on-primary px-8 py-4 font-bold flex items-center gap-3 hover:bg-primary-container hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 group">
           <span className="material-symbols-outlined group-hover:rotate-90 transition-transform">add</span>
@@ -98,7 +114,16 @@ export default function AdminBlogManagementPage() {
           <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
         </div>
       ) : (
-        <BlogTable blogs={sortedBlogs} onDelete={handleDelete} onReview={handleReview} />
+        <BlogTable 
+          blogs={sortedBlogs} 
+          page={page} 
+          totalPages={totalPages} 
+          total={total} 
+          onPageChange={setPage} 
+          error={error}
+          onDelete={handleDelete}
+          onReview={handleReview}
+        />
       )}
     </div>
   );
