@@ -147,9 +147,9 @@ export default function Navbar() {
             Blog & Tin tức
           </Link>
           <Link 
-            href="/lookup/orders" 
+            href={(mounted && user) ? "/customer/orders" : "/lookup/orders"} 
             className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname.startsWith("/lookup/orders")
+              pathname.startsWith("/lookup/orders") || pathname.startsWith("/customer/orders")
                 ? "text-primary font-bold border-b-2 border-primary pb-1" 
                 : "text-on-surface-variant hover:text-primary transition-colors duration-200"
             }`}
@@ -250,7 +250,7 @@ export default function Navbar() {
           <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
           <Link href={(mounted && user) ? "/customer/history" : "/lookup/bookings"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/lookup/bookings" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
           <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/blog" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Blog & Tin tức</Link>
-          <Link href="/lookup/orders" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname.startsWith("/lookup/orders") ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Đơn hàng</Link>
+          <Link href={(mounted && user) ? "/customer/orders" : "/lookup/orders"} onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname.startsWith("/lookup/orders") || pathname.startsWith("/customer/orders") ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Đơn hàng</Link>
           <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
             {(mounted && user) ? (
               <>

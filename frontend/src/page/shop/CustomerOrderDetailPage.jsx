@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
-export default function CustomerOrderDetailPage({ orderCode }) {
+function OrderDetailContent({ orderCode }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const source = searchParams.get("source");
+
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -101,6 +106,21 @@ export default function CustomerOrderDetailPage({ orderCode }) {
         <section className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-outline-variant pb-12">
             <div>
+              <button 
+                onClick={() => {
+                  if (source === 'customer') {
+                    router.push('/customer/orders');
+                  } else {
+                    // For guests, we don't have the phone number in this context unless we pass it, 
+                    // but we can just use router.back() or go to lookup
+                    router.push('/lookup/orders');
+                  }
+                }} 
+                className="group flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors mb-6 font-label-md text-xs uppercase tracking-widest"
+              >
+                <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                Quay lại danh sách
+              </button>
               <h1 className="font-headline-lg md:text-6xl text-primary mb-4 italic">Chi tiết đơn hàng</h1>
               <p className="text-on-surface-variant font-body-lg text-body-lg">Cảm ơn bạn đã mua hàng tại Hallo BarberShop.</p>
             </div>
@@ -328,5 +348,17 @@ export default function CustomerOrderDetailPage({ orderCode }) {
 
       <Footer />
     </div>
+  );
+}
+
+export default function CustomerOrderDetailPage({ orderCode }) {
+  return (
+    <Suspense fallback={
+      <div className="bg-background min-h-screen text-on-surface flex flex-col items-center justify-center">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+      </div>
+    }>
+      <OrderDetailContent orderCode={orderCode} />
+    </Suspense>
   );
 }

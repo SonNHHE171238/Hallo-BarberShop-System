@@ -328,6 +328,53 @@ exports.getBookingDetail = async (req, res) => {
   }
 };
 
+exports.getBookingPaymentStatus = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).select("paymentStatus status");
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    res.json({ success: true, data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getGuestBookingDetail = async (req, res) => {
+  try {
+    const { phone } = req.query;
+    if (!phone) {
+      return res.status(400).json({ success: false, message: "Vui lòng cung cấp số điện thoại để xác thực." });
+    }
+
+    const booking = await Booking.findById(req.params.id)
+      .populate("services", "name price durationMinutes")
+      .populate({
+        path: "barberId",
+        populate: { path: "userId", select: "name avatarUrl" },
+      })
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy lịch hẹn" });
+    }
+
+    // Verify phone
+    let bookingPhone = booking.customerPhone;
+    if (!bookingPhone && booking.customerId) {
+      const User = require("../models/user.model");
+      const user = await User.findById(booking.customerId).select("phone");
+      if (user) bookingPhone = user.phone;
+    }
+
+    if (bookingPhone !== phone) {
+      return res.status(403).json({ success: false, message: "Bạn không có quyền xem chi tiết lịch hẹn này." });
+    }
+
+    res.json({ success: true, data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // Check if a booking can be completed based on time window
 // Admin reject booking
 

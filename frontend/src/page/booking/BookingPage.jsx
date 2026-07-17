@@ -58,7 +58,7 @@ export default function BookingPage() {
     if (showQR && currentBookingId) {
       interval = setInterval(async () => {
         try {
-          const res = await axios.get(`http://localhost:5000/api/bookings/${currentBookingId}`, { withCredentials: true });
+          const res = await axios.get(`http://localhost:5000/api/bookings/${currentBookingId}/payment-status`);
           if (res.data.success && (res.data.data.paymentStatus === 'paid' || res.data.data.paymentStatus === 'partial_paid')) {
             clearInterval(interval);
             setShowQR(false);
