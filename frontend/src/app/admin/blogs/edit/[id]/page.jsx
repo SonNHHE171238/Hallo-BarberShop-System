@@ -5,7 +5,8 @@ export const metadata = {
   description: "Trang chỉnh sửa bài viết dành cho Admin",
 };
 
-export default function EditBlogRoute({ params }) {
-  const { id } = params;
+export default async function EditBlogRoute({ params }) {
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
   return <AdminBlogEditorPage isEdit={true} blogId={id} />;
 }
