@@ -325,6 +325,21 @@ export default function GuestBookingDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Note Card */}
+            {booking.note && (
+              <div className="bg-surface-container border border-outline-variant hover:border-primary/30 rounded-2xl p-6 shadow-sm transition-colors">
+                <h2 className="font-label-md text-xs font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2 mb-4 pb-3 border-b border-outline-variant/30">
+                  <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                  Ghi chú của khách
+                </h2>
+                <div className="bg-surface-container-high rounded-xl p-4 border border-outline-variant/30">
+                  <p className="font-body-md text-sm text-on-surface leading-relaxed italic">
+                    "{booking.note}"
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Services & Total */}

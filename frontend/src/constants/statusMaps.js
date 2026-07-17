@@ -24,10 +24,10 @@ export const getOrderStatusConfig = (status) => {
  */
 export const BOOKING_STATUS_MAP = {
   'pending': { label: 'Đang chờ', icon: 'pending', color: 'text-warning border-warning/30 bg-warning/10' },
-  'confirmed': { label: 'Đã xác nhận', icon: 'event_available', color: 'text-info border-info/30 bg-info/10' },
+  'confirmed': { label: 'Đã cọc/Giữ chỗ', icon: 'event_available', color: 'text-info border-info/30 bg-info/10' },
   'completed': { label: 'Hoàn thành', icon: 'check_circle', color: 'text-success border-success/30 bg-success/10' },
   'cancelled': { label: 'Đã hủy', icon: 'cancel', color: 'text-error border-error/30 bg-error/10' },
-  'no_show': { label: 'Không đến', icon: 'person_off', color: 'text-error border-error/30 bg-error/10' },
+  'no_show': { label: 'Không tới', icon: 'person_off', color: 'text-error border-error/30 bg-error/10' },
   'rejected': { label: 'Từ chối', icon: 'do_not_disturb_on', color: 'text-error border-error/30 bg-error/10' }
 };
 
