@@ -305,133 +305,12 @@ export default function POSBookingPage() {
         });
 
   return (
-    <div className="w-full flex-1 flex flex-col lg:flex-row max-w-[1600px] mx-auto overflow-hidden h-full">
+    <div className="w-full h-[calc(100vh-80px)] flex flex-col lg:flex-row max-w-[1600px] mx-auto overflow-hidden bg-surface-container-lowest">
       {/* Left Side: Selection */}
-      <section className="flex-1 p-4 md:p-8 lg:p-12 border-r border-outline-variant overflow-y-auto custom-scrollbar pb-32">
+      <section className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col overflow-hidden">
 
 
-        {/* Customer Info Section */}
-        <div className="bg-surface-container/60 backdrop-blur-xl border border-outline-variant p-6 md:p-8 rounded-xl mb-12 shadow-inner">
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-3">
-              <label className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                Tra cứu khách hàng (Số điện thoại)
-              </label>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">
-                    search
-                  </span>
-                  <input
-                    className="w-full bg-surface-container border border-outline-variant rounded-lg p-4 pl-12 focus:outline-none focus:border-primary text-on-surface placeholder:text-outline-variant/40 transition-all font-body-md"
-                    placeholder="Nhập số điện thoại khách hàng..."
-                    type="tel"
-                    value={phoneInput}
-                    onChange={(e) => setPhoneInput(normalizePhone(e.target.value))}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearchCustomer()}
-                    onPaste={(e) => handlePhonePaste(e, setPhoneInput)}
-                  />
-                </div>
-                <button 
-                  onClick={handleSearchCustomer}
-                  className="px-8 py-4 bg-surface-container-high border border-outline-gold text-primary rounded-lg font-label-md hover:bg-primary/10 transition-all active:scale-95 whitespace-nowrap"
-                >
-                  Kiểm tra
-                </button>
-              </div>
-            </div>
 
-            {/* Display Customer Info if found */}
-            {customer && !showNewCustomerForm && (
-              <div className="bg-surface-container-low border border-outline-variant/20 rounded-xl p-6 flex flex-col gap-6 animate-fade-in">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-label-md text-outline-variant uppercase tracking-[0.2em]">Trạng thái tài khoản</span>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                      <span className="font-body-md font-medium text-on-surface-variant">
-                        {customer.role === 'customer' ? 'Thành viên' : 'Khách vãng lai'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right flex flex-col gap-1">
-                    <span className="text-[10px] font-label-md text-outline-variant uppercase tracking-[0.2em]">Điểm tích lũy</span>
-                    <span className="font-body-md font-medium text-primary">
-                      {customer.role === 'customer' ? customer.points : 'N/A'}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-outline-variant/10">
-                  <div>
-                    <span className="text-[10px] font-label-md text-outline-variant uppercase tracking-[0.2em]">Tên khách hàng</span>
-                    <p className="text-on-surface font-body-md text-lg">{customer.name}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-label-md text-outline-variant uppercase tracking-[0.2em]">Số điện thoại</span>
-                    <p className="text-on-surface font-body-md text-lg">{customer.phone}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* New Customer Form Dropdown */}
-            {showNewCustomerForm && !customer && (
-              <div className="bg-surface-container-high border border-primary/30 rounded-xl p-6 flex flex-col gap-4 animate-fade-in">
-                <h3 className="font-headline-sm text-primary">Thêm Mới Khách Hàng</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-on-surface-variant">Tên khách hàng *</label>
-                    <input 
-                      type="text" 
-                      className="bg-surface border border-outline-variant rounded p-2 text-sm text-on-surface focus:border-primary focus:outline-none"
-                      value={newCustomerInfo.name}
-                      onChange={(e) => setNewCustomerInfo({...newCustomerInfo, name: e.target.value})}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-on-surface-variant">Số điện thoại *</label>
-                    <input 
-                      type="tel" 
-                      className="bg-surface border border-outline-variant rounded p-2 text-sm text-on-surface focus:border-primary focus:outline-none"
-                      value={newCustomerInfo.phone}
-                        onChange={(e) => setNewCustomerInfo({...newCustomerInfo, phone: normalizePhone(e.target.value)})}
-                        onPaste={(e) => handlePhonePaste(e, (val) => setNewCustomerInfo(prev => ({ ...prev, phone: val })))}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1 md:col-span-2">
-                    <label className="text-xs text-on-surface-variant">Email / Ghi chú (Tùy chọn)</label>
-                    <input 
-                      type="text" 
-                      className="bg-surface border border-outline-variant rounded p-2 text-sm text-on-surface focus:border-primary focus:outline-none"
-                      value={newCustomerInfo.emailOrNote}
-                        onChange={(e) => setNewCustomerInfo({...newCustomerInfo, emailOrNote: e.target.value})}
-                        onBlur={(e) => {
-                          const v = e.target.value.trim();
-                          if (v && v.includes('@') && !isValidEmail(v)) {
-                            toast.error('Email không hợp lệ.');
-                          }
-                        }}
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end gap-3 mt-2">
-                  <button 
-                    onClick={() => setShowNewCustomerForm(false)}
-                    className="px-4 py-2 border border-outline-variant text-on-surface-variant rounded text-sm hover:bg-surface-variant transition-colors"
-                  >
-                    Hủy
-                  </button>
-                  <button 
-                    onClick={handleSaveNewCustomer}
-                    className="px-4 py-2 bg-primary text-on-primary rounded text-sm font-bold hover:brightness-110 transition-colors"
-                  >
-                    Lưu Khách Hàng
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Services & Products Section */}
         <POSServiceList 
@@ -446,11 +325,10 @@ export default function POSBookingPage() {
 
         {/* Staff Selection (Only show if there's at least one service selected) */}
         {hasServices && (
-          <div className="mb-12 animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+          <div className="mt-4 pt-4 border-t border-outline-variant/30 shrink-0 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
               <div>
-                <h2 className="font-headline-sm text-2xl text-on-surface mb-1">Chỉ Định Barber</h2>
-                <span className="font-label-md text-xs text-gold-dim">Bắt buộc khi có đặt Dịch vụ</span>
+                <h2 className="font-headline-sm text-lg text-on-surface mb-1">Chỉ Định Barber</h2>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 bg-surface-container-low border border-outline-variant/20 rounded-xl p-6">
@@ -518,7 +396,94 @@ export default function POSBookingPage() {
         selectItem={selectItem}
         handlePrint={handlePrint}
         openTimeModalOrCheckout={openTimeModalOrCheckout}
+        // Customer passdown
+        phoneInput={phoneInput}
+        setPhoneInput={setPhoneInput}
+        handleSearchCustomer={handleSearchCustomer}
+        handlePhonePaste={handlePhonePaste}
+        customer={customer}
+        setCustomer={setCustomer}
+        setShowNewCustomerForm={setShowNewCustomerForm}
+        normalizePhone={normalizePhone}
       />
+
+      {/* Modal: New Customer */}
+      {showNewCustomerForm && !customer && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-surface-obsidian/60 backdrop-blur-sm" onClick={() => setShowNewCustomerForm(false)}></div>
+          <div className="relative bg-surface border border-outline-variant rounded-2xl w-full max-w-lg shadow-2xl p-6 md:p-8 animate-fade-in slide-in-from-bottom-4">
+            <button 
+              onClick={() => setShowNewCustomerForm(false)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+            
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                <span className="material-symbols-outlined text-primary">person_add</span>
+              </div>
+              <h2 className="font-headline-sm text-xl text-on-surface">Thêm Khách Mới</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-outline-variant">Tên khách hàng <span className="text-error">*</span></label>
+                <input 
+                  type="text" 
+                  className="bg-surface-container border border-outline-variant/50 rounded-lg p-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all"
+                  value={newCustomerInfo.name}
+                  onChange={(e) => setNewCustomerInfo({...newCustomerInfo, name: e.target.value})}
+                  placeholder="Nguyễn Văn A..."
+                  autoFocus
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-outline-variant">Số điện thoại <span className="text-error">*</span></label>
+                <input 
+                  type="tel" 
+                  className="bg-surface-container border border-outline-variant/50 rounded-lg p-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all"
+                  value={newCustomerInfo.phone}
+                  onChange={(e) => setNewCustomerInfo({...newCustomerInfo, phone: normalizePhone(e.target.value)})}
+                  onPaste={(e) => handlePhonePaste(e, (val) => setNewCustomerInfo(prev => ({ ...prev, phone: val })))}
+                  placeholder="0912345678"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-outline-variant">Email / Ghi chú</label>
+                <input 
+                  type="text" 
+                  className="bg-surface-container border border-outline-variant/50 rounded-lg p-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all"
+                  value={newCustomerInfo.emailOrNote}
+                  onChange={(e) => setNewCustomerInfo({...newCustomerInfo, emailOrNote: e.target.value})}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v.includes('@') && !isValidEmail(v)) {
+                      toast.error('Email không hợp lệ.');
+                    }
+                  }}
+                  placeholder="email@example.com hoặc ghi chú đặc biệt"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-outline-variant/30">
+              <button 
+                onClick={() => setShowNewCustomerForm(false)}
+                className="px-5 py-2.5 border border-outline-variant text-on-surface-variant font-bold rounded-lg hover:bg-surface-variant transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={handleSaveNewCustomer}
+                className="px-6 py-2.5 bg-primary text-on-primary font-bold rounded-lg hover:brightness-110 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
+              >
+                Lưu Khách Hàng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Time Selection Modal */}
       {showTimeModal && (

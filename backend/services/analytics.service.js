@@ -19,10 +19,17 @@ class AnalyticsService {
     if (chartTimeframe === 'thisYear') {
       chartStart.setMonth(0, 1);
       chartStart.setHours(0, 0, 0, 0);
+      chartEnd = new Date(chartStart.getFullYear(), 11, 31);
+      chartEnd.setHours(23, 59, 59, 999);
+    } else if (chartTimeframe === 'last7days' || chartTimeframe === '7days') {
+      chartStart.setDate(chartStart.getDate() - 6);
+      chartStart.setHours(0, 0, 0, 0);
     } else {
       // Default: thisMonth
       chartStart.setDate(1);
       chartStart.setHours(0, 0, 0, 0);
+      chartEnd = new Date(chartStart.getFullYear(), chartStart.getMonth() + 1, 0);
+      chartEnd.setHours(23, 59, 59, 999);
     }
 
     const [
@@ -68,19 +75,46 @@ class AnalyticsService {
       Order.aggregate(ordersPipeline)
     ]);
 
-    // Merge data
+    // Initialize full range map with 0s
     const mergedMap = new Map();
+    
+    if (chartTimeframe === 'thisYear') {
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(start.getFullYear(), i, 1);
+        const yyyy = d.getFullYear();
+        const mm = String(i + 1).padStart(2, '0');
+        const key = `${yyyy}-${mm}`;
+        mergedMap.set(key, { label: key, service: 0, product: 0, total: 0 });
+      }
+    } else {
+      // 'thisMonth' or 'last7days' or '7days'
+      // Tính số ngày
+      const dayDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+      for (let i = 0; i < dayDiff; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const key = `${yyyy}-${mm}-${dd}`;
+        mergedMap.set(key, { label: key, service: 0, product: 0, total: 0 });
+      }
+    }
+
+    // Merge actual data into the predefined map
     bookingsData.forEach(b => {
-      mergedMap.set(b._id, { label: b._id, service: b.total, product: 0, total: b.total });
+      if (mergedMap.has(b._id)) {
+        const item = mergedMap.get(b._id);
+        item.service += b.total;
+        item.total += b.total;
+      }
     });
     
     ordersData.forEach(o => {
       if (mergedMap.has(o._id)) {
         const item = mergedMap.get(o._id);
-        item.product = o.total;
+        item.product += o.total;
         item.total += o.total;
-      } else {
-        mergedMap.set(o._id, { label: o._id, service: 0, product: o.total, total: o.total });
       }
     });
 

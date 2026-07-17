@@ -109,6 +109,12 @@ export default function AdminAnalyticsPage() {
                 {/* Chart Filters */}
                 <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
                   <button 
+                    onClick={() => setChartTimeframe('last7days')}
+                    className={`px-4 py-1.5 text-xs rounded-md transition-all ${chartTimeframe === 'last7days' ? 'bg-primary text-on-primary font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
+                  >
+                    7 ngày qua
+                  </button>
+                  <button 
                     onClick={() => setChartTimeframe('thisMonth')}
                     className={`px-4 py-1.5 text-xs rounded-md transition-all ${chartTimeframe === 'thisMonth' ? 'bg-primary text-on-primary font-bold shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
                   >
