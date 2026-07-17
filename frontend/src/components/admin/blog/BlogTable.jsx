@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import BlogPreviewModal from "./BlogPreviewModal";
 
-export default function BlogTable({ blogs = [], onDelete }) {
+export default function BlogTable({ blogs = [], onDelete, onReview }) {
   const pathname = usePathname();
   const basePath = pathname?.startsWith('/staff') ? '/staff/blogs' : '/admin/blogs';
   const { user } = useAuth();
@@ -83,9 +83,19 @@ export default function BlogTable({ blogs = [], onDelete }) {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => setPreviewBlog(blog)} className="p-1.5 rounded hover:bg-primary/20 text-on-surface-variant hover:text-primary transition-all flex items-center justify-center">
+                        <button onClick={() => setPreviewBlog(blog)} className="p-1.5 rounded hover:bg-primary/20 text-on-surface-variant hover:text-primary transition-all flex items-center justify-center" title="Xem trước">
                           <span className="material-symbols-outlined text-[20px]">visibility</span>
                         </button>
+                        {user?.role === 'admin' && blog.status === 'pending' && (
+                          <button onClick={() => { if(confirm('Bạn có chắc chắn duyệt bài viết này?')) onReview && onReview(blog._id, 'approved'); }} className="p-1.5 rounded hover:bg-green-500/20 text-on-surface-variant hover:text-green-500 transition-all flex items-center justify-center" title="Duyệt bài">
+                            <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                          </button>
+                        )}
+                        {user?.role === 'admin' && blog.status === 'pending' && (
+                          <button onClick={() => { const reason = prompt('Nhập lý do từ chối:'); if(reason !== null) onReview && onReview(blog._id, 'rejected', reason); }} className="p-1.5 rounded hover:bg-error/20 text-on-surface-variant hover:text-error transition-all flex items-center justify-center" title="Từ chối">
+                            <span className="material-symbols-outlined text-[20px]">cancel</span>
+                          </button>
+                        )}
                         {canEdit ? (
                           <Link href={`${basePath}/edit/${blog._id}`} className="p-1.5 rounded hover:bg-blue-500/20 text-on-surface-variant hover:text-blue-400 transition-all flex items-center justify-center">
                             <span className="material-symbols-outlined text-[20px]">edit</span>

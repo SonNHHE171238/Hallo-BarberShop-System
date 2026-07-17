@@ -49,6 +49,24 @@ export default function AdminBlogManagementPage() {
     }
   };
 
+  const handleReview = async (blogId, status, rejectionReason = '') => {
+    try {
+      const res = await axios.patch(`http://localhost:5000/api/blogs/${blogId}/review`, {
+        status,
+        rejectionReason
+      }, {
+        withCredentials: true
+      });
+      if (res.data.success) {
+        setBlogs(blogs.map(b => b._id === blogId ? { ...b, status, rejectionReason } : b));
+        alert(status === 'approved' ? "Đã duyệt bài viết!" : "Đã từ chối bài viết!");
+      }
+    } catch (error) {
+      console.error("Failed to review blog:", error);
+      alert(error.response?.data?.message || "Lỗi khi duyệt bài viết");
+    }
+  };
+
   // Handle Sorting
   const sortedBlogs = [...blogs].sort((a, b) => {
     if (sortOption === "newest") return new Date(b.createdAt) - new Date(a.createdAt);
@@ -80,7 +98,7 @@ export default function AdminBlogManagementPage() {
           <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
         </div>
       ) : (
-        <BlogTable blogs={sortedBlogs} onDelete={handleDelete} />
+        <BlogTable blogs={sortedBlogs} onDelete={handleDelete} onReview={handleReview} />
       )}
     </div>
   );
