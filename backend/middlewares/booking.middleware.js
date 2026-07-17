@@ -1,8 +1,19 @@
 // Backend booking middleware (mocked for standalone execution)
 
-exports.applyRoleBasedBookingFilter = (req, res, next) => {
-  // In a real app, this would add role-based filters to queries
-  req.bookingFilter = {};
+exports.applyRoleBasedBookingFilter = async (req, res, next) => {
+  if (req.role === 'admin') {
+    req.bookingFilter = {};
+  } else if (req.role === 'barber') {
+    const Barber = require('../models/barber.model');
+    const barber = await Barber.findOne({ userId: req.userId });
+    if (barber) {
+      req.bookingFilter = { barberId: barber._id };
+    } else {
+      req.bookingFilter = { barberId: null };
+    }
+  } else {
+    req.bookingFilter = { customerId: req.userId };
+  }
   next();
 };
 

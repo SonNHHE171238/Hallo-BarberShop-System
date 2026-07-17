@@ -285,12 +285,12 @@ export default function AdminVouchersPage() {
               <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Mã giảm giá</label>
-                  <input name="code" value={formData.code} onChange={handleChange} required className="w-full border p-2 rounded uppercase text-sm" />
+                  <input name="code" value={formData.code} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded uppercase text-sm" />
                 </div>
                 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Loại giảm</label>
-                  <select name="discountType" value={formData.discountType} onChange={handleChange} className="w-full border p-2 rounded text-sm">
+                  <select name="discountType" value={formData.discountType} onChange={handleChange} className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm">
                     <option value="percentage">Theo %</option>
                     <option value="fixed_amount">Số tiền cố định</option>
                   </select>
@@ -298,7 +298,7 @@ export default function AdminVouchersPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Phạm vi áp dụng</label>
-                  <select name="voucherType" value={formData.voucherType} onChange={handleChange} className="w-full border p-2 rounded text-sm">
+                  <select name="voucherType" value={formData.voucherType} onChange={handleChange} className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm">
                     <option value="all">Mọi hóa đơn (Cả cắt tóc & mua hàng)</option>
                     <option value="booking_only">Chỉ áp dụng Đặt lịch cắt tóc</option>
                     <option value="product_only">Chỉ áp dụng Mua sáp/sản phẩm</option>
@@ -307,39 +307,39 @@ export default function AdminVouchersPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Giá trị giảm</label>
-                  <input name="discountValue" type="number" min="0" max={formData.discountType === 'percentage' ? "100" : undefined} value={formData.discountValue} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="discountValue" type="number" min="0" max={formData.discountType === 'percentage' ? "100" : undefined} value={formData.discountValue} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Đơn tối thiểu</label>
-                  <input name="minOrderValue" type="number" min="0" value={formData.minOrderValue} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="minOrderValue" type="number" min="0" value={formData.minOrderValue} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 {formData.discountType === 'percentage' && (
                   <div className="space-y-1">
                     <label className="text-xs font-bold uppercase">Giảm tối đa (VNĐ)</label>
-                    <input name="maxDiscountAmount" type="number" min="0" value={formData.maxDiscountAmount} onChange={handleChange} className="w-full border p-2 rounded text-sm" placeholder="Không bắt buộc" />
+                    <input name="maxDiscountAmount" type="number" min="0" value={formData.maxDiscountAmount} onChange={handleChange} className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" placeholder="Không bắt buộc" />
                   </div>
                 )}
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Lượt dùng tổng</label>
-                  <input name="usageLimit" type="number" min="1" value={formData.usageLimit} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="usageLimit" type="number" min="1" value={formData.usageLimit} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
                 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Lượt dùng mỗi người</label>
-                  <input name="usageLimitPerUser" type="number" min="1" value={formData.usageLimitPerUser} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="usageLimitPerUser" type="number" min="1" value={formData.usageLimitPerUser} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Từ ngày</label>
-                  <input name="validFrom" type="datetime-local" min={!formData.id ? getLocalDatetimeString() : undefined} value={formData.validFrom} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="validFrom" type="datetime-local" min={!formData.id ? getLocalDatetimeString() : undefined} value={formData.validFrom} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Đến ngày</label>
-                  <input name="validUntil" type="datetime-local" min={formData.validFrom || (!formData.id ? getLocalDatetimeString() : undefined)} max={`${new Date().getFullYear()}-12-31T23:59`} value={formData.validUntil} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="validUntil" type="datetime-local" min={formData.validFrom || (!formData.id ? getLocalDatetimeString() : undefined)} max={`${new Date().getFullYear()}-12-31T23:59`} value={formData.validUntil} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1 md:col-span-2 flex items-center gap-2">
