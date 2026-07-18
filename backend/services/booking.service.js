@@ -193,7 +193,9 @@ exports.processCreateBooking = async ({
         voucherCode,
         totalPrice,
         customerId,
-        customerPhone
+        customerPhone,
+        [], // no productIds for bookings
+        services // passed as serviceIds
       );
       if (lockInfo) {
         discountAmount = lockInfo.discountAmount;
