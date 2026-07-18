@@ -656,8 +656,16 @@ exports.cancelBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Check if user can cancel this booking
-    if (!booking.customerId || booking.customerId.toString() !== userId) {
+    const user = await User.findById(userId);
+    let isAuthorized = false;
+
+    if (booking.customerId && booking.customerId.toString() === userId) {
+      isAuthorized = true;
+    } else if (!booking.customerId && booking.customerPhone && user && booking.customerPhone === user.phone) {
+      isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
       return res
         .status(403)
         .json({ message: "Not authorized to cancel this booking" });
