@@ -345,7 +345,15 @@ exports.getGuestBookingDetail = async (req, res) => {
       return res.status(400).json({ success: false, message: "Vui lòng cung cấp số điện thoại để xác thực." });
     }
 
-    const booking = await Booking.findById(req.params.id)
+    const mongoose = require("mongoose");
+    let bookingQuery = null;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      bookingQuery = Booking.findById(req.params.id);
+    } else {
+      bookingQuery = Booking.findOne({ bookingCode: req.params.id.toUpperCase() });
+    }
+
+    const booking = await bookingQuery
       .populate("services", "name price durationMinutes")
       .populate({
         path: "barberId",
