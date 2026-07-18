@@ -32,6 +32,7 @@ mongoose.connect(dbUri)
     // Start background jobs
     require('./src/jobs/voucherCleanup.job');
     require('./src/jobs/bookingCleanup.job');
+    require('./cron/roster.cron.js');
 
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
