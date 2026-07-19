@@ -67,7 +67,7 @@ export default function AdminAbsencesPage() {
 
   const handleReject = async (absenceId) => {
     if (!window.confirm("Bạn có chắc chắn muốn từ chối đơn xin nghỉ này?")) return;
-    
+
     try {
       await absenceService.rejectAbsence(absenceId);
       setMessage({ type: "success", text: "Đã từ chối đơn xin nghỉ." });
@@ -89,7 +89,7 @@ export default function AdminAbsencesPage() {
         action,
         newBarberId: action === "reassigned" ? newBarberId : undefined
       });
-      
+
       // Cập nhật lại UI sau khi resolve thành công
       const updatedAbsence = { ...selectedAbsence };
       const bookingIndex = updatedAbsence.affectedBookings.findIndex(b => b._id === bookingId);
@@ -101,10 +101,10 @@ export default function AdminAbsencesPage() {
         }
       }
       setSelectedAbsence(updatedAbsence);
-      
+
       // Update in main list too
       setAbsences(prev => prev.map(a => a._id === updatedAbsence._id ? updatedAbsence : a));
-      
+
       setNewBarberId("");
     } catch (err) {
       alert(err.message || "Lỗi khi xử lý lịch hẹn.");
@@ -119,7 +119,7 @@ export default function AdminAbsencesPage() {
       alert("Vui lòng xử lý tất cả các lịch hẹn bị trùng trước khi duyệt.");
       return;
     }
-    
+
     try {
       await absenceService.approveAbsence(selectedAbsence._id);
       setMessage({ type: "success", text: "Đã duyệt đơn sau khi xử lý lịch hẹn trùng." });
@@ -160,11 +160,10 @@ export default function AdminAbsencesPage() {
             <button
               key={status}
               onClick={() => setFilter(status)}
-              className={`px-4 py-2 text-xs font-label-md uppercase border border-outline-variant transition-colors rounded-sm ${
-                filter === status
+              className={`px-4 py-2 text-xs font-label-md uppercase border border-outline-variant transition-colors rounded-sm ${filter === status
                   ? "bg-primary text-on-primary border-primary shadow-lg shadow-primary/20"
                   : "text-on-surface-variant hover:text-primary bg-surface-container hover:bg-surface-container-high"
-              }`}
+                }`}
             >
               {status === "" ? "Tất cả" : status === "pending" ? "Chờ duyệt" : status === "approved" ? "Đã duyệt" : "Từ chối"}
             </button>
@@ -209,12 +208,12 @@ export default function AdminAbsencesPage() {
                 absences.map((req) => {
                   const hasAffected = req.affectedBookings && req.affectedBookings.length > 0;
                   const unresolvedCount = hasAffected ? req.affectedBookings.filter(b => b.status === "pending_reschedule").length : 0;
-                  
+
                   return (
                     <tr key={req._id} className="hover:bg-surface-container-high/40 transition-colors">
                       <td className="p-4">
                         <div className="font-bold text-on-surface">
-                          {formatDate(req.startDate)} 
+                          {formatDate(req.startDate)}
                           {req.startDate !== req.endDate && ` - ${formatDate(req.endDate)}`}
                         </div>
                       </td>
@@ -253,19 +252,18 @@ export default function AdminAbsencesPage() {
                       <td className="p-4 text-right">
                         {req.isApproved === null && (
                           <div className="flex justify-end gap-2">
-                            <button 
+                            <button
                               onClick={() => handleReject(req._id)}
                               className="px-3 py-1.5 bg-surface-container-highest text-error hover:bg-error hover:text-on-error font-bold text-xs uppercase rounded-sm transition-colors"
                             >
                               Từ chối
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleApprove(req)}
-                              className={`px-3 py-1.5 font-bold text-xs uppercase rounded-sm transition-colors flex items-center gap-1 ${
-                                unresolvedCount > 0 
-                                  ? "bg-gold text-on-primary hover:bg-gold-dim" 
+                              className={`px-3 py-1.5 font-bold text-xs uppercase rounded-sm transition-colors flex items-center gap-1 ${unresolvedCount > 0
+                                  ? "bg-gold text-on-primary hover:bg-gold-dim"
                                   : "bg-primary text-on-primary hover:brightness-110"
-                              }`}
+                                }`}
                             >
                               {unresolvedCount > 0 ? (
                                 <>
@@ -295,13 +293,13 @@ export default function AdminAbsencesPage() {
                   <span className="material-symbols-outlined">warning</span> Xử lý lịch hẹn trùng
                 </h3>
                 <p className="text-sm text-on-surface-variant mt-1">
-                  Barber <strong>{selectedAbsence.barberId?.userId?.name}</strong> xin nghỉ từ {formatDate(selectedAbsence.startDate)} đến {formatDate(selectedAbsence.endDate)}.<br/>
+                  Barber <strong>{selectedAbsence.barberId?.userId?.name}</strong> xin nghỉ từ {formatDate(selectedAbsence.startDate)} đến {formatDate(selectedAbsence.endDate)}.<br />
                   Bạn phải xử lý các lịch hẹn đã đặt trước khi có thể duyệt đơn.
                 </p>
               </div>
               <button onClick={() => setResolveModalOpen(false)} className="material-symbols-outlined text-on-surface-variant hover:text-error">close</button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto flex-1 custom-scrollbar bg-surface-container-lowest">
               <div className="space-y-4">
                 {selectedAbsence.affectedBookings.map(b => (
@@ -312,11 +310,11 @@ export default function AdminAbsencesPage() {
                         {new Date(b.originalDate).toLocaleString('vi-VN')}
                       </div>
                       <div className="text-sm text-on-surface-variant mt-1">
-                        Khách: <strong className="text-on-surface">{b.bookingId?.customerId?.name || b.bookingId?.customerName || "Khách hàng"}</strong> - SĐT: {b.bookingId?.customerId?.phone || b.bookingId?.customerPhone || "N/A"}
+                        Khách: <strong className="text-on-surface">{b.bookingId?.customerId?.name || "Khách hàng"}</strong> - SĐT: {b.bookingId?.customerId?.phone || "N/A"}
                       </div>
-                      
+
                       <div className="mt-2 text-xs font-bold uppercase tracking-widest">
-                        Trạng thái xử lý: 
+                        Trạng thái xử lý:
                         {b.status === "pending_reschedule" && <span className="text-error ml-2">Đang chờ</span>}
                         {b.status === "cancelled" && <span className="text-on-surface-variant ml-2">Đã hủy lịch</span>}
                         {b.status === "reassigned" && <span className="text-primary ml-2">Đã đổi sang thợ: {b.newBarberId?.userId?.name || b.newBarberId?.user?.name || "Thợ khác"}</span>}
@@ -325,14 +323,14 @@ export default function AdminAbsencesPage() {
 
                     {b.status === "pending_reschedule" && (
                       <div className="flex flex-col gap-2 min-w-[250px] bg-surface-container p-3 rounded-sm border border-outline-variant/30">
-                        <button 
+                        <button
                           onClick={() => handleResolveBooking(b._id, "cancelled")}
                           disabled={resolvingBookingId === b._id}
                           className="w-full py-2 bg-surface-container-highest text-error hover:bg-error hover:text-on-error text-xs font-bold uppercase rounded-sm transition-colors"
                         >
                           Hủy lịch khách
                         </button>
-                        
+
                         <div className="relative">
                           <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-outline-variant/50"></div>
@@ -343,7 +341,7 @@ export default function AdminAbsencesPage() {
                         </div>
 
                         <div className="flex gap-2">
-                          <select 
+                          <select
                             className="flex-1 bg-surface-container-lowest border border-outline-variant text-on-surface text-sm p-2 outline-none rounded-sm"
                             onChange={(e) => setNewBarberId(e.target.value)}
                             defaultValue=""
@@ -353,7 +351,7 @@ export default function AdminAbsencesPage() {
                               <option key={barber.id} value={barber.id}>{barber.user?.name || "Thợ"} (Đánh giá: {barber.averageRating}★)</option>
                             ))}
                           </select>
-                          <button 
+                          <button
                             onClick={() => handleResolveBooking(b._id, "reassigned")}
                             disabled={resolvingBookingId === b._id}
                             className="px-3 bg-primary text-on-primary text-xs font-bold rounded-sm hover:brightness-110 disabled:opacity-50 flex items-center justify-center"
@@ -369,13 +367,13 @@ export default function AdminAbsencesPage() {
             </div>
 
             <div className="p-6 border-t border-outline-variant/30 bg-surface-container flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setResolveModalOpen(false)}
                 className="px-6 py-3 font-bold uppercase text-sm text-on-surface-variant hover:text-on-surface transition-colors"
               >
                 Đóng lại
               </button>
-              <button 
+              <button
                 onClick={handleApproveAfterResolve}
                 disabled={selectedAbsence.affectedBookings?.some(b => b.status === "pending_reschedule")}
                 className="px-6 py-3 bg-primary text-on-primary font-bold uppercase text-sm rounded-sm hover:brightness-110 disabled:opacity-50 transition-all shadow-lg shadow-primary/20"

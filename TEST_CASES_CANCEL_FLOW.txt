@@ -1,0 +1,402 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║        HALLO BARBER SHOP – TÀI LIỆU KIỂM THỬ THỦ CÔNG (HUỶ LỊCH HẸN)         ║
+║        Phiên bản: 1.0  |  Ngày: 18/07/2026  |  Tester: ___________           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+HƯỚNG DẪN NHANH
+───────────────
+  [P] PASS  →  Kết quả đúng như mong đợi
+  [F] FAIL  →  Kết quả sai, ghi log lỗi chi tiết
+  [S] SKIP  →  Bỏ qua, ghi rõ lý do
+
+  Cách thực hiện:
+    1. Đọc "Điều kiện tiên quyết" → chuẩn bị dữ liệu và tài khoản tương ứng.
+    2. Thực hiện tuần tự "Các bước thực hiện" trên giao diện UI hoặc API Client.
+    3. So sánh thực tế với "Kết quả mong đợi" → tích chọn [P], [F] hoặc [S].
+    4. Ghi chú cụ thể kết quả thực tế vào ô tương ứng.
+
+
+THUẬT NGỮ & QUY TẮC NGHIỆP VỤ (CANCELLATION POLICY)
+──────────────────────────────────────────────────
+  1. Trạng thái hợp lệ để huỷ: Chỉ cho phép huỷ các lịch hẹn đang ở trạng thái Chờ xác nhận (pending) hoặc Đã xác nhận (confirmed).
+  2. Thời hạn huỷ (2h Policy): Khách hàng (User/Guest) chỉ được tự huỷ lịch trước giờ hẹn tối thiểu 2 tiếng. Dưới 2 tiếng, hệ thống sẽ chặn không cho huỷ.
+  3. Cơ chế NoShow / Infraction:
+     - Khi khách hàng đã đăng ký (User) huỷ lịch (kể cả đúng hạn hay trễ hạn), hệ thống sẽ tạo một bản ghi NoShow để theo dõi:
+       * Huỷ đúng hạn (>= 2h): reason = "customer_cancelled", isWithinPolicy = true.
+       * Huỷ trễ hạn (< 2h - nếu cố tình gọi API bypass frontend): reason = "late_cancellation", isWithinPolicy = false.
+     - Các bản ghi NoShow có trạng thái isExcused = false (mặc định) đều được tính vào tổng số lần vi phạm (noShowCount).
+     - Nếu noShowCount >= 3, hệ thống sẽ khoá chức năng đặt lịch của khách hàng đó.
+  4. Giải phóng Slot: Khi lịch hẹn bị huỷ, hệ thống phải tự động giải phóng (unmark) khung giờ đã đặt trên lịch làm việc của Barber (BarberSchedule) và giảm tổng số lịch hẹn của Barber đó (totalBookings) đi 1.
+  5. Khách vãng lai (Guest): Khách đặt lịch không đăng nhập, huỷ lịch qua trang chi tiết khách vãng lai và cần nhập chính xác số điện thoại để xác thực.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LUỒNG 1: KHÁCH HÀNG (ĐÃ ĐĂNG NHẬP) HỦY LỊCH HẸN HỢP LỆ (HAPPY PATH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-HP-01  │  User huỷ lịch hẹn trước giờ hẹn >= 2 tiếng                  │
+│               │  (Huỷ thành công - Đúng chính sách)                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Xác nhận khách hàng đã đăng nhập có thể huỷ lịch hẹn hợp lệ thành công và hệ thống cập nhật đúng DB/Giao diện.
+
+Điều kiện tiên quyết:
+  □  Đang đăng nhập bằng tài khoản Customer (User).
+  □  Có ít nhất 1 lịch hẹn ở trạng thái "Chờ xác nhận" (pending) hoặc "Đã xác nhận" (confirmed).
+  □  Thời gian của lịch hẹn cách thời điểm hiện tại >= 2 tiếng.
+
+Các bước thực hiện:
+  1.  Đăng nhập tài khoản Customer.
+  2.  Truy cập vào trang "Lịch sử đặt lịch" (Customer History Page).
+  3.  Tìm lịch hẹn thoả mãn điều kiện (>= 2h trước giờ hẹn).
+  4.  Click vào nút "Huỷ lịch" (hoặc biểu tượng huỷ).
+  5.  Trên modal "Huỷ lịch hẹn", chọn lý do huỷ: "Tôi bận việc đột xuất" (hoặc lý do bất kỳ).
+  6.  Click nút "Xác nhận huỷ".
+
+Kết quả mong đợi:
+  ✓  Modal đóng lại, xuất hiện thông báo toast xanh: "Huỷ lịch hẹn thành công" (hoặc thông báo thành công tương ứng).
+  ✓  Trạng thái của lịch hẹn trên UI chuyển sang "Đã huỷ" (Cancelled).
+  ✓  DB: Booking chuyển trạng thái status = "cancelled", có cập nhật cancelledAt và lưu cancellationReason, note chứa thông tin chi tiết lịch huỷ.
+  ✓  DB: Khung giờ hẹn được giải phóng trong BarberSchedule.
+  ✓  DB: totalBookings của Barber được trừ đi 1.
+  ✓  DB: Tạo 1 bản ghi NoShow với reason = "customer_cancelled", isWithinPolicy = true, isExcused = false.
+  ✓  Nếu lịch hẹn đã thanh toán trước (paymentStatus = "paid"): Hệ thống tạo 1 thông báo (Notification) hoàn tiền cho khách.
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-HP-02  │  User chọn lý do huỷ khác và nhập nội dung tự do           │
+│               │  (Kiểm tra tính năng nhập lý do tuỳ chỉnh)                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Đảm bảo ô textarea hiển thị khi chọn "Lý do khác" và dữ liệu lý do tự nhập được lưu đúng vào DB.
+
+Điều kiện tiên quyết:
+  □  Đang đăng nhập bằng tài khoản Customer.
+  □  Có lịch hẹn pending/confirmed cách hiện tại >= 2 tiếng.
+
+Các bước thực hiện:
+  1.  Vào "Lịch sử đặt lịch", tìm lịch hẹn và click "Huỷ lịch".
+  2.  Trên modal huỷ lịch, click chọn option "Lý do khác".
+  3.  Nhập vào ô text: "Thay đổi kế hoạch đi công tác đột xuất".
+  4.  Click "Xác nhận huỷ".
+
+Kết quả mong đợi:
+  ✓  Huỷ lịch thành công.
+  ✓  DB: Trường cancellationReason lưu đúng chuỗi "Thay đổi kế hoạch đi công tác đột xuất".
+  ✓  DB: Trường note của Booking ghi nhận đúng lý do tự nhập này.
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LUỒNG 2: KHÁCH HÀNG (ĐÃ ĐĂNG NHẬP) HỦY LỊCH HẸN TRỄ (LATE CANCELLATION)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-LP-01  │  User cố gắng huỷ lịch sát giờ hẹn (< 2 tiếng) trên UI      │
+│               │  (Chặn từ Frontend)                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Kiểm tra hệ thống chặn không cho phép click huỷ lịch từ giao diện khi vi phạm quy tắc 2 giờ.
+
+Điều kiện tiên quyết:
+  □  Đang đăng nhập bằng tài khoản Customer.
+  □  Có 1 lịch hẹn ở trạng thái pending/confirmed có giờ hẹn cách hiện tại dưới 2 tiếng (Ví dụ: hiện tại 10:00, lịch hẹn lúc 11:30 cùng ngày).
+
+Các bước thực hiện:
+  1.  Vào trang "Lịch sử đặt lịch" (Customer History Page).
+  2.  Tìm lịch hẹn có thời gian < 2 tiếng so với hiện tại.
+  3.  Click vào nút "Huỷ lịch".
+
+Kết quả mong đợi:
+  ✓  Hệ thống hiển thị thông báo lỗi ngay lập tức: "Bạn chỉ có thể huỷ lịch trước giờ hẹn tối thiểu 2 tiếng."
+  ✓  Không mở modal "Huỷ lịch hẹn" và không gửi request lên backend.
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-LP-02  │  Bypass Frontend gọi trực tiếp API huỷ lịch trễ (< 2 tiếng) │
+│               │  (Chặn từ Backend & ghi nhận Late Cancellation)             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Kiểm tra tầng backend có chặn huỷ lịch trễ khi khách hàng cố tình bypass frontend gọi API trực tiếp.
+
+Điều kiện tiên quyết:
+  □  Lấy được token đăng nhập của Customer và ID của booking có thời gian < 2 tiếng.
+  □  Sử dụng Postman/Curl để gửi request: `PUT /api/bookings/:bookingId/cancel`.
+
+Các bước thực hiện:
+  1.  Gửi request PUT đến `/api/bookings/:bookingId/cancel` kèm theo header Authorization và body là lý do huỷ.
+  2.  Kiểm tra response trả về từ backend.
+
+Kết quả mong đợi:
+  ✓  Backend trả về HTTP Status Code 400 (Bad Request).
+  ✓  Response JSON chứa: `{ "message": "Cannot cancel booking less than 2 hours before appointment time" }`.
+  ✓  Trạng thái booking trong DB KHÔNG thay đổi (vẫn giữ nguyên pending/confirmed).
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LUỒNG 3: KHÁCH VÃNG LAI (GUEST) HỦY LỊCH HẸN HỢP LỆ (HAPPY PATH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-GP-01  │  Khách vãng lai huỷ lịch thành công qua trang chi tiết     │
+│               │  (Có xác thực số điện thoại đúng chính sách >= 2h)         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Xác nhận khách vãng lai (không đăng nhập) có thể huỷ lịch hẹn thành công khi cung cấp đúng SĐT xác thực và huỷ trước 2 tiếng.
+
+Điều kiện tiên quyết:
+  □  Có 1 booking vãng lai (guest) đã được tạo thành công với số điện thoại cụ thể (VD: 0987654321).
+  □  Giờ hẹn cách hiện tại >= 2 tiếng.
+  □  Không đăng nhập tài khoản.
+
+Các bước thực hiện:
+  1.  Truy cập vào trang chi tiết lịch hẹn của khách vãng lai (`/bookings/:id/guest?phone=0987654321`).
+  2.  Click nút "Huỷ lịch".
+  3.  Hệ thống hiển thị modal yêu cầu nhập số điện thoại xác thực và lý do huỷ.
+  4.  Nhập đúng số điện thoại (0987654321) và nhập lý do huỷ.
+  5.  Click nút "Xác nhận huỷ".
+
+Kết quả mong đợi:
+  ✓  Thông báo thành công hiển thị: "Hủy lịch thành công!"
+  ✓  Giao diện cập nhật trạng thái lịch hẹn thành "Đã huỷ".
+  ✓  DB: Booking có status = "cancelled", trường note cập nhật thông tin huỷ của khách vãng lai.
+  ✓  DB: Slot giờ hẹn trong BarberSchedule được giải phóng.
+  ✓  DB: totalBookings của Barber được trừ đi 1.
+  ✓  Lưu ý: Không tạo bản ghi NoShow cho luồng khách vãng lai này (do API `guestCancelBooking` không có logic ghi nhận NoShow).
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LUỒNG 4: KHÁCH VÃNG LAI HỦY LỊCH HẸN TRỄ / XÁC THỰC SAI SĐT (SAD PATH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-GS-01  │  Khách vãng lai xác thực sai số điện thoại                 │
+│               │  (Hệ thống chặn huỷ lịch)                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Đảm bảo khách không thể huỷ lịch vãng lai nếu nhập sai số điện thoại xác thực.
+
+Điều kiện tiên quyết:
+  □  Có 1 booking vãng lai với SĐT lưu trong DB là 0987654321.
+
+Các bước thực hiện:
+  1.  Truy cập trang chi tiết lịch hẹn vãng lai.
+  2.  Click "Huỷ lịch".
+  3.  Nhập số điện thoại sai: 0909090909 và điền lý do huỷ.
+  4.  Click "Xác nhận huỷ".
+
+Kết quả mong đợi:
+  ✓  Hệ thống hiển thị thông báo lỗi trên UI: "Xác thực số điện thoại thất bại." (hoặc lỗi tương tự).
+  ✓  Request bị từ chối với HTTP Status Code 403.
+  ✓  Booking trong DB giữ nguyên trạng thái cũ.
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-GS-02  │  Khách vãng lai cố tình huỷ lịch trễ (< 2 tiếng)           │
+│               │  (Hệ thống chặn huỷ lịch)                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Đảm bảo chính sách 2 tiếng cũng được áp dụng nghiêm ngặt cho đối tượng khách vãng lai.
+
+Điều kiện tiên quyết:
+  □  Có 1 booking vãng lai (SĐT: 0987654321) có thời gian hẹn dưới 2 tiếng so với hiện tại.
+
+Các bước thực hiện:
+  1.  Truy cập trang chi tiết khách vãng lai.
+  2.  Click nút "Huỷ lịch" và nhập đúng số điện thoại xác thực.
+  3.  Click "Xác nhận huỷ".
+
+Kết quả mong đợi:
+  ✓  Hệ thống hiển thị lỗi: "Chỉ có thể hủy lịch trước giờ hẹn ít nhất 2 tiếng."
+  ✓  API trả về status 400 kèm thông báo tương ứng.
+  ✓  Booking giữ nguyên trạng thái cũ.
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LUỒNG 5: ADMIN / STAFF HỦY LỊCH HẸN TRỰC TIẾP HOẶC DO TRÙNG LỊCH XIN NGHỈ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-AS-01  │  Admin huỷ lịch trực tiếp của khách từ dashboard quản lý    │
+│               │  (Không áp dụng giới hạn 2 tiếng đối với quản trị viên)     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Xác nhận Admin/Staff có quyền huỷ bất kỳ lịch hẹn nào (kể cả sát giờ hẹn) để xử lý các tình huống đặc biệt.
+
+Điều kiện tiên quyết:
+  □  Đang đăng nhập bằng tài khoản Admin hoặc Staff.
+  □  Có 1 lịch hẹn ở trạng thái confirmed cách hiện tại < 2 tiếng.
+
+Các bước thực hiện:
+  1.  Đăng nhập tài khoản Admin/Staff.
+  2.  Vào mục "Quản lý Đặt lịch" (Booking Management).
+  3.  Tìm lịch hẹn có thời gian < 2 tiếng.
+  4.  Click nút Huỷ lịch từ dashboard admin.
+  5.  Nhập lý do huỷ và xác nhận.
+
+*Lưu ý kỹ thuật: Hiện tại API `cancelBooking` áp dụng chung logic `shouldApplyTimeRestrictions(booking)` cho cả admin và khách. 
+Nếu thực hiện bước này bị lỗi 400, ghi nhận kết quả và báo cáo bug thiết kế quyền hạn.
+
+Kết quả mong đợi:
+  ✓  Huỷ thành công, trạng thái chuyển thành "Đã huỷ".
+  ✓  Giải phóng slot giờ trong BarberSchedule.
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-AS-02  │  Admin duyệt đơn nghỉ phép của Barber và chọn "Huỷ lịch"    │
+│               │  cho các lịch hẹn bị trùng (Affected Bookings)             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Kiểm tra tính năng huỷ lịch hẹn tự động/bán tự động khi giải quyết lịch hẹn bị trùng do Barber xin nghỉ phép đột xuất.
+
+Điều kiện tiên quyết:
+  □  Đang đăng nhập bằng tài khoản Admin.
+  □  Có 1 yêu cầu xin nghỉ phép của Barber chứa danh sách lịch hẹn trùng (Affected Bookings).
+
+Các bước thực hiện:
+  1.  Đăng nhập tài khoản Admin.
+  2.  Vào trang "Quản lý nghỉ phép" (Admin Absences Page).
+  3.  Click "Xử lý lịch hẹn trùng" đối với đơn xin nghỉ phép của Barber.
+  4.  Với lịch hẹn trùng hiển thị trên modal, click chọn hành động "Hủy lịch khách".
+  5.  Xác nhận hành động huỷ.
+
+Kết quả mong đợi:
+  ✓  Lịch hẹn đó chuyển sang trạng thái "Đã huỷ" (cancelled) ngay lập tức.
+  ✓  Trạng thái xử lý của lịch hẹn trùng đó trong danh sách chuyển sang "Đã huỷ lịch".
+  ✓  Slot giờ của lịch hẹn ban đầu trong BarberSchedule được giải phóng.
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LUỒNG 6: CÁC TRẠNG THÁI KHÔNG THỂ HỦY (FINAL STATUSES RESTRICTION)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-FR-01  │  Cố gắng huỷ lịch đã hoàn thành (completed) hoặc đã huỷ    │
+│               │  (Chặn từ hệ thống)                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Đảm bảo các lịch hẹn đã hoàn thành (completed), đã huỷ (cancelled), hoặc đã đánh dấu vắng mặt (no_show) không thể bị huỷ lại.
+
+Điều kiện tiên quyết:
+  □  Có các lịch hẹn thử nghiệm ở các trạng thái: completed, cancelled, no_show.
+
+Các bước thực hiện:
+  1.  Sử dụng Postman/API client gửi request PUT `/api/bookings/:bookingId/cancel` với ID của các lịch hẹn thuộc trạng thái trên.
+
+Kết quả mong đợi:
+  ✓  Với lịch completed: API trả về lỗi 400 kèm thông báo "This booking cannot be cancelled because it has already been completed."
+  ✓  Với lịch cancelled: API trả về lỗi 400 kèm thông báo "This booking has already been cancelled."
+  ✓  Với lịch no_show: API trả về lỗi 400 kèm thông báo "This booking cannot be cancelled because it was marked as no-show."
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  LUỒNG 7: TỰ ĐỘNG HỦY QUA CRON JOB (CLEANUP JOB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TC-CC-CJ-01  │  Hệ thống tự động huỷ lịch hẹn hết hạn chưa thanh toán      │
+│               │  (Kiểm tra Cron Job hoạt động đúng)                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Mục đích:
+  Kiểm tra job tự động quét dọn (Booking Cleanup Job) hoạt động chính xác để tự động huỷ các lịch hẹn chờ quá lâu hoặc thanh toán thất bại.
+
+Điều kiện tiên quyết:
+  □  Có lịch hẹn ở trạng thái pending hoặc gắn liền với voucher/thanh toán đang chờ (quá thời hạn quy định, ví dụ: quá 15-30 phút không thanh toán).
+
+Các bước thực hiện:
+  1.  Để thời gian trôi qua hoặc trigger thủ công chạy file cron job: `backend/src/jobs/bookingCleanup.job.js` hoặc `voucherCleanup.job.js`.
+  2.  Kiểm tra trạng thái booking trong DB sau khi chạy job.
+
+Kết quả mong đợi:
+  ✓  Các booking hết hạn tự động chuyển sang status = "cancelled".
+  ✓  Slot giờ của chúng trong BarberSchedule được giải phóng.
+  ✓  Log hệ thống ghi nhận: `[CRON Booking Cleanup] Hoàn tất! Đã tự động hủy X booking` hoặc `[Voucher Cleanup] Cancelled pending booking Y`.
+
+Kết quả thực tế:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+  Ngày: ___________ │ Tester: _______________ │ Kết quả:  [P]  [F]  [S]

@@ -89,6 +89,10 @@ exports.publishRoster = async (req, res) => {
     const roster = await WeeklyRoster.findById(req.params.id);
     if (!roster) return res.status(404).json({ message: 'Roster not found' });
     
+    if (roster.status === 'published') {
+      return res.status(400).json({ success: false, message: 'Lịch của tuần này đã được công bố từ trước và không thể thực hiện lại.' });
+    }
+    
     // Find all active barbers to generate 7-day schedule
     const barbers = await Barber.find({});
     

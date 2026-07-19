@@ -1,0 +1,121 @@
+========================================================================
+             DANH SÁCH TÍNH NĂNG THỰC TẾ TRONG CODE DỰ ÁN HALLOBBS
+========================================================================
+
+------------------------------------------------------------------------
+3.2.1 Authentication & Authorization
+------------------------------------------------------------------------
+- 3.2.1.1 Register Account: Đăng ký tài khoản khách hàng mới với các thông tin: Tên, Email, Số điện thoại, Mật khẩu.
+- 3.2.1.2 Email OTP Verification: Xác thực và kích hoạt tài khoản bằng mã OTP gửi về Email sau khi đăng ký thành công.
+- 3.2.1.3 Resend OTP: Cho phép người dùng yêu cầu gửi lại mã OTP xác thực tài khoản qua email.
+- 3.2.1.4 Login: Đăng nhập tài khoản bằng Email và mật khẩu đã đăng ký.
+- 3.2.1.5 Login with Google: Đăng nhập / đăng ký nhanh qua tài khoản Google OAuth2.
+- 3.2.1.6 Forgot Password: Yêu cầu khôi phục mật khẩu (hệ thống gửi token khôi phục mật khẩu qua Email).
+- 3.2.1.7 Reset Password: Đặt lại mật khẩu mới bằng token khôi phục được gửi qua email.
+- 3.2.1.8 Change Password: Cho phép người dùng đã đăng nhập tự thay đổi mật khẩu của mình.
+- 3.2.1.9 Logout: Đăng xuất tài khoản, xóa token và cookie phiên làm việc trên trình duyệt.
+- 3.2.1.10 Refresh Token: Tự động gia hạn Access Token bằng Refresh Token để duy trì trạng thái đăng nhập của người dùng.
+
+------------------------------------------------------------------------
+3.2.2 Service & Barber Management
+------------------------------------------------------------------------
+- 3.2.2.1 View and Edit Personal Profile: Xem thông tin tài khoản cá nhân, cập nhật thông tin liên hệ và tải lên ảnh đại diện (avatar) qua Cloudinary.
+- 3.2.2.2 View Service List: Xem danh sách các dịch vụ cắt tóc (phân loại theo danh mục: cắt, uốn, nhuộm, combo...).
+- 3.2.2.3 View Barber List: Xem danh sách thợ cắt tóc kèm thông tin chi tiết (bio, đánh giá trung bình, số năm kinh nghiệm).
+- 3.2.2.4 Manage Barber Profiles (Admin): Admin quản lý thông tin thợ cắt (bio, kinh nghiệm, chuyên môn, trạng thái hoạt động).
+- 3.2.2.5 Manage Services (Admin): Admin quản lý danh sách dịch vụ (thêm, sửa, xóa tên, giá, thời lượng cắt, danh mục dịch vụ).
+- 3.2.2.6 Manage User Accounts (Admin): Admin quản lý danh sách toàn bộ tài khoản (Admin, Staff, Barber, Customer), cho phép Admin tạo tài khoản nội bộ (Admin/Staff/Barber), khóa (ban), mở khóa hoặc xóa tài khoản.
+- 3.2.2.7 Auto-Initialize Barber Schedule & Profile: Tự động khởi tạo hồ sơ Barber và sinh lịch làm việc 14 ngày mặc định khi Admin tạo tài khoản Barber mới.
+
+------------------------------------------------------------------------
+3.2.3 Schedule Configuration & Absence
+------------------------------------------------------------------------
+- 3.2.3.1 View Work Calendar: Xem lịch làm việc cá nhân của từng thợ (Barber) hiển thị dạng Lịch trực quan.
+- 3.2.3.2 Submit Leave Request: Barber gửi yêu cầu xin nghỉ phép (chọn khoảng ngày xin nghỉ và lý do). Hệ thống tự động chặn nếu ngày nghỉ thuộc về quá khứ.
+- 3.2.3.3 Review and Approve Leave Request (Admin): Admin xem danh sách đơn nghỉ của thợ, duyệt hoặc từ chối đơn xin nghỉ.
+- 3.2.3.4 Absences Booking Conflict Resolution (Admin): Khi duyệt nghỉ phép, hệ thống tự động kiểm tra và hiển thị các lịch hẹn trùng ca nghỉ. Admin có thể trực tiếp xử lý bằng cách: Hủy lịch khách hoặc Đổi lịch sang thợ cắt khác đang rảnh.
+- 3.2.3.5 View All Barber Schedules (Roster Grid): Giao diện xem lịch làm việc tổng hợp của tất cả các Barber trong tuần/ngày để điều phối ca.
+- 3.2.3.6 Shift Roster Management (Admin/Staff): Admin tạo khung thời gian Roster tuần mới, nhân viên (Staff) tự đăng ký ca trực làm việc (Sáng/Chiều), Admin phê duyệt và Publish Roster chính thức.
+- 3.2.3.7 Automated Roster Cron Jobs: Hệ thống tự động tạo Roster mới vào Thứ 5 hàng tuần và tự động Publish Roster vào Chủ Nhật hàng tuần qua cron job.
+
+------------------------------------------------------------------------
+3.2.4 Core Booking Flow
+------------------------------------------------------------------------
+- 3.2.4.1 Online Appointment Booking: Luồng đặt lịch trực tuyến 4 bước dành cho khách hàng: Chọn dịch vụ -> Chọn thợ cắt -> Chọn thời gian (ngày, slot 30 phút) -> Xác nhận thông tin.
+- 3.2.4.2 Smart Booking Algorithm: Tự động chia slot giờ làm việc (30 phút/slot) dựa trên khung giờ làm việc cấu hình sẵn của thợ và loại trừ thời gian thợ đã bị đặt chỗ hoặc đang nghỉ phép.
+- 3.2.4.3 No-Show Penalty Deposit Requirement: Khách hàng vi phạm No-Show 1 lần khi đặt lịch mới sẽ phải đặt cọc trước 50% tổng tiền qua cổng PayOS; vi phạm 2 lần bắt buộc đặt cọc trước 100%; vi phạm từ 3 lần trở lên sẽ bị khóa tính năng đặt lịch.
+- 3.2.4.4 Guest Booking Online: Cho phép khách vãng lai đặt lịch trực tuyến không cần đăng nhập bằng cách cung cấp Tên và Số điện thoại liên hệ.
+- 3.2.4.5 Walk-in Booking (POS): Cho phép nhân viên (Staff) đặt lịch hộ khách vãng lai hoặc khách liên hệ qua hotline trực tiếp từ màn hình POS.
+
+------------------------------------------------------------------------
+3.2.5 Operations & Booking Tracking
+------------------------------------------------------------------------
+- 3.2.5.1 View My Bookings: Khách hàng đã đăng nhập xem danh sách lịch hẹn sắp diễn ra và lịch sử các ca cắt tóc đã hoàn thành.
+- 3.2.5.2 Guest Booking Tracking & Verification: Khách vãng lai xem lại chi tiết lịch hẹn và lịch sử cắt bằng cách xác thực qua mã số điện thoại.
+- 3.2.5.3 Cancel a Booking: Khách hàng hoặc khách vãng lai tự hủy lịch hẹn trực tuyến (chỉ cho phép hủy trước giờ hẹn tối thiểu 2 tiếng).
+- 3.2.5.4 Manage All Bookings (Admin/Staff): Admin/Nhân viên quản lý toàn bộ danh sách lịch hẹn của salon, cho phép phê duyệt (Confirm), Từ chối (Reject), Gán thợ (Assign Barber) hoặc thay đổi chi tiết lịch hẹn.
+- 3.2.5.5 Mark Booking Status (Completed / No-Show): Nhân viên/Barber cập nhật trạng thái lịch hẹn khi khách hoàn thành dịch vụ hoặc đánh dấu "Không đến" (No-Show) nếu khách không tới tiệm.
+- 3.2.5.6 Reschedule Booking: Khách hàng/Staff đổi ngày/giờ hẹn của lịch đã đặt sang khung giờ mới trống lịch.
+- 3.2.5.7 Automated Booking Cancellation Refund: Hệ thống tự động ghi nhận hoàn tiền (gửi thông báo/ghi log) đối với các đơn đặt lịch đã thanh toán trực tuyến qua PayOS mà bị hủy.
+
+------------------------------------------------------------------------
+3.2.6 Product Catalog & Cart
+------------------------------------------------------------------------
+- 3.2.6.1 Manage Product Categories (Admin): Thêm, sửa, xóa danh mục sản phẩm (sáp, gôm, dầu gội...).
+- 3.2.6.2 Manage Brands (Admin): Thêm, sửa, xóa các thương hiệu sản phẩm liên kết bán tại cửa hàng.
+- 3.2.6.3 View Product List: Khách hàng xem danh mục sản phẩm bán lẻ, tìm kiếm và lọc sản phẩm theo thương hiệu/danh mục, sắp xếp theo giá và tồn kho.
+- 3.2.6.4 View Product Detail: Xem chi tiết sản phẩm bao gồm ảnh mô tả, giá tiền, số lượng tồn kho và đánh giá từ người mua trước.
+- 3.2.6.5 Add Product to Cart: Khách hàng thêm sản phẩm vào giỏ hàng cá nhân, cập nhật tăng/giảm số lượng sản phẩm.
+
+------------------------------------------------------------------------
+3.2.7 Checkout & Inventory Management
+------------------------------------------------------------------------
+- 3.2.7.1 Product Checkout (Logged-in Customer): Thanh toán giỏ hàng trực tuyến cho khách hàng đã đăng nhập (nhập địa chỉ giao hàng và thông tin liên hệ).
+- 3.2.7.2 Guest Checkout: Khách vãng lai mua hàng lẻ trực tuyến không cần tạo tài khoản (cung cấp tên, email, sđt, địa chỉ giao hàng).
+- 3.2.7.3 Pay via PayOS (Online Payment): Thanh toán hóa đơn mua sản phẩm/đặt cọc dịch vụ trực tuyến thông qua cổng thanh toán QR Code ngân hàng của PayOS. Hệ thống tự động nhận diện thanh toán thông qua Webhook PayOS.
+- 3.2.7.4 Cash on Delivery (COD): Cho phép chọn hình thức thanh toán bằng tiền mặt khi nhận hàng đối với đơn mua sản phẩm.
+- 3.2.7.5 View Order History: Xem lịch sử mua sắm sản phẩm của khách hàng (đăng nhập) hoặc khách vãng lai (qua kiểm tra số điện thoại).
+- 3.2.7.6 Process and Manage Orders (Admin/Staff): Xem chi tiết đơn hàng, duyệt đơn hàng và cập nhật trạng thái đơn hàng (Chờ duyệt, Đang giao, Đã giao, Hủy đơn).
+- 3.2.7.7 Unified POS Billing & Checkout (POS): Nhân viên quầy tạo hóa đơn thanh toán trực tiếp, cho phép thêm cả dịch vụ cắt tóc và các sản phẩm bán lẻ gộp vào cùng một hóa đơn (Unified checkout), áp dụng voucher và tính tiền nhanh.
+- 3.2.7.8 Staff Inventory Page: Giao diện cập nhật nhanh số lượng sản phẩm tồn kho cho Staff/Admin.
+
+------------------------------------------------------------------------
+3.2.8 Voucher Management
+------------------------------------------------------------------------
+- 3.2.8.1 Create and Manage Vouchers (Admin): Admin tạo mã giảm giá (Voucher) với các cấu hình: loại voucher (chỉ áp dụng sản phẩm, chỉ áp dụng dịch vụ, áp dụng tất cả), giá trị giảm (tiền cố định hoặc %), giá trị đơn hàng tối thiểu, giới hạn sử dụng tổng, giới hạn sử dụng mỗi user, hạn sử dụng.
+- 3.2.8.2 Save Vouchers (Collect Vouchers): Khách hàng lưu voucher công khai (Public) vào ví cá nhân (savedVouchers).
+- 3.2.8.3 View My Vouchers: Khách hàng xem danh sách các voucher đã lưu còn hạn sử dụng.
+- 3.2.8.4 Apply Voucher at Checkout: Hệ thống tự động kiểm tra điều kiện áp dụng của Voucher và tính toán khấu trừ số tiền giảm giá tại màn hình checkout lịch hẹn hoặc giỏ hàng.
+- 3.2.8.5 Voucher Temporary Locking (VoucherLock): Khóa tạm thời voucher trong 15 phút khi người dùng chuyển sang cổng thanh toán trực tuyến. Tự động giải phóng voucher nếu thanh toán thất bại hoặc hủy ca.
+
+------------------------------------------------------------------------
+3.2.9 Feedback & Review System
+------------------------------------------------------------------------
+- 3.2.9.1 Leave a Booking Review: Khách hàng viết đánh giá (chấm sao và nhận xét) cho lịch hẹn đã hoàn thành dịch vụ.
+- 3.2.9.2 Guest Booking Review: Khách vãng lai tra cứu lịch hẹn đã hoàn thành bằng số điện thoại để thực hiện đánh giá (số điện thoại của guest sẽ được ẩn một phần để bảo mật).
+- 3.2.9.3 Leave a Product Review: Người mua viết đánh giá cho sản phẩm đã mua dựa trên mã đơn hàng orderCode thành công.
+- 3.2.9.4 View Feedbacks: Hiển thị danh sách các đánh giá của Barber (trong hồ sơ barber) hoặc của sản phẩm (trong trang chi tiết sản phẩm).
+- 3.2.9.5 Auto Loyalty Points & Voucher Reward: Tự động cộng 50 điểm loyalty cho khách hàng và sinh tự động mã Voucher tặng 10% khi khách hàng hoàn thành gửi đánh giá dịch vụ.
+
+------------------------------------------------------------------------
+3.2.10 Business Analytics & Dashboard
+------------------------------------------------------------------------
+- 3.2.10.1 View Business Statistics Dashboard (Admin): Giao diện biểu đồ doanh thu chi tiết (phân tách dịch vụ và bán sản phẩm), tỷ lệ hoàn thành/hủy ca/no-show, xếp hạng thợ cắt được yêu thích nhất và các sản phẩm bán chạy nhất theo các khung thời gian tùy chọn (7 ngày qua, tháng này, năm nay).
+
+------------------------------------------------------------------------
+3.2.11 Content Management System - CMS Blog
+------------------------------------------------------------------------
+- 3.2.11.1 View Blog / News: Hiển thị danh sách bài viết chia sẻ kinh nghiệm chăm sóc tóc, khuyến mãi.
+- 3.2.11.2 View Blog Post Detail: Trang đọc chi tiết nội dung bài viết.
+- 3.2.11.3 Manage Blog Posts (Admin): Admin viết bài mới bằng công cụ Rich Text Editor, sửa, ẩn hoặc xóa bài viết.
+
+------------------------------------------------------------------------
+3.2.12 Smart Assistant & Live Chat
+------------------------------------------------------------------------
+- 3.2.12.1 Chat with AI Chatbot: Hộp thoại chat tích hợp AI ở góc màn hình hỗ trợ tư vấn tự động các kiểu tóc, tra cứu thông tin dịch vụ và gợi ý danh sách thợ cắt tóc.
+- 3.2.12.2 Hairstyle Analysis & Advice via AI (Multimodal): Cho phép người dùng tải lên hình ảnh chân dung để AI phân tích khuôn mặt và đưa ra gợi ý kiểu tóc phù hợp, tự động liên kết đến các dịch vụ tương ứng tại salon.
+
+------------------------------------------------------------------------
+3.2.13 Notification System (Hệ thống thông báo)
+------------------------------------------------------------------------
+- 3.2.13.1 Real-time Notifications: Hiển thị thông báo (qua chuông thông báo trên Header của khách hàng) về trạng thái đổi lịch, hoàn tiền, voucher được tặng hoặc thông báo nhắc nhở lịch hẹn.

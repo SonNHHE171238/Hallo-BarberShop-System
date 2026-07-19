@@ -1,0 +1,155 @@
+Mã Bug: BUG-VC-BE-01
+Chức năng: Áp dụng voucher khi mua hàng
+Tên lỗi: Lỗi áp dụng voucher product_only khi đặt hàng (trừ tiền trên UI nhưng checkout lỗi 400)
+Các bước thực hiện:
+1. Thêm sản phẩm (Murray's Superior) vào giỏ hàng.
+2. Nhập mã voucher product_only ("TEST").
+3. UI hiển thị trừ tiền giảm giá thành công.
+4. Chọn phương thức thanh toán và click "THANH TOÁN NGAY".
+Kết quả hiện tại:
+- Hệ thống chặn tạo đơn hàng, báo lỗi HTTP 400: "Lỗi mã giảm giá: Mã giảm giá này chỉ áp dụng khi mua Sản phẩm".
+- Đơn hàng không được tạo thành công trong DB.
+Ảnh màn lỗi:
+![Voucher DB](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784363815097.png)
+![Voucher Cart UI](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784363815812.png)
+![Axios 400 Error](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784363816732.png)
+![Alert Error](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784363817754.png)
+Kết quả mong muốn:
+Tạo đơn hàng thành công, khấu trừ đúng giá trị giảm giá của voucher vào tổng hóa đơn.
+Độ ưu tiên: Critical (High)
+
+================================================================================
+
+Mã Bug: BUG-BK-UI-01
+Chức năng: Áp dụng voucher khi đặt lịch (Booking)
+Tên lỗi: Lỗi hiển thị sai giá trong modal xác nhận đặt lịch của khách vãng lai (áp dụng voucher thành công ở sidebar ban đầu nhưng khi ấn xác nhận thì modal hiển thị lại giá gốc)
+Các bước thực hiện:
+1. Tại trang Đặt Lịch Hẹn, chọn Dịch vụ (ví dụ: Tẩy tóc 400.000đ), chọn Barber và chọn Thời gian trống.
+2. Tại phần Chi Tiết Đặt Lịch, nhập mã giảm giá (ví dụ: "SUMMER20").
+3. Sidebar hiển thị giảm giá thành công (-50.000đ) và tổng cộng mới (350k).
+4. Click nút "Xác Nhận Đặt Lịch" để mở modal nhập thông tin khách vãng lai.
+Kết quả hiện tại:
+- Tại modal "Xác nhận thông tin", phần tóm tắt góc phải hiển thị tổng tiền là giá gốc chưa giảm (Tổng: 400,000đ).
+- Hệ thống bị mất/không hiển thị số tiền đã được giảm trừ từ voucher trong modal này.
+Ảnh màn lỗi:
+![Giá gốc hiển thị lại trong modal](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784364514529.png)
+![Giá gốc hiển thị lại trong modal bước tiếp theo](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784364515287.png)
+![Voucher được áp dụng thành công ở trang chính](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784364516177.png)
+Kết quả mong muốn:
+Modal xác nhận thông tin hiển thị đúng số tiền đã giảm (Tạm tính: 400.000đ, Giảm giá: -50.000đ, Tổng: 350.000đ).
+Độ ưu tiên: High
+
+================================================================================
+
+Mã Bug: BUG-BK-UI-03
+Chức năng: Xem chi tiết lịch hẹn
+Tên lỗi: Lỗi xem chi tiết lịch hẹn khi đã đăng nhập (hệ thống báo không tìm thấy lịch hẹn và chuyển hướng sang trang tra cứu theo số điện thoại)
+Các bước thực hiện:
+1. Đăng nhập tài khoản khách hàng (Customer).
+2. Vào trang "Lịch sử đặt lịch" (Customer History Page).
+3. Chọn một lịch hẹn chưa hoàn thành và nhấn nút "Chi Tiết".
+Kết quả hiện tại:
+- Hệ thống điều hướng đến URL: localhost:3000/lookup/detail?id=...&phone=undefined&source=customer.
+- Trình duyệt hiển thị thông báo "Không tìm thấy lịch hẹn. Lịch hẹn này có thể đã bị xóa hoặc bạn nhập sai số điện thoại" và hiển thị các toast thông báo đỏ "Bạn không có quyền xem chi tiết lịch hẹn này." do trường số điện thoại bị undefined.
+Ảnh màn lỗi:
+![Redirection and 403 error](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784364758955.png)
+![Lịch sử đặt lịch với nút Chi Tiết](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784364760154.png)
+Kết quả mong muốn:
+Điều hướng khách hàng đã đăng nhập tới đúng trang chi tiết lịch hẹn cá nhân tại `/booking/[id]` (ví dụ: `/booking/6a5a320e48ceb5c29fc61fe2`) và hiển thị đầy đủ thông tin lịch hẹn bình thường.
+Độ ưu tiên: High
+
+================================================================================
+
+Mã Bug: BUG-BK-BE-04
+Chức năng: Hủy và đổi lịch hẹn của khách vãng lai
+Tên lỗi: Lỗi hủy/đổi lịch cho khách vãng lai (báo lỗi 404 Không tìm thấy lịch hẹn khi bấm Hủy/Đổi lịch)
+Các bước thực hiện:
+1. Khách vãng lai truy cập vào trang tra cứu lịch hẹn theo số điện thoại.
+2. Bấm vào nút "Chi Tiết" của một lịch hẹn ở trạng thái Đang chờ (pending).
+3. Bấm nút "HỦY LỊCH HẸN" (hoặc "ĐỔI NGÀY / GIỜ").
+4. Nhập lý do hủy lịch và bấm "Hủy lịch ngay".
+Kết quả hiện tại:
+- Hệ thống hiển thị cảnh báo đỏ "Không tìm thấy lịch hẹn" trên giao diện.
+- Request API trả về HTTP Status Code 404 do parameter mismatch giữa router (dùng `:id`) và controller (destructure `:bookingId`).
+Ảnh màn lỗi:
+![Error alert on cancel](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784365102387.png)
+![Booking detail page](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784365110172.png)
+![Booking list page](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784365114686.png)
+Kết quả mong muốn:
+Cho phép khách vãng lai hủy hoặc đổi lịch hẹn thành công mà không gặp lỗi 404 "Không tìm thấy lịch hẹn".
+Độ ưu tiên: High
+
+================================================================================
+
+Mã Bug: BUG-AU-FE-05
+Chức năng: Đăng nhập bằng Google (Google Sign-In)
+Tên lỗi: Lỗi chặn truy cập Google OAuth (Access blocked: Authorization Error - Error 401: invalid_client)
+Các bước thực hiện:
+1. Truy cập vào trang Đăng nhập (/login).
+2. Bấm vào nút "Đăng nhập với Google".
+Kết quả hiện tại:
+- Cửa sổ đăng nhập Google hiện thông báo lỗi: "Access blocked: Authorization Error. The OAuth client was not found. Error 401: invalid_client".
+- Nguyên nhân: Frontend thiếu cấu hình biến môi trường NEXT_PUBLIC_GOOGLE_CLIENT_ID, dẫn đến hệ thống gọi client ID mặc định sai ('dummy_client_id_for_build').
+Ảnh màn lỗi:
+![Google Login OAuth Error](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784365415231.png)
+Kết quả mong muốn:
+Hiển thị màn hình chọn tài khoản Google để người dùng đăng nhập bình thường.
+Độ ưu tiên: High
+
+================================================================================
+
+Mã Bug: BUG-VC-BE-06
+Chức năng: Hiển thị và giới hạn phạm vi áp dụng Voucher
+Tên lỗi: Hệ thống tự động hiển thị công khai và cho phép sử dụng tất cả voucher (kể cả các voucher giá trị lớn như MEGADEAL) cho khách vãng lai (Guest)
+Các bước thực hiện:
+1. Tạo voucher giảm giá giá trị cao (ví dụ: MEGADEAL giảm 5.000.000đ) không gán cụ thể cho user nào.
+2. Truy cập vào trang xem các khuyến mãi của tiệm (/promotions hoặc trang tương ứng).
+Kết quả hiện tại:
+- Khách vãng lai và mọi người dùng đều thấy mã MEGADEAL cùng các voucher khác hiển thị công khai trên giao diện "SIÊU HỘI KHUYẾN MÃI" và có thể lấy sử dụng.
+- Nguyên nhân: Thiếu thuộc tính cấu hình `isPublic` trong model `Voucher`, và API `getPublicVouchers` tự động trả về toàn bộ voucher không bị giới hạn user.
+Ảnh màn lỗi:
+![All vouchers are public](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784365630564.png)
+Kết quả mong muốn:
+- Thêm trường `isPublic` (Boolean, default: false) vào schema `Voucher`.
+- API lấy danh sách khuyến mãi công khai chỉ trả về những voucher được set `isPublic: true`.
+- Admin có thể thiết lập bật/tắt thuộc tính `isPublic` này cho từng voucher khi tạo/sửa.
+Độ ưu tiên: High
+
+================================================================================
+
+Mã Bug: BUG-LF-BE-02
+Chức năng: Yêu cầu xin nghỉ của Barber (Barber Leave Flow)
+Tên lỗi: Hệ thống cho phép Barber chọn và gửi đơn xin nghỉ trong quá khứ
+Các bước thực hiện:
+1. Đăng nhập tài khoản Barber (ví dụ: TUẤN ANH).
+2. Vào mục "Xin nghỉ phép" (hoặc "Xin nghỉ bất thường").
+3. Chọn "Từ ngày" và "Đến ngày" là một ngày trong quá khứ (ví dụ: 07/03/2026, trong khi ngày hiện tại là 18/07/2026).
+4. Nhập lý do và click "Gửi yêu cầu nghỉ".
+Kết quả hiện tại:
+- Hệ thống không chặn chọn ngày quá khứ từ bộ lịch của input.
+- Barber có thể gửi đơn xin nghỉ phép trong quá khứ thành công lên hệ thống mà không có cảnh báo hay thông báo lỗi.
+Ảnh màn lỗi:
+![Barber selects past date for leave request](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784366321364.png)
+Kết quả mong muốn:
+- Chặn không cho chọn ngày trong quá khứ từ giao diện lịch (thiết lập thuộc tính `min` cho input date bằng ngày hiện tại).
+- Backend kiểm tra và từ chối nếu ngày xin nghỉ thuộc về quá khứ.
+Độ ưu tiên: Medium
+
+================================================================================
+
+Mã Bug: BUG-LF-UI-07
+Chức năng: Duyệt đơn nghỉ của Barber - Xử lý trùng lịch (Admin)
+Tên lỗi: Không hiển thị tên và số điện thoại của khách hàng trong modal Xử lý lịch hẹn trùng (hiển thị "Khách hàng" và "N/A" đối với khách vãng lai)
+Các bước thực hiện:
+1. Đăng nhập tài khoản Admin.
+2. Vào trang "Quản Lý Nghỉ Phép" (Admin Absences Page).
+3. Tìm đến một đơn xin nghỉ phép của Barber bị trùng với lịch hẹn của Khách vãng lai (Guest).
+4. Click nút "Xử lý trùng" để hiển thị modal "Xử lý lịch hẹn trùng".
+Kết quả hiện tại:
+- Thông tin tên khách hàng hiển thị là "Khách hàng" và số điện thoại là "N/A" (Khách: Khách hàng - SĐT: N/A).
+- Nguyên nhân: Component AdminAbsencesPage.jsx chỉ lấy thông tin từ `bookingId.customerId.name` và `bookingId.customerId.phone`. Tuy nhiên, với khách vãng lai (bookingType là "guest"), các trường này là null và thông tin được lưu ở `customerName` và `customerPhone` của booking.
+Ảnh màn lỗi:
+![Overlap modal shows Customer name as Khách hàng and SĐT as N/A](file:///C:/Users/Dell/.gemini/antigravity-ide/brain/521b3ee0-f12e-4aec-9248-f367d1b9605f/media__1784368308281.png)
+Kết quả mong muốn:
+Hệ thống hiển thị đúng tên và số điện thoại của khách hàng (đọc dự phòng từ `bookingId.customerId.name || bookingId.customerName` và `bookingId.customerId.phone || bookingId.customerPhone`).
+Độ ưu tiên: High
