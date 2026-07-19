@@ -26,15 +26,15 @@ export default function BlogGrid({ posts = [] }) {
               const dateObj = new Date(blog.createdAt);
               const formattedDate = `${dateObj.getDate()} TH${String(dateObj.getMonth() + 1).padStart(2, '0')}, ${dateObj.getFullYear()}`;
               const plainTextContent = blog.content ? blog.content.replace(/<[^>]+>/g, '') : "";
-              const bgImg = fallbackImages[index % fallbackImages.length];
+              const bgImg = blog.image || fallbackImages[index % fallbackImages.length];
 
               return (
                 <Link href={`/blog/${blog.slug}`} key={blog._id} className="group block">
                   <article className="flex flex-col glass-card rounded-xl overflow-hidden grayscale-hover transition-all duration-300 hover:-translate-y-2 h-full">
-                    <div className="h-64 overflow-hidden relative">
+                    <div className="h-64 overflow-hidden relative bg-black flex items-center justify-center">
                       <img 
                         alt={blog.title}
-                        className="w-full h-full object-cover" 
+                        className="w-full h-full object-contain" 
                         src={bgImg} 
                       />
                     </div>

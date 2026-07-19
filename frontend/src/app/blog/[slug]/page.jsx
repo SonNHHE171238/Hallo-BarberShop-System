@@ -5,7 +5,7 @@ export const metadata = {
   description: "Trang chi tiết bài viết blog",
 };
 
-export default function Page({ params }) {
-  // Use params.slug if needed, for static UI we just render the page
-  return <BlogDetailPage slug={params.slug} />;
+export default async function Page({ params }) {
+  const resolvedParams = await params;
+  return <BlogDetailPage slug={resolvedParams.slug} />;
 }

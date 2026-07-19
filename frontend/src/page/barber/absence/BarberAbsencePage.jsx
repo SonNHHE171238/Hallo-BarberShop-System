@@ -59,6 +59,13 @@ export default function BarberAbsencePage() {
       return setMessage({ text: "Không tìm thấy thông tin Barber.", type: "error" });
     }
 
+    const sDate = new Date(startDate);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    if (sDate < today) {
+      return setMessage({ text: 'Ngày bắt đầu nghỉ không được nằm trong quá khứ.', type: 'error' });
+    }
+
     try {
       setIsSubmitting(true);
       await absenceService.createRequest({
@@ -137,6 +144,7 @@ export default function BarberAbsencePage() {
                       type="date" 
                       required
                       value={startDate}
+                      min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
                       onChange={(e) => setStartDate(e.target.value)}
                       className="w-full bg-surface-container-high border border-outline-variant/50 text-on-surface p-4 focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none rounded-sm" 
                     />
