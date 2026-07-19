@@ -25,16 +25,53 @@ const getShopServices = async () => {
   }
 };
 
-const getShopProducts = async () => {
+const getShopProducts = async (args) => {
   try {
-    const products = await Product.find({ isActive: true, stock: { $gt: 0 } }).select('name brand description price stock -_id');
-    if (!products || products.length === 0) {
-      return JSON.stringify({ message: "Hiện tại shop đã hết hàng tất cả sản phẩm." });
+    const searchQuery = args?.searchQuery;
+    if (searchQuery) {
+      const escapedQuery = escapeRegExp(searchQuery);
+      // Tìm chính xác tương đối
+      let products = await Product.find({ 
+        isActive: true, 
+        stock: { $gt: 0 },
+        name: { $regex: new RegExp(escapedQuery, 'i') } 
+      }).select('name brand description price stock image -_id');
+
+      if (products && products.length > 0) {
+        return JSON.stringify({ success: true, products });
+      } else {
+        // Tìm gần đúng
+        const words = searchQuery.split(/\s+/).filter(w => w.length > 2);
+        let similarProducts = [];
+        if (words.length > 0) {
+           const regexList = words.map(w => new RegExp(escapeRegExp(w), 'i'));
+           similarProducts = await Product.find({
+             isActive: true,
+             stock: { $gt: 0 },
+             $or: [
+               { name: { $in: regexList } },
+               { description: { $in: regexList } },
+               { brand: { $in: regexList } }
+             ]
+           }).select('name brand description price stock image -_id').limit(10);
+        }
+
+        if (!similarProducts || similarProducts.length === 0) {
+           similarProducts = await Product.find({ isActive: true, stock: { $gt: 0 } }).select('name brand description price stock image -_id').limit(10);
+        }
+        
+        return JSON.stringify({ success: false, reason: "NOT_FOUND", similarProducts });
+      }
     }
-    return JSON.stringify(products);
+
+    const products = await Product.find({ isActive: true, stock: { $gt: 0 } }).select('name brand description price stock image -_id');
+    if (!products || products.length === 0) {
+      return JSON.stringify({ success: false, reason: "Hiện tại shop đã hết hàng tất cả sản phẩm." });
+    }
+    return JSON.stringify({ success: true, products });
   } catch (error) {
     console.error("Error in getShopProducts:", error);
-    return JSON.stringify({ error: "Lỗi hệ thống khi lấy danh sách sản phẩm." });
+    return JSON.stringify({ success: false, reason: "Lỗi hệ thống khi lấy danh sách sản phẩm." });
   }
 };
 
@@ -850,10 +887,12 @@ const geminiTools = [{
     },
     {
       name: "getShopProducts",
-      description: "Lấy danh sách các sản phẩm đang được bán tại Hallo BarberShop, bao gồm tên sản phẩm, thương hiệu, giá tiền và số lượng tồn kho.",
+      description: "Lấy danh sách các sản phẩm đang được bán tại Hallo BarberShop. NẾU KHÁCH TÌM KIẾM SẢN PHẨM CỤ THỂ, BẮT BUỘC TRUYỀN searchQuery để công cụ tìm kiếm và lọc đúng sản phẩm.",
       parameters: {
         type: "OBJECT",
-        properties: {},
+        properties: {
+          searchQuery: { type: "STRING", description: "Tên hoặc từ khóa sản phẩm khách hàng muốn tìm (tùy chọn)" }
+        },
       },
     },
     {
