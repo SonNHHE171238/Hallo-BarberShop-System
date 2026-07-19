@@ -148,13 +148,6 @@ export default function AdminVouchersPage() {
         return;
       }
 
-      const currentYear = new Date().getFullYear();
-      if (validUntilDate.getFullYear() > currentYear) {
-        setFormError(`Hạn kết thúc không được vượt quá năm hiện tại (${currentYear}).`);
-        setFormLoading(false);
-        return;
-      }
-
       const payload = {
         ...formData,
         code: formData.code.toUpperCase().trim(),
@@ -346,7 +339,7 @@ export default function AdminVouchersPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Đến ngày</label>
-                  <input name="validUntil" type="datetime-local" min={formData.validFrom || (!formData.id ? getLocalDatetimeString() : undefined)} max={`${new Date().getFullYear()}-12-31T23:59`} value={formData.validUntil} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
+                  <input name="validUntil" type="datetime-local" min={formData.validFrom || (!formData.id ? getLocalDatetimeString() : undefined)} value={formData.validUntil} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1 col-span-1 md:col-span-2 pt-2 border-t border-outline-variant flex items-center gap-6">

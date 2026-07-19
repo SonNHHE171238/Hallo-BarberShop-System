@@ -44,13 +44,6 @@ exports.createVoucher = async (req, res) => {
       });
     }
 
-    if (validUntilDate.getFullYear() > currentYear) {
-      return res.status(400).json({
-        success: false,
-        message: `Voucher end date cannot exceed the current year (${currentYear})`,
-      });
-    }
-
     if (validFromDate >= validUntilDate) {
       return res.status(400).json({
         success: false,
@@ -184,18 +177,10 @@ exports.updateVoucher = async (req, res) => {
       });
     }
 
-    const currentYear = new Date().getFullYear();
     const checkValidFrom = validFrom ? new Date(validFrom) : voucher.validFrom;
     const checkValidUntil = validUntil
       ? new Date(validUntil)
       : voucher.validUntil;
-
-    if (checkValidUntil.getFullYear() > currentYear) {
-      return res.status(400).json({
-        success: false,
-        message: `Voucher end date cannot exceed the current year (${currentYear})`,
-      });
-    }
 
     if (checkValidFrom >= checkValidUntil) {
       return res.status(400).json({
