@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { QRCodeSVG } from 'qrcode.react';
 import { getBookingStatusConfig } from "@/constants/statusMaps";
-import { extractTimeSlot } from "@/utils/formatters";
+import { extractTimeSlot, formatDate } from "@/utils/formatters";
 
 export default function GuestBookingDetailPage() {
   const router = useRouter();
@@ -39,17 +39,22 @@ export default function GuestBookingDetailPage() {
   const [paymentType, setPaymentType] = useState("deposit");
 
   useEffect(() => {
-    if (!id || !phone) {
+    if (!id || (!phone && source !== "customer")) {
       setIsLoading(false);
       return;
     }
     fetchBooking();
-  }, [id, phone]);
+  }, [id, phone, source]);
 
   const fetchBooking = async () => {
     setIsLoading(true);
     try {
-      const res = await bookingService.getGuestBookingDetail(id, phone);
+      let res;
+      if (source === "customer" && !phone) {
+        res = await bookingService.getBookingById(id);
+      } else {
+        res = await bookingService.getGuestBookingDetail(id, phone || "");
+      }
       if (res) {
         setBooking(res.data || res);
       }
@@ -260,10 +265,15 @@ export default function GuestBookingDetailPage() {
               <span className="material-symbols-outlined text-2xl text-primary">schedule</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Giờ hẹn</span>
-              <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">
-                {extractTimeSlot(booking.timeSlot || booking.bookingDate)}
-              </span>
+              <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Thời gian hẹn</span>
+              <div className="flex flex-col">
+                <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">
+                  {extractTimeSlot(booking.timeSlot || booking.bookingDate)}
+                </span>
+                <span className="font-body-sm text-on-surface-variant/80 mt-0.5">
+                  Ngày: {formatDate(booking.bookingDate)}
+                </span>
+              </div>
             </div>
           </div>
         </header>

@@ -656,8 +656,16 @@ exports.cancelBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Check if user can cancel this booking
-    if (!booking.customerId || booking.customerId.toString() !== userId) {
+    const user = await User.findById(userId);
+    let isAuthorized = false;
+
+    if (booking.customerId && booking.customerId.toString() === userId) {
+      isAuthorized = true;
+    } else if (!booking.customerId && booking.customerPhone && user && booking.customerPhone === user.phone) {
+      isAuthorized = true;
+    }
+
+    if (!isAuthorized) {
       return res
         .status(403)
         .json({ message: "Not authorized to cancel this booking" });
@@ -670,11 +678,12 @@ exports.cancelBooking = async (req, res) => {
     }
 
     // Apply time restrictions only if the booking is not completed
+    let hoursDifference = null;
     if (shouldApplyTimeRestrictions(booking)) {
       const now = new Date();
       const bookingTime = new Date(booking.bookingDate);
       const timeDifference = bookingTime.getTime() - now.getTime();
-      const hoursDifference = timeDifference / (1000 * 60 * 60);
+      hoursDifference = timeDifference / (1000 * 60 * 60);
 
       if (hoursDifference < 2) {
         return res.status(400).json({
@@ -892,14 +901,21 @@ exports.testBookingFlowAutoAssign = async (req, res) => {
 // Create a new walk-in booking (Admin/Staff only)
 exports.guestCancelBooking = async (req, res) => {
   try {
-    const { bookingId } = req.params;
+    const bookingId = req.params.id || req.params.bookingId;
     const { phone, reason } = req.body;
 
     if (!phone) {
       return res.status(400).json({ success: false, message: "Vui lòng cung cấp số điện thoại để xác thực." });
     }
 
-    const booking = await Booking.findById(bookingId);
+    const mongoose = require("mongoose");
+    let booking;
+    if (mongoose.Types.ObjectId.isValid(bookingId)) {
+      booking = await Booking.findById(bookingId);
+    } else {
+      booking = await Booking.findOne({ bookingCode: bookingId.toUpperCase() });
+    }
+
     if (!booking) {
       return res.status(404).json({ success: false, message: "Không tìm thấy lịch hẹn" });
     }
@@ -983,14 +999,21 @@ exports.guestCancelBooking = async (req, res) => {
 
 exports.guestRescheduleBooking = async (req, res) => {
   try {
-    const { bookingId } = req.params;
+    const bookingId = req.params.id || req.params.bookingId;
     const { phone, bookingDate, barberId, durationMinutes } = req.body;
 
     if (!phone) {
       return res.status(400).json({ success: false, message: "Vui lòng cung cấp số điện thoại để xác thực." });
     }
 
-    const booking = await Booking.findById(bookingId);
+    const mongoose = require("mongoose");
+    let booking;
+    if (mongoose.Types.ObjectId.isValid(bookingId)) {
+      booking = await Booking.findById(bookingId);
+    } else {
+      booking = await Booking.findOne({ bookingCode: bookingId.toUpperCase() });
+    }
+
     if (!booking) {
       return res.status(404).json({ success: false, message: "Không tìm thấy lịch hẹn" });
     }

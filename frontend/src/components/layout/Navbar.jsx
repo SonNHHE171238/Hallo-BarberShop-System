@@ -26,8 +26,8 @@ export default function Navbar() {
       if (user) {
         try {
           const res = await axios.get("http://localhost:5000/api/cart", { withCredentials: true });
-          if (res.data.success && res.data.data && res.data.data.items) {
-            const items = res.data.data.items;
+          if (res.data.success && Array.isArray(res.data.data)) {
+            const items = res.data.data;
             const count = items.reduce((acc, item) => acc + (item.quantity || 1), 0);
             setCartCount(count);
           }

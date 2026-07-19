@@ -15,7 +15,7 @@ const payos = new PayOS({
 exports.createOrder = async (req, res, next) => {
   try {
     const { items, customerName, customerPhone, shippingAddress, paymentMethod, voucherCode } = req.body;
-    const userId = req.user ? req.user.id : null; // Hỗ trợ cả guest
+    const userId = req.userId || null; // Hỗ trợ cả guest
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Giỏ hàng trống' });
@@ -56,7 +56,8 @@ exports.createOrder = async (req, res, next) => {
 
     if (voucherCode) {
       try {
-        const lockInfo = await voucherController.validateAndLockVoucher(voucherCode, totalAmount, userId, customerPhone);
+        const productIds = orderItems.map(i => i.productId);
+        const lockInfo = await voucherController.validateAndLockVoucher(voucherCode, totalAmount, userId, customerPhone, productIds);
         if (lockInfo) {
           discountAmount = lockInfo.discountAmount;
           voucherLockId = lockInfo.lockId;

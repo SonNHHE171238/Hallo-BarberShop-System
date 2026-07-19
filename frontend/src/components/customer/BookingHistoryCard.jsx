@@ -57,9 +57,9 @@ export default function BookingHistoryCard({
 
       {(!hideActions || isGuest) && (
         <div className="flex flex-col gap-3 w-full md:w-auto shrink-0">
-          {!hideActions && !isCompleted && (
+          {!hideActions && (
             <Link
-              href={`/lookup/detail?id=${booking._id}&phone=${booking.customerPhone}&source=customer`}
+              href={`/lookup/detail?id=${booking._id}&phone=${booking.customerPhone || booking.customerId?.phone || ''}&source=customer`}
               className="w-full md:w-32 py-3 text-center flex items-center justify-center rounded-lg border border-primary text-primary font-bold text-label-md hover:bg-primary/10 transition-colors uppercase tracking-widest"
             >
               Chi Tiết
