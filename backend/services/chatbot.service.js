@@ -13,14 +13,17 @@ CÁC QUY TẮC QUAN TRỌNG:
 3. Khi khách hỏi về thợ, hãy dùng tool 'getAvailableBarbers'. Nếu thợ khách yêu cầu đang bận hoặc không làm việc, HÃY tự động đề xuất: "Thợ [Tên thợ] hiện đang không nhận khách/bận. Mời bạn chọn thợ khác ở Menu bên dưới nhé."
 4. KHI GỌI TOOL 'getShopServices' HOẶC 'getAvailableBarbers', TUYỆT ĐỐI KHÔNG ĐƯỢC GIẢI THÍCH HAY LIỆT KÊ TÊN DỊCH VỤ/THỢ BẰNG TEXT. CHỈ TRẢ LỜI ĐÚNG 1 CÂU: "Mời bạn ấn vào nút bên dưới để xem menu nhé".
 5. Để ĐẶT LỊCH ('bookAppointment'), bạn CẦN thu thập ĐỦ 6 thông tin: Tên, SĐT hợp lệ, Tên dịch vụ, Tên thợ (nếu không có thì truyền "Any"), Ngày đặt (định dạng YYYY-MM-DD), Giờ đặt (HH:mm). SAU KHI ĐẶT LỊCH THÀNH CÔNG, BẮT BUỘC PHẢI liệt kê lại rõ ràng thông tin xác nhận cho khách bao gồm: Mã Lịch Hẹn (Booking ID), Tên khách, SĐT, Thời gian và Dịch vụ. SAU ĐÓ HÀY LUÔN HỎI KHÁCH: "Bạn có muốn thanh toán trước (toàn bộ hóa đơn) để giữ chỗ chắc chắn không bị hủy nếu đến muộn quá 15 phút không?". Nếu khách đồng ý, gọi 'generateBookingPaymentLink'.
-6. Để MUA HÀNG ('placeOrder'), bạn CẦN thu thập ĐỦ 4 thông tin: Tên, SĐT hợp lệ, Địa chỉ, Hình thức thanh toán (COD hoặc PayOS). TUYỆT ĐỐI KHÔNG tự ý thay thế sản phẩm khách yêu cầu bằng sản phẩm khác. Nếu tool placeOrder báo lỗi (success: false), BẮT BUỘC phải đọc chính xác lý do lỗi ('reason') cho khách (VD: báo rõ số lượng còn lại trong kho là bao nhiêu nếu không đủ). KHÔNG ĐƯỢC báo chung chung là hết hàng nếu kho vẫn còn.
+6. Để MUA HÀNG ('placeOrder'), bạn CẦN thu thập ĐỦ 5 thông tin: Tên, SĐT hợp lệ, Địa chỉ, Tên & Số lượng sản phẩm, Hình thức thanh toán (COD hoặc PayOS). TUYỆT ĐỐI KHÔNG tự ý thay thế sản phẩm. LƯU Ý QUAN TRỌNG: KHI ĐÃ ĐỦ THÔNG TIN, CHƯA ĐƯỢC GỌI TOOL 'placeOrder' NGAY. Bắt buộc phải lập 1 bảng tóm tắt (Form) bằng Markdown liệt kê rõ: Tên, SĐT, Địa chỉ, Sản phẩm, Số lượng, Hình thức thanh toán. Cuối bảng, phải hỏi: 'Bạn có xác nhận chốt đơn hàng với các thông tin trên không?'. CHỈ KHI KHÁCH HÀNG CHAT XÁC NHẬN (Ok, Đồng ý, Chốt...), bạn mới được gọi tool 'placeOrder'. Nếu tool báo lỗi, BẮT BUỘC phải đọc lý do lỗi cho khách.
 7. NẾU khách muốn THAY ĐỔI lịch hẹn đã đặt, BẮT BUỘC phải gọi tool 'lookupAppointments' (với SĐT) ĐẦU TIÊN để lấy 'Mã đặt lịch' (bookingId) và các thông tin cũ (ngày, giờ, dịch vụ). Sau khi có đủ thông tin cũ và mới, mới gọi 'updateAppointment'.
 8. Nếu khách muốn HỦY LỊCH hoặc TRA CỨU LỊCH, hãy yêu cầu SĐT và gọi tool 'cancelAppointment' hoặc 'lookupAppointments'. (Nếu khách hỏi "Tôi đã thanh toán xong chưa?", hãy gọi 'lookupAppointments' và xem trường "Thanh toán" để trả lời số tiền còn thiếu hoặc đã đủ).
 9. BẠN LÀ NHÂN VIÊN TƯ VẤN, KHÔNG PHẢI LẬP TRÌNH VIÊN. TUYỆT ĐỐI KHÔNG sinh ra JSON hay code trong câu trả lời. Đối với QR Code thanh toán, nếu được trả về định dạng Markdown Ảnh (![QR Code](url)), hãy TRÍCH DẪN Y HỆT NGUYÊN VĂN vào tin nhắn của bạn để hiển thị cho khách kèm các thông tin số tài khoản.
 10. Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).
-11. BẮT BUỘC phải gọi tool 'getShopProducts' để kiểm tra xem sản phẩm có tồn tại hay không TRƯỚC KHI trả lời khách hàng (không được tự ý phán đoán).
+11. BẮT BUỘC phải gọi tool 'getShopProducts' để kiểm tra xem sản phẩm có tồn tại hay không TRƯỚC KHI trả lời khách hàng (không được tự ý phán đoán). NẾU tool trả về kết quả thành công:
+  - Nếu có DƯỚI 5 sản phẩm: Bạn ĐƯỢC PHÉP liệt kê danh sách sản phẩm đó bằng text, NHƯNG BẮT BUỘC phải trình bày dưới dạng danh sách (bullet points) rõ ràng từng dòng để khách dễ đọc (VD: - **Tên sản phẩm** (Giá tiền)).
+  - Nếu có TỪ 5 sản phẩm TRỞ LÊN: TUYỆT ĐỐI KHÔNG liệt kê bằng text, chỉ trả lời 1 câu duy nhất: "Mời bạn ấn vào nút bên dưới để xem danh sách toàn bộ các sản phẩm nhé!".
 12. Chatbot CHƯA HỖ TRỢ sửa hoặc hủy ĐƠN HÀNG MUA SẢN PHẨM (chỉ hỗ trợ sửa/hủy LỊCH HẸN CẮT TÓC). Nếu khách muốn đổi thông tin đơn hàng, hãy báo khách liên hệ Hotline. Để tra cứu đơn hàng, dùng tool 'lookupOrders'.
-13. Nếu khách hàng cung cấp thông tin mâu thuẫn (VD: 2 số điện thoại, 2 địa chỉ), BẮT BUỘC phải hỏi lại khách để chốt 1 thông tin duy nhất, KHÔNG ĐƯỢC tự ý gộp chung thông tin.`;
+13. Nếu khách hàng cung cấp thông tin mâu thuẫn (VD: 2 số điện thoại, 2 địa chỉ), BẮT BUỘC phải hỏi lại khách để chốt 1 thông tin duy nhất, KHÔNG ĐƯỢC tự ý gộp chung thông tin.
+14. Sau khi cung cấp mã QR thanh toán (bằng PayOS), HÀY nhắc khách hàng: 'Sau khi thanh toán xong, bạn vui lòng báo lại cho mình biết để mình kiểm tra nhé!'. Nếu khách hàng thông báo đã chuyển khoản xong, BẮT BUỘC phải gọi tool 'checkPaymentStatus' với mã giao dịch (orderCode) tương ứng để kiểm tra trạng thái và báo kết quả lại cho khách.`;
 
 exports.handleChat = async (message, history, imageBase64, mimeType) => {
   if (!process.env.GEMINI_API_KEY) {
@@ -42,10 +45,16 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
     tools: geminiTools,
   });
 
-  const formattedHistory = history ? history.map(msg => ({
-    role: msg.role === 'ai' ? 'model' : 'user',
-    parts: [{ text: msg.content }]
-  })) : [];
+  const formattedHistory = history ? history.map(msg => {
+    let textContent = msg.content || msg.text || "";
+    if (typeof textContent === 'object') {
+      try { textContent = JSON.stringify(textContent); } catch (e) { textContent = ""; }
+    }
+    return {
+      role: msg.role === 'ai' ? 'model' : 'user',
+      parts: [{ text: String(textContent) }]
+    };
+  }) : [];
 
   const chatSession = model.startChat({ history: formattedHistory });
   let response = await chatSession.sendMessage(message || "");
@@ -54,6 +63,9 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
   let functionCalls = response.response.functionCalls();
   let menuServices = null; // Biến tạm lưu danh sách dịch vụ nếu AI gọi getShopServices
   let menuBarbers = null; // Biến tạm lưu danh sách thợ nếu AI gọi getAvailableBarbers
+  let menuProducts = null; // Biến tạm lưu danh sách sản phẩm gợi ý
+  let productQueryText = "";
+  let isProductFound = false;
 
   while (functionCalls && functionCalls.length > 0) {
     const functionResponses = await Promise.all(functionCalls.map(async (call) => {
@@ -71,7 +83,19 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
       } else if (call.name === "checkBarberSchedule") {
         functionResult = await tools.checkBarberSchedule(call.args);
       } else if (call.name === "getShopProducts") {
-        functionResult = await tools.getShopProducts();
+        functionResult = await tools.getShopProducts(call.args);
+        try {
+          const parsed = JSON.parse(functionResult);
+          if (parsed.success === false && parsed.similarProducts && parsed.similarProducts.length > 0) {
+            menuProducts = parsed.similarProducts;
+            productQueryText = call.args.searchQuery || "";
+            isProductFound = false;
+          } else if (parsed.success === true && parsed.products && parsed.products.length > 0) {
+            menuProducts = parsed.products;
+            productQueryText = call.args.searchQuery || "";
+            isProductFound = true;
+          }
+        } catch (e) { console.error("Failed to parse getShopProducts result:", e); }
       } else if (call.name === "placeOrder") {
         functionResult = await tools.placeOrder(call.args);
       } else if (call.name === "generateBookingPaymentLink") {
@@ -82,6 +106,8 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
         functionResult = await tools.cancelAppointment(call.args);
       } else if (call.name === "lookupOrders") {
         functionResult = await tools.lookupOrders(call.args);
+      } else if (call.name === "checkPaymentStatus") {
+        functionResult = await tools.checkPaymentStatus(call.args);
       }
 
       // Tự động load Menu Thợ nếu các tool trên báo lỗi không tìm thấy thợ, hoặc thợ kín lịch/nghỉ/tạm ngừng/không có hồ sơ
@@ -120,22 +146,44 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
     functionCalls = response.response.functionCalls();
   }
 
+  // Helper để lấy text an toàn, tránh lỗi khi model không trả về text
+  const safeGetText = () => {
+    try {
+      if (response && response.response && typeof response.response.text === 'function') {
+        return response.response.text();
+      }
+      return "";
+    } catch (error) {
+      return "";
+    }
+  };
+
   // Ưu tiên trả về Menu Barber nếu có thông tin thợ (do AI gọi tool), ngược lại nếu có dịch vụ thì trả về Menu Dịch vụ
   if (menuBarbers && menuBarbers.length > 0 && !menuBarbers.error) {
     return {
       isBarberMenu: true,
-      text: response.response.text() || "Mời bạn chọn thợ ở Menu bên dưới nhé:",
+      text: safeGetText() || "Mời bạn chọn thợ ở Menu bên dưới nhé:",
       barbers: menuBarbers
     };
   } else if (menuServices && menuServices.length > 0 && !menuServices.error) {
     return {
       isMenu: true,
-      text: response.response.text() || "Mời bạn chọn dịch vụ ở Menu bên dưới nhé:",
+      text: safeGetText() || "Mời bạn chọn dịch vụ ở Menu bên dưới nhé:",
       services: menuServices
+    };
+  } else if (menuProducts && menuProducts.length > 0) {
+    const defaultText = isProductFound
+      ? "Mời bạn tham khảo danh sách sản phẩm ở Menu bên dưới nhé:"
+      : `Bên mình hiện không có sản phẩm tên "${productQueryText}". Mời bạn tham khảo các sản phẩm tương tự ở danh sách bên dưới nhé:`;
+      
+    return {
+      isProductMenu: true,
+      text: safeGetText() || defaultText,
+      products: menuProducts
     };
   }
 
-  return response.response.text();
+  return safeGetText();
 };
 
 const handleHairstyleAdvice = async (message, imageBase64, mimeType) => {

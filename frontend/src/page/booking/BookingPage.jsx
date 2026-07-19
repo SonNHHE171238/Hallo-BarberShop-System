@@ -247,16 +247,20 @@ export default function BookingPage() {
 
       <Footer />
       
-      <GuestBookingModal 
-        isOpen={isGuestModalOpen}
-        onClose={() => setIsGuestModalOpen(false)}
-        onSubmit={handleGuestSubmit}
-        selectedServices={selectedServices}
-        selectedBarber={selectedBarber}
-        selectedDate={selectedDate}
-        selectedTime={selectedTime}
-        isLoading={isLoading}
-      />
+      {isGuestModalOpen && (
+        <GuestBookingModal
+          isOpen={isGuestModalOpen}
+          onClose={() => setIsGuestModalOpen(false)}
+          onSubmit={handleGuestSubmit}
+          selectedServices={selectedServices}
+          selectedBarber={selectedBarber}
+          selectedDate={selectedDate}
+          selectedTime={selectedTime}
+          isLoading={isLoading}
+          discountAmount={discountAmount}
+          finalTotal={selectedServices.reduce((acc, curr) => acc + (curr.price || 0), 0) - discountAmount}
+        />
+      )}
 
       {/* ================= QR CODE MODAL ================= */}
       {showQR && payosData && (
