@@ -4,7 +4,7 @@ import { bookingService } from '@/services/booking.service';
 const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedServices = [], selectedBarber, selectedDate, selectedTime, isLoading }) {
+export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedServices = [], selectedBarber, selectedDate, selectedTime, isLoading, discountAmount = 0, finalTotal }) {
   const [step, setStep] = useState(1);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -261,8 +261,18 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
                 </div>
               ))}
               <div className="flex justify-between items-center mt-2 pt-2 border-t border-outline-variant">
+                 <p className="font-medium text-on-surface text-sm">Tạm tính:</p>
+                 <p className="font-medium text-on-surface">{selectedServices.reduce((total, s) => total + (s.price || 0), 0).toLocaleString()}đ</p>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between items-center mt-1">
+                   <p className="font-medium text-error text-sm">Giảm giá:</p>
+                   <p className="font-medium text-error">-{discountAmount.toLocaleString()}đ</p>
+                </div>
+              )}
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-outline-variant">
                  <p className="font-bold text-on-surface">Tổng:</p>
-                 <p className="font-bold text-primary text-lg">{selectedServices.reduce((total, s) => total + (s.price || 0), 0).toLocaleString()}đ</p>
+                 <p className="font-bold text-primary text-lg">{(finalTotal !== undefined ? finalTotal : selectedServices.reduce((total, s) => total + (s.price || 0), 0)).toLocaleString()}đ</p>
               </div>
             </div>
             <div>
