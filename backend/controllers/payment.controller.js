@@ -156,6 +156,7 @@ exports.payosWebhook = async (req, res, next) => {
         
         if (order) {
           order.paymentStatus = 'paid';
+          order.status = 'processing';
           
           order.historyLog.push({
             action: 'Thanh toán thành công',

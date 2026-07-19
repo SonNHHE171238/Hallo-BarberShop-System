@@ -24,6 +24,8 @@ export default function ChatbotWidget() {
   const [isBarberMenuOpen, setIsBarberMenuOpen] = useState(false);
   const [barberData, setBarberData] = useState([]);
   const [selectedBarber, setSelectedBarber] = useState(null);
+  const [isProductMenuOpen, setIsProductMenuOpen] = useState(false);
+  const [productData, setProductData] = useState([]);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const pathname = usePathname();
@@ -114,6 +116,8 @@ export default function ChatbotWidget() {
           setMessages((prev) => [...prev, { role: "ai", isMenu: true, content: data.data.text, services: data.data.services }]);
         } else if (data.type === 'barber_menu') {
           setMessages((prev) => [...prev, { role: "ai", isBarberMenu: true, content: data.data.text, barbers: data.data.barbers }]);
+        } else if (data.type === 'product_menu') {
+          setMessages((prev) => [...prev, { role: "ai", isProductMenu: true, text: data.data.text, products: data.data.products }]);
         } else {
           setMessages((prev) => [...prev, { role: "ai", content: data.data }]);
         }
@@ -201,6 +205,8 @@ export default function ChatbotWidget() {
                 setBarberData={setBarberData}
                 setSelectedBarber={setSelectedBarber}
                 setIsBarberMenuOpen={setIsBarberMenuOpen}
+                setProductData={setProductData}
+                setIsProductMenuOpen={setIsProductMenuOpen}
               />
             ))}
 
@@ -454,6 +460,52 @@ export default function ChatbotWidget() {
           </div>
         </div>
       )}
+
+      {/* Product Menu Modal */}
+      {isProductMenuOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsProductMenuOpen(false)}>
+          <div className="bg-surface-container-lowest w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+            <div className="p-4 bg-primary text-on-primary flex justify-between items-center">
+              <h3 className="font-heading-md font-bold text-lg">Sản phẩm gợi ý</h3>
+              <button onClick={() => setIsProductMenuOpen(false)} className="hover:bg-primary-fixed hover:text-on-primary-fixed p-1 rounded-full transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              {productData.length === 0 ? (
+                <p className="text-center text-on-surface-variant italic">Không có sản phẩm nào phù hợp.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {productData.map((prod, idx) => (
+                    <div 
+                      key={idx} 
+                      className="border border-outline-variant/30 rounded-xl p-3 bg-surface flex flex-col cursor-pointer hover:border-primary/50 transition-all hover:shadow-md"
+                      onClick={() => {
+                        setIsProductMenuOpen(false);
+                        const msgText = `Tôi muốn mua sản phẩm ${prod.name}`;
+                        setInput(msgText);
+                      }}
+                    >
+                      <div className="w-full h-24 mb-2 rounded-lg bg-surface-container flex items-center justify-center overflow-hidden">
+                        {prod.image ? (
+                           <img src={prod.image} alt={prod.name} className="w-full h-full object-cover" />
+                        ) : (
+                           <span className="text-xs text-on-surface-variant">No image</span>
+                        )}
+                      </div>
+                      <div className="font-bold text-sm line-clamp-2 text-on-surface mb-1">{prod.name}</div>
+                      <div className="text-xs text-on-surface-variant mb-1">{prod.brand}</div>
+                      <div className="text-sm font-bold text-primary mt-auto">{prod.price.toLocaleString('vi-VN')}đ</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

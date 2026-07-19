@@ -61,6 +61,10 @@ const voucherSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isPublic: {
+      type: Boolean,
+      default: true,
+    },
     applicableProducts: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -8,8 +8,32 @@ const Booking = require('../models/booking.model');
 // Create a new voucher
 exports.createVoucher = async (req, res) => {
   try {
-    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive } = req.body;
+<<<<<<< HEAD
+    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive, isPublic } = req.body;
+=======
+    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive, voucherType } = req.body;
+>>>>>>> 46f226ec635591fda6ab8a9dc4120d5560e09328
     
+    if (discountType === 'percentage' && (discountValue < 0 || discountValue > 100)) {
+      return res.status(400).json({ success: false, message: 'Discount percentage must be between 0 and 100' });
+    }
+
+    const validFromDate = new Date(validFrom);
+    const validUntilDate = new Date(validUntil);
+    const currentYear = new Date().getFullYear();
+    
+    if (validUntilDate < new Date()) {
+      return res.status(400).json({ success: false, message: 'Voucher end date cannot be in the past' });
+    }
+    
+    if (validUntilDate.getFullYear() > currentYear) {
+      return res.status(400).json({ success: false, message: `Voucher end date cannot exceed the current year (${currentYear})` });
+    }
+
+    if (validFromDate >= validUntilDate) {
+      return res.status(400).json({ success: false, message: 'Valid until date must be after valid from date' });
+    }
+
     // Check if code already exists
     const existingVoucher = await Voucher.findOne({ code: code.toUpperCase() });
     if (existingVoucher) {
@@ -26,7 +50,12 @@ exports.createVoucher = async (req, res) => {
       validUntil,
       usageLimit,
       usageLimitPerUser: usageLimitPerUser || 1,
-      isActive: isActive !== undefined ? isActive : true
+      isActive: isActive !== undefined ? isActive : true,
+<<<<<<< HEAD
+      isPublic: isPublic !== undefined ? isPublic : true
+=======
+      voucherType: voucherType || 'all'
+>>>>>>> 46f226ec635591fda6ab8a9dc4120d5560e09328
     });
 
     await newVoucher.save();
@@ -91,11 +120,33 @@ exports.getVoucherById = async (req, res) => {
 // Update a voucher
 exports.updateVoucher = async (req, res) => {
   try {
-    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive } = req.body;
+<<<<<<< HEAD
+    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive, isPublic } = req.body;
+=======
+    const { code, discountType, discountValue, minOrderValue, maxDiscountAmount, validFrom, validUntil, usageLimit, usageLimitPerUser, isActive, voucherType } = req.body;
+>>>>>>> 46f226ec635591fda6ab8a9dc4120d5560e09328
     
     const voucher = await Voucher.findById(req.params.id);
     if (!voucher) {
       return res.status(404).json({ success: false, message: 'Voucher not found' });
+    }
+
+    const newDiscountType = discountType || voucher.discountType;
+    const newDiscountValue = discountValue !== undefined ? discountValue : voucher.discountValue;
+    if (newDiscountType === 'percentage' && (newDiscountValue < 0 || newDiscountValue > 100)) {
+      return res.status(400).json({ success: false, message: 'Discount percentage must be between 0 and 100' });
+    }
+
+    const currentYear = new Date().getFullYear();
+    const checkValidFrom = validFrom ? new Date(validFrom) : voucher.validFrom;
+    const checkValidUntil = validUntil ? new Date(validUntil) : voucher.validUntil;
+
+    if (checkValidUntil.getFullYear() > currentYear) {
+      return res.status(400).json({ success: false, message: `Voucher end date cannot exceed the current year (${currentYear})` });
+    }
+    
+    if (checkValidFrom >= checkValidUntil) {
+      return res.status(400).json({ success: false, message: 'Valid until date must be after valid from date' });
     }
 
     // If changing code, ensure uniqueness
@@ -116,6 +167,11 @@ exports.updateVoucher = async (req, res) => {
     if (usageLimit !== undefined) voucher.usageLimit = usageLimit;
     if (usageLimitPerUser !== undefined) voucher.usageLimitPerUser = usageLimitPerUser;
     if (isActive !== undefined) voucher.isActive = isActive;
+<<<<<<< HEAD
+    if (isPublic !== undefined) voucher.isPublic = isPublic;
+=======
+    if (voucherType !== undefined) voucher.voucherType = voucherType;
+>>>>>>> 46f226ec635591fda6ab8a9dc4120d5560e09328
 
     await voucher.save();
     return res.status(200).json({ success: true, message: 'Voucher updated successfully', data: voucher });
@@ -452,9 +508,10 @@ exports.getMyVouchers = async (req, res) => {
 exports.getPublicVouchers = async (req, res) => {
   try {
     const now = new Date();
-    // Only fetch vouchers that don't have applicableUsers restrictions (or size 0), are active and valid
+    // Only fetch vouchers that don't have applicableUsers restrictions (or size 0), are active, public and valid
     const vouchers = await Voucher.find({
       isActive: true,
+      isPublic: { $ne: false },
       validUntil: { $gte: now },
       $or: [
         { applicableUsers: { $size: 0 } },

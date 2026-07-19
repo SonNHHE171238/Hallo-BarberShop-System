@@ -140,10 +140,11 @@ export const bookingService = {
     }
   },
 
-  cancelBooking: async (bookingId) => {
+  cancelBooking: async (bookingId, reason) => {
     try {
       return await fetchWithAuth(`/bookings/${bookingId}/cancel`, {
-        method: 'PUT'
+        method: 'PUT',
+        body: JSON.stringify({ reason })
       });
     } catch (error) {
       throw error;

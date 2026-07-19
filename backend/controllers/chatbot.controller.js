@@ -39,6 +39,15 @@ exports.chat = async (req, res, next) => {
           services: result.services
         }
       });
+    } else if (result && result.isProductMenu) {
+      res.status(200).json({
+        success: true,
+        type: "product_menu",
+        data: {
+          text: result.text,
+          products: result.products
+        }
+      });
     } else {
       res.status(200).json({
         success: true,

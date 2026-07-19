@@ -125,8 +125,15 @@ export default function BookingPage() {
       });
 
       if (response.paymentLinkData && response.paymentLinkData.checkoutUrl) {
-        toast.success("Vui lòng thanh toán cọc để giữ chỗ!");
-        window.location.href = response.paymentLinkData.checkoutUrl;
+        if (response.noShowCount && response.noShowCount > 0) {
+          toast.error(`Yêu cầu đặt cọc: Hệ thống ghi nhận bạn đã không đến ${response.noShowCount} lần trước đó! Đang chuyển hướng thanh toán...`, { duration: 4000 });
+        } else {
+          toast.success("Vui lòng thanh toán cọc để giữ chỗ!");
+        }
+        
+        setTimeout(() => {
+          window.location.href = response.paymentLinkData.checkoutUrl;
+        }, 3000);
         return;
       }
 
