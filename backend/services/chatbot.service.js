@@ -20,7 +20,8 @@ CÁC QUY TẮC QUAN TRỌNG:
 10. Giá tiền hãy format giá trị cho dễ đọc (ví dụ: 100000 -> 100.000 VNĐ).
 11. BẮT BUỘC phải gọi tool 'getShopProducts' để kiểm tra xem sản phẩm có tồn tại hay không TRƯỚC KHI trả lời khách hàng (không được tự ý phán đoán).
 12. Chatbot CHƯA HỖ TRỢ sửa hoặc hủy ĐƠN HÀNG MUA SẢN PHẨM (chỉ hỗ trợ sửa/hủy LỊCH HẸN CẮT TÓC). Nếu khách muốn đổi thông tin đơn hàng, hãy báo khách liên hệ Hotline. Để tra cứu đơn hàng, dùng tool 'lookupOrders'.
-13. Nếu khách hàng cung cấp thông tin mâu thuẫn (VD: 2 số điện thoại, 2 địa chỉ), BẮT BUỘC phải hỏi lại khách để chốt 1 thông tin duy nhất, KHÔNG ĐƯỢC tự ý gộp chung thông tin.`;
+13. Nếu khách hàng cung cấp thông tin mâu thuẫn (VD: 2 số điện thoại, 2 địa chỉ), BẮT BUỘC phải hỏi lại khách để chốt 1 thông tin duy nhất, KHÔNG ĐƯỢC tự ý gộp chung thông tin.
+14. Sau khi cung cấp mã QR thanh toán (bằng PayOS), HÃY nhắc khách hàng: 'Sau khi thanh toán xong, bạn vui lòng báo lại cho mình biết để mình kiểm tra nhé!'. Nếu khách hàng thông báo đã chuyển khoản xong, BẮT BUỘC phải gọi tool 'checkPaymentStatus' với mã giao dịch (orderCode) tương ứng để kiểm tra trạng thái và báo kết quả lại cho khách.`;
 
 exports.handleChat = async (message, history, imageBase64, mimeType) => {
   if (!process.env.GEMINI_API_KEY) {
@@ -82,6 +83,8 @@ exports.handleChat = async (message, history, imageBase64, mimeType) => {
         functionResult = await tools.cancelAppointment(call.args);
       } else if (call.name === "lookupOrders") {
         functionResult = await tools.lookupOrders(call.args);
+      } else if (call.name === "checkPaymentStatus") {
+        functionResult = await tools.checkPaymentStatus(call.args);
       }
 
       // Tự động load Menu Thợ nếu các tool trên báo lỗi không tìm thấy thợ, hoặc thợ kín lịch/nghỉ/tạm ngừng/không có hồ sơ

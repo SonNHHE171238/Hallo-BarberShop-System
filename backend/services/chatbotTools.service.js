@@ -581,6 +581,84 @@ const generateBookingPaymentLink = async (args) => {
   }
 };
 
+const checkPaymentStatus = async (args) => {
+  try {
+    const { orderCode } = args;
+    if (!orderCode) {
+      return JSON.stringify({ success: false, reason: "Thiếu mã giao dịch (orderCode)." });
+    }
+
+    const Order = require('../models/order.model');
+    const Booking = require('../models/booking.model');
+
+    // 1. Kiểm tra Database trước
+    let order = await Order.findOne({ orderCode });
+    let booking = await Booking.findOne({ orderCode });
+
+    if (!order && !booking) {
+       return JSON.stringify({ success: false, reason: "Không tìm thấy mã giao dịch này trong hệ thống dữ liệu." });
+    }
+
+    // Nếu DB đã ghi nhận thanh toán rồi thì báo luôn, không cần gọi API PayOS
+    if (order && order.paymentStatus === 'paid') {
+       return JSON.stringify({ success: true, message: `Trạng thái giao dịch ${orderCode}: Đã thanh toán thành công. Đơn hàng đã được xác nhận trên hệ thống.` });
+    }
+    if (booking && booking.paymentStatus === 'paid') {
+       return JSON.stringify({ success: true, message: `Trạng thái giao dịch ${orderCode}: Đã thanh toán thành công. Lịch hẹn đã được xác nhận thanh toán.` });
+    }
+
+    // 2. Nếu DB vẫn đang pending, tiến hành gọi PayOS để check
+    const { PayOS } = require("@payos/node");
+    const payos = new PayOS({
+      clientId: process.env.PAYOS_CLIENT_ID,
+      apiKey: process.env.PAYOS_API_KEY,
+      checksumKey: process.env.PAYOS_CHECKSUM_KEY
+    });
+
+    let paymentData;
+    try {
+      paymentData = await payos.paymentRequests.getPaymentLinkInformation(orderCode);
+    } catch (err) {
+      return JSON.stringify({ success: false, reason: "Mã giao dịch có trong hệ thống nhưng không tồn tại trên cổng thanh toán PayOS." });
+    }
+
+    const isPaid = paymentData.status === "PAID";
+    let message = "";
+
+    // Dịch trạng thái sang tiếng Việt
+    let statusVi = "Không xác định";
+    if (paymentData.status === "PAID") statusVi = "Đã thanh toán thành công";
+    else if (paymentData.status === "PENDING") statusVi = "Đang chờ thanh toán";
+    else if (paymentData.status === "CANCELLED") statusVi = "Đã hủy";
+    else if (paymentData.status === "PROCESSING") statusVi = "Đang xử lý";
+
+    message = `Trạng thái giao dịch ${orderCode}: ${statusVi}. Số tiền: ${paymentData.amount} VNĐ.`;
+
+    // 3. Nếu PayOS báo đã trả tiền nhưng DB chưa cập nhật (Webhook trễ), AI chủ động cập nhật DB
+    if (isPaid) {
+      if (order && order.status === "PENDING") {
+        order.paymentStatus = 'paid';
+        order.paymentMethod = "payos";
+        order.status = "PROCESSING";
+        await order.save();
+        message += " Đơn hàng đã được tự động xác nhận vào hệ thống.";
+      } else if (booking && booking.paymentStatus !== "paid") {
+        booking.paymentStatus = "paid";
+        booking.amountPaid = (booking.amountPaid || 0) + paymentData.amount;
+        booking.status = "completed";
+        booking.completedAt = new Date();
+        await booking.save();
+        message += " Lịch hẹn đã được xác nhận thanh toán.";
+      }
+    }
+
+    return JSON.stringify({ success: true, message: message });
+  } catch (error) {
+    console.error("Error in checkPaymentStatus tool:", error);
+    return JSON.stringify({ success: false, reason: "Lỗi hệ thống khi kiểm tra thanh toán: " + error.message });
+  }
+};
+
 const checkBarberSchedule = async (args) => {
   try {
     const { barberName, date } = args;
@@ -668,6 +746,7 @@ const tools = {
   lookupOrders,
   placeOrder,
   generateBookingPaymentLink,
+  checkPaymentStatus,
   checkBarberSchedule
 };
 
@@ -813,6 +892,17 @@ const geminiTools = [{
           bookingId: { type: "STRING", description: "Mã lịch hẹn cần thanh toán (bắt buộc)" }
         },
         required: ["bookingId"]
+      }
+    },
+    {
+      name: "checkPaymentStatus",
+      description: "Kiểm tra trạng thái thanh toán của một đơn hàng hoặc lịch hẹn trực tiếp từ cổng thanh toán thông qua mã giao dịch (orderCode).",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          orderCode: { type: "NUMBER", description: "Mã giao dịch (orderCode) cần kiểm tra (bắt buộc)" }
+        },
+        required: ["orderCode"]
       }
     }
   ]
