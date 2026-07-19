@@ -194,7 +194,7 @@ exports.applyVoucher = async (req, res) => {
       const jwt = require('jsonwebtoken');
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        userId = decoded.id;
+        userId = decoded.userId || decoded.id;
       } catch (err) {
         // Ignore token errors, treat as guest if token is invalid
         console.warn('Invalid token provided for voucher application');
@@ -383,21 +383,20 @@ exports.validateAndLockVoucher = async (code, totalAmount, userId, customerPhone
   }
 
   // Check per-user limit
-  let userLocks = 0;
-  const userQuery = [];
-  if (userId) userQuery.push({ userId });
-  if (customerPhone) userQuery.push({ customerPhone });
+  const orConditions = [];
+  if (userId) orConditions.push({ userId });
+  if (customerPhone) orConditions.push({ customerPhone });
 
-  if (userQuery.length > 0) {
-    userLocks = await VoucherLock.countDocuments({
+  if (orConditions.length > 0) {
+    const userLocks = await VoucherLock.countDocuments({
       voucherId: voucher._id,
       status: { $in: ['holding', 'redeemed'] },
-      $or: userQuery
+      $or: orConditions
     });
-  }
 
-  if (userLocks >= voucher.usageLimitPerUser) {
-    throw new Error('You have reached the maximum usage limit for this voucher');
+    if (userLocks >= voucher.usageLimitPerUser) {
+      throw new Error('You have reached the maximum usage limit for this voucher');
+    }
   }
 
   // Create lock for 15 minutes

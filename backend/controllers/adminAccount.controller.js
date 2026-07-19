@@ -49,6 +49,54 @@ exports.createAccount = async (req, res, next) => {
 
         const savedUser = await newUser.save();
         
+        // Nếu chức vụ là thợ cắt, tạo hồ sơ Barber mặc định để họ xuất hiện trong danh sách đặt lịch
+        if (role === 'barber') {
+            const Barber = require('../models/barber.model');
+            const BarberSchedule = require('../models/barber-schedule.model');
+            
+            const newBarber = new Barber({
+                userId: savedUser._id,
+                bio: 'Xin chào, tôi là thợ cắt tóc mới tại Hallo Barber.',
+                experienceYears: 1,
+                specialties: ['Cắt tóc nam'],
+                workingSince: new Date(),
+                isAvailable: true
+            });
+            await newBarber.save();
+
+            // Tự động sinh lịch mặc định cho 14 ngày tới
+            const getUpcomingWeekdays = (days = 14) => {
+                const dates = [];
+                const now = new Date();
+                for (let index = 0; index < days; index += 1) {
+                    const nextDate = new Date(now);
+                    nextDate.setDate(now.getDate() + index);
+                    const weekday = nextDate.getDay();
+                    if (weekday === 0 || weekday === 6) continue;
+                    dates.push(nextDate.toISOString().split('T')[0]);
+                }
+                return dates;
+            };
+
+            const scheduleDates = getUpcomingWeekdays(14);
+            const schedules = scheduleDates.map((date) => {
+                const schedule = new BarberSchedule({
+                    barberId: newBarber._id,
+                    date,
+                    workingHours: { start: '08:00', end: '20:00' },
+                    slotDuration: 30,
+                    breakTimes: [],
+                    isOffDay: false,
+                });
+                schedule.generateDefaultSlots();
+                return schedule;
+            });
+
+            if (schedules.length > 0) {
+                await BarberSchedule.insertMany(schedules);
+            }
+        }
+        
         const responseUser = savedUser.toObject();
         delete responseUser.passwordHash;
 
