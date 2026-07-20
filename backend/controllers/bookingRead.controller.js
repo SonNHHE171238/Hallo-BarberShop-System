@@ -106,7 +106,11 @@ exports.getMyBookings = async (req, res) => {
 // Assign barber to booking (Admin only)
 exports.getAvailableSlots = async (req, res, next) => {
   try {
-    const { barberId, date, durationMinutes = 30 } = req.body;
+    let { barberId, date, durationMinutes } = req.body;
+    durationMinutes = parseInt(durationMinutes);
+    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      durationMinutes = 30;
+    }
 
     if (!barberId || !date) {
       const error = new Error("Barber ID and date are required");
