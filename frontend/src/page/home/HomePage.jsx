@@ -11,6 +11,7 @@ import HotDeals from "@/components/home/HotDeals";
 import BusinessHours from "@/components/home/BusinessHours";
 import Barbers from "@/components/home/Barbers";
 import Testimonials from "@/components/home/Testimonials";
+import Services from "@/components/shared/Services";
 
 export default function HomePage() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function HomePage() {
       <main>
         <Hero />
         <AboutUs />
+        <Services />
         <HotDeals />
         <BusinessHours />
         <Barbers />

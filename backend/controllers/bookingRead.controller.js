@@ -106,7 +106,11 @@ exports.getMyBookings = async (req, res) => {
 // Assign barber to booking (Admin only)
 exports.getAvailableSlots = async (req, res, next) => {
   try {
-    const { barberId, date, durationMinutes = 30 } = req.body;
+    let { barberId, date, durationMinutes } = req.body;
+    durationMinutes = parseInt(durationMinutes);
+    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      durationMinutes = 30;
+    }
 
     if (!barberId || !date) {
       const error = new Error("Barber ID and date are required");
@@ -321,7 +325,35 @@ exports.getBookingDetail = async (req, res) => {
         populate: { path: "userId", select: "name" },
       })
       .populate("customerId");
+      
     if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // Authorization check
+    if (req.role === 'customer') {
+      const User = require('../models/user.model');
+      const user = await User.findById(req.userId);
+      let isAuthorized = false;
+      
+      const customerIdStr = booking.customerId ? booking.customerId._id.toString() : null;
+      if (customerIdStr === req.userId) {
+        isAuthorized = true;
+      } else if (!customerIdStr && booking.customerPhone && user && booking.customerPhone === user.phone) {
+        isAuthorized = true;
+      }
+      
+      if (!isAuthorized) {
+        return res.status(403).json({ message: "Not authorized to view this booking" });
+      }
+    } else if (req.role === 'barber') {
+      const Barber = require('../models/barber.model');
+      const barber = await Barber.findOne({ userId: req.userId });
+      const barberIdStr = booking.barberId ? booking.barberId._id.toString() : null;
+      
+      if (!barber || barberIdStr !== barber._id.toString()) {
+        return res.status(403).json({ message: "Not authorized to view this booking" });
+      }
+    }
+
     res.json(booking);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -345,7 +377,15 @@ exports.getGuestBookingDetail = async (req, res) => {
       return res.status(400).json({ success: false, message: "Vui lòng cung cấp số điện thoại để xác thực." });
     }
 
-    const booking = await Booking.findById(req.params.id)
+    const mongoose = require("mongoose");
+    let bookingQuery = null;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      bookingQuery = Booking.findById(req.params.id);
+    } else {
+      bookingQuery = Booking.findOne({ bookingCode: req.params.id.toUpperCase() });
+    }
+
+    const booking = await bookingQuery
       .populate("services", "name price durationMinutes")
       .populate({
         path: "barberId",

@@ -15,7 +15,7 @@ const payos = new PayOS({
 exports.createOrder = async (req, res, next) => {
   try {
     const { items, customerName, customerPhone, shippingAddress, paymentMethod, voucherCode } = req.body;
-    const userId = req.user ? req.user.id : null; // Hỗ trợ cả guest
+    const userId = req.userId || null; // Hỗ trợ cả guest
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Giỏ hàng trống' });
@@ -56,7 +56,8 @@ exports.createOrder = async (req, res, next) => {
 
     if (voucherCode) {
       try {
-        const lockInfo = await voucherController.validateAndLockVoucher(voucherCode, totalAmount, userId, customerPhone);
+        const productIds = orderItems.map(i => i.productId);
+        const lockInfo = await voucherController.validateAndLockVoucher(voucherCode, totalAmount, userId, customerPhone, productIds);
         if (lockInfo) {
           discountAmount = lockInfo.discountAmount;
           voucherLockId = lockInfo.lockId;
@@ -146,18 +147,70 @@ exports.createOrder = async (req, res, next) => {
   }
 };
 
-// Khách vãng lai: Theo dõi đơn hàng bằng OrderCode
 exports.trackOrderByCode = async (req, res, next) => {
   try {
-    const orderCode = req.params.code;
-    const order = await Order.findOne({ orderCode })
-      .populate('items.productId', 'name image price brand');
+    const orderCode = Number(req.params.code);
+    const order = await Order.findOne({ 
+      $or: [
+        { orderCode: orderCode },
+        { previousOrderCodes: orderCode }
+      ]
+    }).populate('items.productId', 'name image price brand');
       
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng với mã này' });
     }
-    
     res.json({ success: true, data: order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Khách hàng: Tạo lại mã thanh toán PayOS
+exports.recreatePaymentLink = async (req, res, next) => {
+  try {
+    const orderCode = Number(req.params.code);
+    const order = await Order.findOne({ 
+      $or: [
+        { orderCode: orderCode },
+        { previousOrderCodes: orderCode }
+      ]
+    });
+    if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    if (order.paymentStatus === 'paid') return res.status(400).json({ success: false, message: 'Đơn hàng đã được thanh toán' });
+    
+    // Lưu lại orderCode cũ để sau này tra cứu vẫn ra
+    if (order.orderCode) {
+      if (!order.previousOrderCodes) order.previousOrderCodes = [];
+      order.previousOrderCodes.push(order.orderCode);
+    }
+
+    // Tạo orderCode mới để tránh lỗi duplicate của PayOS
+    const newOrderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
+    order.orderCode = newOrderCode;
+    await order.save();
+    
+    const body = {
+      orderCode: newOrderCode,
+      amount: order.totalAmount,
+      description: `Thanh toan don hang`,
+      returnUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}/shop/orders/${newOrderCode}`,
+      cancelUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}/shop/orders/${newOrderCode}`
+    };
+    
+    const paymentLinkRes = await payos.paymentRequests.create(body);
+    res.json({
+      success: true,
+      data: {
+        qrCode: paymentLinkRes.qrCode,
+        checkoutUrl: paymentLinkRes.checkoutUrl,
+        bin: paymentLinkRes.bin,
+        accountName: paymentLinkRes.accountName,
+        accountNumber: paymentLinkRes.accountNumber,
+        amount: order.totalAmount,
+        orderCode: newOrderCode
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -183,7 +236,7 @@ exports.lookupOrdersByPhone = async (req, res, next) => {
 // Khách hàng: Lịch sử mua hàng
 exports.getMyOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({ userId: req.user.id })
+    const orders = await Order.find({ userId: req.userId })
       .populate('items.productId', 'name image')
       .sort({ createdAt: -1 });
     res.json({ success: true, data: orders });
@@ -192,14 +245,100 @@ exports.getMyOrders = async (req, res, next) => {
   }
 };
 
+// Admin: Lấy thống kê đơn hàng
+exports.getOrderStats = async (req, res, next) => {
+  try {
+    const [total, pending, shipped, completed] = await Promise.all([
+      Order.countDocuments(),
+      Order.countDocuments({ status: 'pending' }),
+      Order.countDocuments({ status: 'shipped' }),
+      Order.countDocuments({ status: 'completed' })
+    ]);
+
+    res.json({
+      success: true,
+      data: { total, pending, shipped, completed }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Admin: Lấy tất cả đơn hàng
 exports.getAllOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find()
+    const { page = 1, limit = 10, searchTerm, orderStatus, paymentStatus, paymentMethod, filterDate } = req.query;
+    
+    let filter = {};
+
+    if (filterDate) {
+      const targetDate = new Date(filterDate);
+      if (!isNaN(targetDate.getTime())) {
+        const start = new Date(targetDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(targetDate);
+        end.setHours(23, 59, 59, 999);
+        filter.createdAt = { $gte: start, $lte: end };
+      }
+    }
+    
+    if (searchTerm) {
+      filter.$or = [
+        { customerName: { $regex: searchTerm, $options: 'i' } },
+        { customerPhone: { $regex: searchTerm, $options: 'i' } }
+      ];
+      if (!isNaN(Number(searchTerm))) {
+        filter.$or.push({ orderCode: Number(searchTerm) });
+      }
+    }
+    
+    if (orderStatus && orderStatus !== 'Tất cả' && orderStatus !== 'Trạng thái ĐH') {
+      const statusMap = {
+        "Chờ xử lý": "pending",
+        "Đang chuẩn bị": "processing",
+        "Đang giao": "shipped",
+        "Hoàn thành": "completed",
+        "Đã hủy": "cancelled"
+      };
+      if (statusMap[orderStatus]) filter.status = statusMap[orderStatus];
+    }
+    
+    if (paymentStatus && paymentStatus !== 'Tất cả' && paymentStatus !== 'Trạng thái TT') {
+      const pStatusMap = {
+        "Chờ thanh toán": "pending",
+        "Đã thanh toán": "paid",
+        "Thất bại": "failed"
+      };
+      if (pStatusMap[paymentStatus]) filter.paymentStatus = pStatusMap[paymentStatus];
+    }
+    
+    if (paymentMethod && paymentMethod !== 'Tất cả' && paymentMethod !== 'PT Thanh toán') {
+      const pMethodMap = {
+        "COD": "cod",
+        "QR Pay": { $in: ["payos", "bank_transfer"] }
+      };
+      if (pMethodMap[paymentMethod]) filter.paymentMethod = pMethodMap[paymentMethod];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await Order.countDocuments(filter);
+    
+    const orders = await Order.find(filter)
       .populate('userId', 'name email')
       .populate('items.productId', 'name image')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: orders });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+      
+    res.json({ 
+      success: true, 
+      data: {
+        orders,
+        total,
+        page: parseInt(page),
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     next(error);
   }

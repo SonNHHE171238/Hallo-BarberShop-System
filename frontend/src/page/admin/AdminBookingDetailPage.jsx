@@ -94,7 +94,7 @@ export default function AdminBookingDetailPage() {
     switch(status) {
       case 'completed': return { text: 'Hoàn thành', icon: 'check_circle', color: 'text-success border-success/30 bg-success/10' };
       case 'cancelled': return { text: 'Đã hủy', icon: 'cancel', color: 'text-error border-error/30 bg-error/10' };
-      case 'confirmed': return { text: 'Đã xác nhận', icon: 'event_available', color: 'text-info border-info/30 bg-info/10' };
+      case 'confirmed': return { text: 'Đã cọc/Giữ chỗ', icon: 'event_available', color: 'text-info border-info/30 bg-info/10' };
       case 'pending': return { text: 'Đang chờ', icon: 'pending', color: 'text-warning border-warning/30 bg-warning/10' };
       default: return { text: 'Đang phục vụ', icon: 'sync', color: 'text-primary border-primary/30 bg-primary/10' };
     }
@@ -136,7 +136,7 @@ export default function AdminBookingDetailPage() {
           <div className="flex flex-col">
             <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Giờ hẹn</span>
             <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">
-              {booking.date ? new Date(booking.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : (booking.time || 'N/A')}
+              {booking.time || (booking.rawDate ? new Date(booking.rawDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'N/A')}
             </span>
           </div>
         </div>
@@ -189,6 +189,21 @@ export default function AdminBookingDetailPage() {
               </div>
             </div>
           </div>
+          
+          {/* Note Card */}
+          {booking.note && (
+            <div className="glass-panel relative overflow-hidden bg-surface-container-low/60 border border-outline-variant/40 hover:border-primary/30 rounded-2xl p-6 transition-all duration-300 group">
+              <h2 className="font-label-md text-xs font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2 mb-4 pb-3 border-b border-outline-variant/30">
+                <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                Ghi chú của khách
+              </h2>
+              <div className="relative z-10 bg-surface-container/50 rounded-xl p-4 border border-outline-variant/30">
+                <p className="font-body-md text-sm text-on-surface leading-relaxed italic">
+                  "{booking.note}"
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
 

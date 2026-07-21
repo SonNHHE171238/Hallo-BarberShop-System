@@ -312,9 +312,9 @@ export default function StaffDashboard() {
                                   : booking.status === "in_progress"
                                     ? "Đang làm"
                                     : booking.status === "confirmed"
-                                      ? "Khách đã đến"
+                                      ? "Đã cọc/Giữ chỗ"
                                       : booking.status === "no_show"
-                                        ? "Không đến"
+                                        ? "Không tới"
                                         : booking.status === "cancelled" ||
                                             booking.status === "rejected"
                                           ? "Đã Hủy"
@@ -575,9 +575,9 @@ export default function StaffDashboard() {
                           setStatusConfirmModal({
                             isOpen: true,
                             status: "no_show",
-                            title: "Khách Không Đến",
+                            title: "Khách Không Tới",
                             message:
-                              "Xác nhận khách KHÔNG ĐẾN (No Show)? Lịch sẽ bị đóng.",
+                              "Xác nhận khách KHÔNG TỚI (No Show)? Lịch sẽ bị đóng.",
                             icon: "person_off",
                             color: "text-error",
                             bg: "bg-error/10",
@@ -585,7 +585,7 @@ export default function StaffDashboard() {
                         }}
                         className="w-full py-3 bg-error text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
                       >
-                        Khách Không Đến (No Show)
+                        Khách Không Tới (No Show)
                       </button>
                       <button
                         onClick={() => {

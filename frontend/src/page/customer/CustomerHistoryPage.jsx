@@ -11,6 +11,7 @@ import { bookingService } from "@/services/booking.service";
 import toast from "react-hot-toast";
 import BookingHistoryFilter from "@/components/customer/BookingHistoryFilter";
 import BookingHistoryCard from "@/components/customer/BookingHistoryCard";
+import CancelBookingModal from "@/components/customer/CancelBookingModal";
 
 export default function CustomerHistoryPage() {
   const router = useRouter();
@@ -25,6 +26,9 @@ export default function CustomerHistoryPage() {
   const [activeFilters, setActiveFilters] = useState(initialFilters);
   const [tempFilters, setTempFilters] = useState(initialFilters);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, bookingId: null });
+  const [successModal, setSuccessModal] = useState({ isOpen: false });
+  const [isCanceling, setIsCanceling] = useState(false);
 
   const fetcher = async () => {
     const response = await bookingService.getMyBookings();
@@ -39,15 +43,32 @@ export default function CustomerHistoryPage() {
     toast.error("Không thể tải lịch sử đặt lịch.");
   }
 
-  const handleCancelBooking = async (bookingId) => {
-    if (window.confirm("Bạn có chắc chắn muốn huỷ lịch hẹn này không?")) {
-      try {
-        await bookingService.cancelBooking(bookingId);
-        toast.success("Đã huỷ lịch hẹn thành công!");
-        fetchBookings(); // Tải lại danh sách
-      } catch (error) {
-        toast.error(error.message || "Không thể huỷ lịch hẹn.");
+  const handleCancelClick = (bookingId) => {
+    const booking = bookings.find(b => b._id === bookingId);
+    if (booking) {
+      const now = new Date();
+      const bookingTime = new Date(booking.bookingDate);
+      const hoursDifference = (bookingTime - now) / (1000 * 60 * 60);
+      if (hoursDifference < 2) {
+        toast.error("Bạn chỉ có thể huỷ lịch trước giờ hẹn tối thiểu 2 tiếng.");
+        return;
       }
+    }
+    setCancelModal({ isOpen: true, bookingId });
+  };
+
+  const handleConfirmCancel = async (reason) => {
+    if (!cancelModal.bookingId) return;
+    setIsCanceling(true);
+    try {
+      await bookingService.cancelBooking(cancelModal.bookingId, reason);
+      setCancelModal({ isOpen: false, bookingId: null });
+      setSuccessModal({ isOpen: true });
+      fetchBookings(); // Tải lại danh sách
+    } catch (error) {
+      toast.error(error.message || "Không thể huỷ lịch hẹn.");
+    } finally {
+      setIsCanceling(false);
     }
   };
 
@@ -196,7 +217,7 @@ export default function CustomerHistoryPage() {
               <BookingHistoryCard 
                 key={booking._id} 
                 booking={booking}
-                onCancel={handleCancelBooking}
+                onCancel={() => handleCancelClick(booking._id)}
                 onRebook={handleRebook}
                 onReview={handleReview}
               />
@@ -224,6 +245,34 @@ export default function CustomerHistoryPage() {
           setIsFilterOpen(false);
         }}
       />
+
+      <CancelBookingModal
+        isOpen={cancelModal.isOpen}
+        onClose={() => setCancelModal({ isOpen: false, bookingId: null })}
+        onConfirm={handleConfirmCancel}
+        isCanceling={isCanceling}
+      />
+
+      {/* Success Modal */}
+      {successModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSuccessModal({ isOpen: false })}>
+          <div className="bg-surface-container-low border border-outline-variant w-full max-w-sm rounded-2xl shadow-2xl p-6 flex flex-col items-center text-center" onClick={e => e.stopPropagation()}>
+            <div className="w-16 h-16 rounded-full bg-success/20 text-success flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-[32px]">check_circle</span>
+            </div>
+            <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mb-2">Huỷ lịch thành công</h3>
+            <p className="text-body-md text-on-surface-variant mb-6">
+              Lịch hẹn của bạn đã được huỷ. Hệ thống sẽ sớm xử lý yêu cầu hoàn tiền (nếu bạn đã thanh toán).
+            </p>
+            <button 
+              onClick={() => setSuccessModal({ isOpen: false })}
+              className="w-full py-3 rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 transition-all uppercase tracking-widest"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer />

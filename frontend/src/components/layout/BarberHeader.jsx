@@ -33,6 +33,7 @@ export default function BarberHeader() {
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/dashboard">Bảng Điều Khiển</Link>
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/bookings">Lịch Hẹn</Link>
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/customers">Khách Hàng</Link>
+          <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/absence">Xin Nghỉ Phép</Link>
         </nav>
 
         {/* Trailing Action */}
@@ -65,10 +66,6 @@ export default function BarberHeader() {
                   <Link href="/barber/profile" className="flex items-center gap-3 px-4 py-2 font-label-md text-sm text-on-surface hover:bg-surface-variant transition-colors">
                     <span className="material-symbols-outlined text-[20px]">person</span>
                     Hồ sơ cá nhân
-                  </Link>
-                  <Link href="/barber/absence" className="flex items-center gap-3 px-4 py-2 font-label-md text-sm text-on-surface hover:bg-surface-variant transition-colors">
-                    <span className="material-symbols-outlined text-[20px]">event_busy</span>
-                    Xin nghỉ phép
                   </Link>
                   <Link href="/barber/settings" className="flex items-center gap-3 px-4 py-2 font-label-md text-sm text-on-surface hover:bg-surface-variant transition-colors">
                     <span className="material-symbols-outlined text-[20px]">settings</span>
@@ -103,6 +100,7 @@ export default function BarberHeader() {
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/dashboard">Bảng Điều Khiển</Link>
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/bookings">Lịch Hẹn</Link>
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/customers">Khách Hàng</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/absence">Xin Nghỉ Phép</Link>
         </div>
       </div>
     </header>

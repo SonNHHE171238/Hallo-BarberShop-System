@@ -34,6 +34,7 @@ function BookingSuccessContent() {
 
     setBooking({
       id: searchParams.get("id")?.slice(-8).toUpperCase() || "HB-8829-X",
+      fullId: searchParams.get("id"),
       serviceName: searchParams.get("service") || "Combo Di Sản",
       price: searchParams.get("price") || "850000",
       barberName: searchParams.get("barber") || "Hoàng Anh",
@@ -199,11 +200,11 @@ function BookingSuccessContent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {user ? (
                   <button 
-                    onClick={() => router.push('/customer/dashboard')}
+                    onClick={() => router.push(`/booking/${booking.fullId || booking.id}`)}
                     className="border border-outline-variant text-on-surface h-12 rounded-lg font-label-md flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors"
                   >
-                    <span className="material-symbols-outlined text-primary/70">account_circle</span>
-                    Xem Hồ Sơ
+                    <span className="material-symbols-outlined text-primary/70">receipt_long</span>
+                    Xem Chi Tiết
                   </button>
                 ) : (
                   <button 

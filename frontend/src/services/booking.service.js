@@ -34,8 +34,8 @@ export const bookingService = {
   getServices: async () => {
     try {
       // Dùng fetchWithAuth hoặc fetch thông thường tuỳ thuộc vào việc API có cần token hay không
-      // Ở đây /api/services là public, nhưng fetchWithAuth cũng hoạt động cho public route
-      const response = await fetchWithAuth('/services', { method: 'GET' });
+      // Gọi API /services/active để lấy Toàn bộ danh sách dịch vụ không bị giới hạn phân trang
+      const response = await fetchWithAuth('/services/active', { method: 'GET' });
       return response;
     } catch (error) {
       throw error;
@@ -140,10 +140,11 @@ export const bookingService = {
     }
   },
 
-  cancelBooking: async (bookingId) => {
+  cancelBooking: async (bookingId, reason) => {
     try {
       return await fetchWithAuth(`/bookings/${bookingId}/cancel`, {
-        method: 'PUT'
+        method: 'PUT',
+        body: JSON.stringify({ reason })
       });
     } catch (error) {
       throw error;

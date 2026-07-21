@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { QRCodeSVG } from 'qrcode.react';
 
 function OrderDetailContent({ orderCode }) {
   const router = useRouter();
@@ -16,24 +17,61 @@ function OrderDetailContent({ orderCode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showTimeline, setShowTimeline] = useState(false);
+  const [payosData, setPayosData] = useState(null);
+  const [loadingPayos, setLoadingPayos] = useState(false);
+
+  const fetchOrder = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/orders/track/${orderCode}`);
+      if (res.data.success) {
+        setOrder(res.data.data);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Không thể tải thông tin đơn hàng.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const res = await axios.get(`http://localhost:5000/api/orders/track/${orderCode}`);
-        if (res.data.success) {
-          setOrder(res.data.data);
-        }
-      } catch (err) {
-        setError(err.response?.data?.message || "Không thể tải thông tin đơn hàng.");
-      } finally {
-        setLoading(false);
-      }
-    };
     if (orderCode) {
       fetchOrder();
     }
   }, [orderCode]);
+
+  // Polling check payment status
+  useEffect(() => {
+    let interval;
+    if (payosData && order?.paymentStatus !== 'paid') {
+      interval = setInterval(async () => {
+        try {
+          const res = await axios.get(`http://localhost:5000/api/orders/track/${orderCode}`);
+          if (res.data.success && res.data.data.paymentStatus === 'paid') {
+            setOrder(res.data.data);
+            clearInterval(interval);
+          }
+        } catch (error) {
+          console.error("Polling error", error);
+        }
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [payosData, orderCode, order?.paymentStatus]);
+
+  const handleGenerateQR = async () => {
+    try {
+      setLoadingPayos(true);
+      const res = await axios.post(`http://localhost:5000/api/orders/track/${orderCode}/recreate-payment`);
+      if (res.data.success) {
+        setPayosData(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Không thể tạo mã QR. Vui lòng thử lại sau.");
+    } finally {
+      setLoadingPayos(false);
+    }
+  };
 
   // Đã bỏ hiệu ứng hover theo yêu cầu
 
@@ -281,12 +319,60 @@ function OrderDetailContent({ orderCode }) {
                 ) : (
                   <div className="bg-surface-container-low p-4 rounded border border-outline-variant mb-6 text-center">
                     <p className="text-xs uppercase tracking-widest text-on-surface-variant mb-2">CHỜ CHUYỂN KHOẢN</p>
-                    <div className="w-48 h-48 mx-auto bg-white p-2 rounded-sm mb-4 flex items-center justify-center border border-outline-variant">
-                       <span className="material-symbols-outlined text-surface-variant text-[60px]">qr_code_scanner</span>
-                    </div>
-                    <p className="text-xs text-on-surface-variant italic leading-relaxed">
-                      Giao dịch chuyển khoản chưa được ghi nhận.
-                    </p>
+                    
+                    {!payosData ? (
+                      <div className="flex flex-col items-center">
+                        <div className="w-48 h-48 mx-auto bg-surface-container p-2 rounded-sm mb-4 flex items-center justify-center border border-outline-variant">
+                          <span className="material-symbols-outlined text-surface-variant text-[60px]">qr_code_scanner</span>
+                        </div>
+                        <button 
+                          onClick={handleGenerateQR}
+                          disabled={loadingPayos}
+                          className="bg-primary text-on-primary px-4 py-3 rounded font-label-md text-xs uppercase tracking-widest flex items-center justify-center gap-2 mb-3 w-full hover:bg-primary-fixed-dim transition-all shadow-md active:scale-95"
+                        >
+                          {loadingPayos ? <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> : <span className="material-symbols-outlined text-sm">qr_code_2</span>}
+                          {loadingPayos ? 'Đang tạo mã...' : 'Lấy mã QR thanh toán'}
+                        </button>
+                        <p className="text-xs text-on-surface-variant italic leading-relaxed">
+                          Giao dịch chuyển khoản chưa được ghi nhận. Nhấn nút bên trên để lấy thông tin.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center animate-in fade-in duration-500">
+                        <div className="w-48 h-48 mx-auto bg-white p-2 rounded-sm mb-4 flex items-center justify-center border-4 border-primary/20">
+                          {payosData.qrCode ? (
+                            <QRCodeSVG value={payosData.qrCode} size={170} />
+                          ) : (
+                            <span className="material-symbols-outlined text-surface-variant text-[60px]">qr_code_scanner</span>
+                          )}
+                        </div>
+                        <div className="w-full text-left space-y-2 mb-3 bg-surface-container p-3 rounded-lg text-sm border border-outline-variant">
+                          <div className="flex justify-between border-b border-outline-variant/30 pb-2">
+                            <span className="text-on-surface-variant text-xs uppercase tracking-widest">Ngân hàng</span>
+                            <span className="font-bold text-on-surface">{payosData.bin}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-outline-variant/30 pb-2">
+                            <span className="text-on-surface-variant text-xs uppercase tracking-widest">Tên TK</span>
+                            <span className="font-bold text-on-surface">{payosData.accountName}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-outline-variant/30 pb-2">
+                            <span className="text-on-surface-variant text-xs uppercase tracking-widest">Số TK</span>
+                            <span className="font-bold text-primary">{payosData.accountNumber}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-on-surface-variant text-xs uppercase tracking-widest">Nội dung</span>
+                            <span className="font-bold text-primary bg-primary/10 px-2 rounded">{payosData.orderCode}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-on-surface-variant italic leading-relaxed mb-3">
+                          Vui lòng dùng App ngân hàng quét mã QR hoặc chuyển khoản với nội dung chính xác.
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-warning bg-warning/10 px-3 py-2 rounded-lg border border-warning/30 w-full shadow-inner">
+                          <span className="material-symbols-outlined animate-spin text-[16px]">autorenew</span>
+                          <span className="font-label-md text-xs uppercase tracking-widest">Đang chờ tiền...</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

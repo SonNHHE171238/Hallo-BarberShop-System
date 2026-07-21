@@ -82,6 +82,34 @@ const staffController = {
         }
       } else if (status === 'no_show') {
         booking.noShowAt = new Date();
+
+        // Track NoShow record for customer
+        try {
+          const NoShow = require('../models/no-show.model');
+          let phone = booking.customerPhone;
+          if (!phone && booking.customerId) {
+            const User = require('../models/user.model');
+            const user = await User.findById(booking.customerId);
+            if (user) phone = user.phone;
+          }
+
+          if (phone) {
+            await NoShow.create({
+              customerId: booking.customerId || null,
+              customerPhone: phone,
+              bookingId: booking._id,
+              barberId: booking.barberId,
+              serviceId: booking.services && booking.services.length > 0 
+                ? (booking.services[0]._id || booking.services[0]) 
+                : null,
+              originalBookingDate: booking.bookingDate,
+              markedBy: req.userId,
+              reason: 'no_show'
+            });
+          }
+        } catch (noShowError) {
+          console.error('Error creating no-show record by staff:', noShowError);
+        }
       } else if (status === 'confirmed') {
         booking.confirmedAt = new Date();
       }
@@ -142,6 +170,7 @@ const staffController = {
         amountPaid: booking.amountPaid || 0,
         paymentStatus: booking.paymentStatus,
         status: booking.status,
+        note: booking.note,
         date: booking.bookingDate.toLocaleDateString('vi-VN'),
         time: booking.bookingDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         rawDate: booking.bookingDate

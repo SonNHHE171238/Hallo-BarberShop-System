@@ -13,6 +13,79 @@ const maskPhone = (phone) => {
   return `0xxx${middle}xxx`;
 };
 
+// GET /api/bookingfeedbacks/testimonials
+exports.getTestimonials = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 6;
+    // Lấy các đánh giá từ 3 sao trở lên, có comment, mới nhất
+    const feedbacks = await BookingFeedback.find({
+      rating: { $gte: 3 },
+      comment: { $exists: true, $ne: "" }
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate({
+        path: "bookingId",
+        select: "customerName customerType customerId customerPhone bookingDate bookingType",
+        populate: {
+          path: "customerId",
+          select: "name avatarUrl createdAt"
+        }
+      });
+
+    const formattedFeedbacks = feedbacks.map(f => {
+      let cName = "Khách hàng";
+      let cRole = "Khách hàng Hallo";
+      let cAvatar = "https://ui-avatars.com/api/?name=K&background=random";
+
+      if (f.bookingId) {
+        cName = f.bookingId.customerName || "Khách hàng";
+        
+        if (f.bookingId.bookingType === "guest") {
+          const bDate = new Date(f.bookingId.bookingDate);
+          const dateStr = `${bDate.getDate().toString().padStart(2, '0')}/${(bDate.getMonth() + 1).toString().padStart(2, '0')}/${bDate.getFullYear()}`;
+          cRole = `Khách đã sử dụng dịch vụ tại ngày ${dateStr}`;
+        } else if (f.bookingId.customerId) {
+          const createdDate = new Date(f.bookingId.customerId.createdAt);
+          const now = new Date();
+          const diffTime = Math.abs(now - createdDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          cRole = `Thành viên Hallo (${diffDays} ngày)`;
+        }
+
+        if (f.bookingId.customerId) {
+          cName = f.bookingId.customerId.name || cName;
+          if (f.bookingId.customerId.avatarUrl) {
+            cAvatar = f.bookingId.customerId.avatarUrl;
+          } else {
+            cAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=random`;
+          }
+        } else {
+          cAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=random`;
+        }
+      }
+
+      return {
+        _id: f._id,
+        rating: f.rating,
+        comment: f.comment,
+        createdAt: f.createdAt,
+        customerName: cName,
+        customerRole: cRole,
+        customerAvatar: cAvatar
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: formattedFeedbacks
+    });
+  } catch (error) {
+    console.error("Error fetching testimonials:", error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
+
 // GET /api/bookingfeedbacks/lookup/:phone
 exports.lookupByPhone = async (req, res) => {
   try {

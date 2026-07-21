@@ -8,3 +8,15 @@ backend/test-booking-flow.js
 backend/pos_booking_plan.md
 *.md
 test case/
+
+# Document files kept locally
+Actual_Feature_List.txt
+BUG_LOG.txt
+BUG_LOG_LEAVE_FLOW.txt
+Detailed_Task_Breakdown.txt
+Revised_Business_Requirements.txt
+TEST_CASES_CANCEL_FLOW.txt
+TEST_CASES_LEAVE_FLOW.txt
+TEST_CASES_NO_SHOW.txt
+log_bug.txt
+

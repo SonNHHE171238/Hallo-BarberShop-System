@@ -14,12 +14,20 @@ const defaultVoucherForm = {
   usageLimit: 100,
   usageLimitPerUser: 1,
   isActive: true,
+  isPublic: true,
+  voucherType: 'all',
 };
 
 function formatDateForInput(dateStr) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toISOString().slice(0, 16);
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+}
+
+function getLocalDatetimeString(date = new Date()) {
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 }
 
 export default function AdminVouchersPage() {
@@ -91,6 +99,8 @@ export default function AdminVouchersPage() {
       usageLimit: voucher.usageLimit,
       usageLimitPerUser: voucher.usageLimitPerUser || 1,
       isActive: voucher.isActive,
+      isPublic: voucher.isPublic !== undefined ? voucher.isPublic : true,
+      voucherType: voucher.voucherType || 'all',
     });
     setFormOpen(true);
   };
@@ -116,6 +126,28 @@ export default function AdminVouchersPage() {
     setFormLoading(true);
 
     try {
+      const discountValueNum = Number(formData.discountValue);
+      if (formData.discountType === 'percentage' && (discountValueNum < 0 || discountValueNum > 100)) {
+        setFormError('Giá trị giảm theo phần trăm chỉ được từ 0 đến 100.');
+        setFormLoading(false);
+        return;
+      }
+
+      const validFromDate = new Date(formData.validFrom);
+      const validUntilDate = new Date(formData.validUntil);
+
+      if (validFromDate >= validUntilDate) {
+        setFormError('Ngày kết thúc phải sau ngày bắt đầu.');
+        setFormLoading(false);
+        return;
+      }
+
+      if (!formData.id && validUntilDate < new Date()) {
+        setFormError('Ngày kết thúc không được ở trong quá khứ.');
+        setFormLoading(false);
+        return;
+      }
+
       const payload = {
         ...formData,
         code: formData.code.toUpperCase().trim(),
@@ -210,9 +242,14 @@ export default function AdminVouchersPage() {
                     </td>
                     <td className="p-3">{v.usedCount} / {v.usageLimit}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${v.isActive ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
-                        {v.isActive ? 'Hoạt động' : 'Tạm dừng'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`w-fit px-2 py-1 rounded text-xs font-bold ${v.isActive ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
+                          {v.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                        </span>
+                        <span className={`w-fit px-2 py-1 rounded text-xs font-bold ${v.isPublic ? 'bg-primary/20 text-primary' : 'bg-surface-variant text-on-surface-variant'}`}>
+                          {v.isPublic ? 'Công khai' : 'Riêng tư'}
+                        </span>
+                      </div>
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
@@ -230,8 +267,8 @@ export default function AdminVouchersPage() {
         <div className="border-t border-outline-variant shrink-0 bg-surface-container-highest/60 p-3 flex justify-between items-center text-sm">
           <div>Trang {page} / {pages} (Tổng {total})</div>
           <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage(page-1)} className="px-3 py-1 bg-surface-container border border-outline-variant rounded disabled:opacity-50">Trước</button>
-            <button disabled={page >= pages} onClick={() => setPage(page+1)} className="px-3 py-1 bg-surface-container border border-outline-variant rounded disabled:opacity-50">Sau</button>
+            <button disabled={page <= 1} onClick={() => { setPage(page-1); loadVouchers({ page: page - 1 }); }} className="px-3 py-1 bg-surface-container border border-outline-variant rounded disabled:opacity-50">Trước</button>
+            <button disabled={page >= pages} onClick={() => { setPage(page+1); loadVouchers({ page: page + 1 }); }} className="px-3 py-1 bg-surface-container border border-outline-variant rounded disabled:opacity-50">Sau</button>
           </div>
         </div>
       </div>
@@ -248,57 +285,72 @@ export default function AdminVouchersPage() {
               <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Mã giảm giá</label>
-                  <input name="code" value={formData.code} onChange={handleChange} required className="w-full border p-2 rounded uppercase text-sm" />
+                  <input name="code" value={formData.code} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded uppercase text-sm" />
                 </div>
                 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Loại giảm</label>
-                  <select name="discountType" value={formData.discountType} onChange={handleChange} className="w-full border p-2 rounded text-sm">
+                  <select name="discountType" value={formData.discountType} onChange={handleChange} className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm">
                     <option value="percentage">Theo %</option>
                     <option value="fixed_amount">Số tiền cố định</option>
                   </select>
                 </div>
 
                 <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase">Phạm vi áp dụng</label>
+                  <select name="voucherType" value={formData.voucherType} onChange={handleChange} className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm">
+                    <option value="all">Mọi hóa đơn (Cả cắt tóc & mua hàng)</option>
+                    <option value="booking_only">Chỉ áp dụng Đặt lịch cắt tóc</option>
+                    <option value="product_only">Chỉ áp dụng Mua sáp/sản phẩm</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Giá trị giảm</label>
-                  <input name="discountValue" type="number" min="0" value={formData.discountValue} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="discountValue" type="number" min="0" max={formData.discountType === 'percentage' ? "100" : undefined} value={formData.discountValue} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Đơn tối thiểu</label>
-                  <input name="minOrderValue" type="number" min="0" value={formData.minOrderValue} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="minOrderValue" type="number" min="0" value={formData.minOrderValue} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 {formData.discountType === 'percentage' && (
                   <div className="space-y-1">
                     <label className="text-xs font-bold uppercase">Giảm tối đa (VNĐ)</label>
-                    <input name="maxDiscountAmount" type="number" min="0" value={formData.maxDiscountAmount} onChange={handleChange} className="w-full border p-2 rounded text-sm" placeholder="Không bắt buộc" />
+                    <input name="maxDiscountAmount" type="number" min="0" value={formData.maxDiscountAmount} onChange={handleChange} className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" placeholder="Không bắt buộc" />
                   </div>
                 )}
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Lượt dùng tổng</label>
-                  <input name="usageLimit" type="number" min="1" value={formData.usageLimit} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="usageLimit" type="number" min="1" value={formData.usageLimit} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
                 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Lượt dùng mỗi người</label>
-                  <input name="usageLimitPerUser" type="number" min="1" value={formData.usageLimitPerUser} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="usageLimitPerUser" type="number" min="1" value={formData.usageLimitPerUser} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Từ ngày</label>
-                  <input name="validFrom" type="datetime-local" value={formData.validFrom} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="validFrom" type="datetime-local" min={!formData.id ? getLocalDatetimeString() : undefined} value={formData.validFrom} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Đến ngày</label>
-                  <input name="validUntil" type="datetime-local" value={formData.validUntil} onChange={handleChange} required className="w-full border p-2 rounded text-sm" />
+                  <input name="validUntil" type="datetime-local" min={formData.validFrom || (!formData.id ? getLocalDatetimeString() : undefined)} value={formData.validUntil} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
-                <div className="space-y-1 md:col-span-2 flex items-center gap-2">
-                  <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} id="isActive" />
-                  <label htmlFor="isActive" className="text-sm font-bold">Kích hoạt</label>
+                <div className="space-y-1 col-span-1 md:col-span-2 pt-2 border-t border-outline-variant flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                    <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-4 h-4 accent-primary" />
+                    Kích hoạt
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                    <input type="checkbox" name="isPublic" checked={formData.isPublic} onChange={handleChange} className="w-4 h-4 accent-primary" />
+                    Công khai (Public)
+                  </label>
                 </div>
 
                 <div className="md:col-span-2 pt-2 border-t flex justify-end gap-2">

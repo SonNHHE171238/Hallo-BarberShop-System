@@ -8,19 +8,39 @@ export default function AdminSidebar({ isOpen, onClose }) {
   const pathname = usePathname();
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(true);
 
-  const navItems = [
-    { name: 'Tổng quan', href: '/admin/dashboard', icon: 'dashboard' },
-    { name: 'Quản lý Blog', href: '/admin/blogs', icon: 'description' },
-    { name: 'Thu ngân (POS)', href: '/admin/pos', icon: 'point_of_sale' },
-    { name: 'Tài khoản', href: '/admin/accounts', icon: 'manage_accounts' },
-    { name: 'Lịch hẹn', href: '/admin/bookings', icon: 'calendar_month' },
-    { name: 'Đơn hàng', href: '/admin/orders', icon: 'local_shipping' },
-    { name: 'Nghỉ phép', href: '/admin/absences', icon: 'event_busy' },
-    { name: 'Dịch vụ', href: '/admin/services', icon: 'cut' },
-    { name: 'Kho hàng', href: '/admin/products', icon: 'inventory_2' },
-    { name: 'Mã giảm giá', href: '/admin/vouchers', icon: 'local_offer' },
-    { name: 'Nhân viên', href: '/admin/employee', icon: 'group' },
-    { name: 'Phân tích', href: '/admin/analytics', icon: 'analytics' },
+  const navGroups = [
+    {
+      title: "Chung",
+      items: [
+        { name: 'Tổng quan', href: '/admin/dashboard', icon: 'dashboard' },
+        { name: 'Phân tích', href: '/admin/analytics', icon: 'analytics' },
+      ]
+    },
+    {
+      title: "Vận hành",
+      items: [
+        { name: 'Thu ngân (POS)', href: '/admin/pos', icon: 'point_of_sale' },
+        { name: 'Lịch hẹn', href: '/admin/bookings', icon: 'calendar_month' },
+        { name: 'Đơn hàng', href: '/admin/orders', icon: 'local_shipping' },
+      ]
+    },
+    {
+      title: "Kinh doanh",
+      items: [
+        { name: 'Dịch vụ', href: '/admin/services', icon: 'cut' },
+        { name: 'Kho hàng', href: '/admin/products', icon: 'inventory_2' },
+        { name: 'Quản lý Blog', href: '/admin/blogs', icon: 'description' },
+        { name: 'Mã giảm giá', href: '/admin/vouchers', icon: 'local_offer' },
+      ]
+    },
+    {
+      title: "Tổ chức",
+      items: [
+        { name: 'Tài khoản', href: '/admin/accounts', icon: 'manage_accounts' },
+        { name: 'Lịch làm', href: '/admin/roster', icon: 'calendar_view_week' },
+        { name: 'Nghỉ phép', href: '/admin/absences', icon: 'event_busy' },
+      ]
+    }
   ];
 
   return (
@@ -57,33 +77,47 @@ export default function AdminSidebar({ isOpen, onClose }) {
         </div>
       
       {/* Navigation Links */}
-      <nav className="flex-1 overflow-y-auto py-6 px-3 lg:px-4 flex flex-col gap-2 overflow-x-hidden custom-scrollbar">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
+      <nav className="flex-1 overflow-y-auto py-6 px-3 lg:px-4 flex flex-col gap-6 overflow-x-hidden custom-scrollbar">
+        {navGroups.map((group, index) => (
+          <div key={index} className="flex flex-col gap-2">
+            {/* Group Header */}
+            {isDesktopExpanded ? (
+              <span className="px-3 text-[10px] font-bold uppercase tracking-widest text-outline-variant mb-1 transition-opacity duration-300">
+                {group.title}
+              </span>
+            ) : (
+              <div className="w-8 h-px bg-outline-variant/30 mx-auto my-2 hidden md:block"></div>
+            )}
+            
+            {/* Items */}
+            {group.items.map((item) => {
+              const isActive = pathname === item.href;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.name}
-              className={`flex items-center gap-3 px-3 py-3 lg:py-2.5 rounded transition-all duration-300 group ${
-                isActive
-                  ? 'bg-surface-container-high text-primary border border-outline-gold'
-                  : 'text-on-surface-variant hover:text-primary hover:bg-surface-container border border-transparent'
-              } ${isDesktopExpanded ? 'justify-start' : 'md:justify-center'}`}
-            >
-              <span
-                className={`material-symbols-outlined shrink-0 ${isActive ? 'text-primary' : ''}`}
-                style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
-              >
-                {item.icon}
-              </span>
-              <span className={`font-label-md text-label-md uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${isDesktopExpanded ? 'opacity-100 translate-x-0' : 'md:opacity-0 md:w-0 md:translate-x-4'}`}>
-                {item.name}
-              </span>
-            </Link>
-          );
-        })}
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.name}
+                  className={`flex items-center gap-3 px-3 py-3 lg:py-2.5 rounded transition-all duration-300 group ${
+                    isActive
+                      ? 'bg-surface-container-high text-primary border border-outline-gold'
+                      : 'text-on-surface-variant hover:text-primary hover:bg-surface-container border border-transparent'
+                  } ${isDesktopExpanded ? 'justify-start' : 'md:justify-center'}`}
+                >
+                  <span
+                    className={`material-symbols-outlined shrink-0 ${isActive ? 'text-primary' : ''}`}
+                    style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className={`font-label-md text-label-md uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${isDesktopExpanded ? 'opacity-100 translate-x-0' : 'md:opacity-0 md:w-0 md:translate-x-4'}`}>
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
     </aside>
     </>

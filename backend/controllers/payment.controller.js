@@ -93,6 +93,17 @@ exports.createPaymentLinkHelper = async ({ bookingId, amount, returnUrl, cancelU
   };
 };
 
+exports.getPaymentLinkInfo = async (req, res, next) => {
+  try {
+    const { orderCode } = req.params;
+    const paymentLinkInfo = await payos.getPaymentLinkInformation(Number(orderCode));
+    return sendSuccess(res, 200, "Lấy thông tin thanh toán thành công", paymentLinkInfo);
+  } catch (error) {
+    console.error("Lỗi lấy thông tin link thanh toán:", error);
+    next(error);
+  }
+};
+
 // Đón webhook từ PayOS
 exports.payosWebhook = async (req, res, next) => {
 
@@ -144,8 +155,14 @@ exports.payosWebhook = async (req, res, next) => {
         const order = await Order.findOne({ orderCode: webhookData.orderCode });
         
         if (order) {
-          order.status = 'processing';
           order.paymentStatus = 'paid';
+          order.status = 'processing';
+          
+          order.historyLog.push({
+            action: 'Thanh toán thành công',
+            note: 'Khách hàng đã thanh toán trực tuyến qua PayOS.',
+          });
+          
           await order.save();
 
           const Payment = require("../models/payment.model");

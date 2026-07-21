@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import LogoutConfirmModal from "../ui/LogoutConfirmModal";
+import NotificationDropdown from "./NotificationDropdown";
 import axios from "axios";
 
 export default function Navbar() {
@@ -26,15 +27,18 @@ export default function Navbar() {
       if (user) {
         try {
           const res = await axios.get("http://localhost:5000/api/cart", { withCredentials: true });
-          if (res.data.success && res.data.data && res.data.data.items) {
-            setCartCount(res.data.data.items.length);
+          if (res.data.success && Array.isArray(res.data.data)) {
+            const items = res.data.data;
+            const count = items.reduce((acc, item) => acc + (item.quantity || 1), 0);
+            setCartCount(count);
           }
         } catch (error) {
           // Ignore error silently to not spam console
         }
       } else {
         const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
-        setCartCount(localCart.length);
+        const count = localCart.reduce((acc, item) => acc + (item.quantity || 1), 0);
+        setCartCount(count);
       }
     };
 
@@ -170,7 +174,9 @@ export default function Navbar() {
           </Link>
           
           {(mounted && user) ? (
-            <div className="relative group hidden md:flex items-center space-x-2 mr-4 cursor-pointer py-2">
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <NotificationDropdown />
+              <div className="relative group hidden md:flex items-center space-x-2 mr-4 cursor-pointer py-2">
               <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center border border-outline-variant">
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
@@ -197,6 +203,7 @@ export default function Navbar() {
                   Đăng xuất
                 </button>
               </div>
+            </div>
             </div>
           ) : (
             <Link
