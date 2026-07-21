@@ -8,8 +8,9 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from "@/context/AuthContext";
 import Footer from "@/components/layout/Footer";
 import { voucherService } from "@/services/voucher.service";
+import { Suspense } from "react";
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -410,5 +411,17 @@ export default function CheckoutPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="bg-background min-h-screen text-on-surface flex flex-col items-center justify-center">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+      </div>
+    }>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }

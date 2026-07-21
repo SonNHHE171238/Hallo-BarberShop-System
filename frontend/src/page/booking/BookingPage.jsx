@@ -16,8 +16,9 @@ import toast from 'react-hot-toast';
 import GuestBookingModal from "@/components/booking/GuestBookingModal";
 import { QRCodeSVG } from 'qrcode.react';
 import axios from "axios";
+import { Suspense } from "react";
 
-export default function BookingPage() {
+function BookingPageContent() {
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedBarber, setSelectedBarber] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -311,5 +312,17 @@ export default function BookingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="bg-background min-h-screen text-on-surface flex flex-col items-center justify-center">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+      </div>
+    }>
+      <BookingPageContent />
+    </Suspense>
   );
 }

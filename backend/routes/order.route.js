@@ -8,6 +8,7 @@ router.post('/', optionalAuthenticate, orderController.createOrder);
 router.get('/track/:code', orderController.trackOrderByCode);
 router.get('/lookup/:phone', orderController.lookupOrdersByPhone);
 router.post('/track/:code/recreate-payment', orderController.recreatePaymentLink);
+router.get('/:code/reviewed-products', orderController.getReviewedProducts);
 
 // Customer routes
 router.get('/my-orders', authenticate, orderController.getMyOrders);

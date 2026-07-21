@@ -14,6 +14,10 @@ exports.createFeedback = async (req, res) => {
       return res.status(400).json({ success: false, message: "Vui lòng chọn số sao hợp lệ từ 1 đến 5." });
     }
 
+    if (!comment || comment.trim().length === 0) {
+      return res.status(400).json({ success: false, message: "Vui lòng nhập nội dung đánh giá." });
+    }
+
     if (!orderCode) {
       return res.status(400).json({ success: false, message: "Vui lòng cung cấp Mã Đơn Hàng để đánh giá." });
     }
@@ -29,6 +33,24 @@ exports.createFeedback = async (req, res) => {
       return res.status(403).json({ 
         success: false, 
         message: "Mã đơn hàng không hợp lệ, hoặc đơn hàng chưa hoàn thành, hoặc không chứa sản phẩm này." 
+      });
+    }
+
+    // Kiểm tra giới hạn 7 ngày từ khi đơn hàng completed
+    // Lấy log cuối cùng hoặc dùng order.updatedAt
+    const completedLog = order.historyLog && order.historyLog.length > 0 
+      ? order.historyLog[order.historyLog.length - 1] 
+      : null;
+    
+    const completedDate = completedLog ? new Date(completedLog.timestamp) : new Date(order.updatedAt);
+    const now = new Date();
+    const diffTime = Math.abs(now - completedDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 7) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Đơn hàng này đã vượt quá thời hạn 7 ngày để đánh giá." 
       });
     }
 
@@ -70,21 +92,10 @@ exports.createFeedback = async (req, res) => {
       });
     }
 
-    // 4. Tặng điểm Loyalty và Sinh Voucher (Chỉ dành cho User có tài khoản)
-    let pointsEarned = 0;
-    let totalPoints = 0;
+    // 4. Sinh Voucher (Chỉ dành cho User có tài khoản)
     let rewardVoucherCode = null;
     
     if (order.userId) {
-      pointsEarned = 50;
-      const user = await User.findByIdAndUpdate(
-        order.userId,
-        { $inc: { loyaltyPoints: pointsEarned } },
-        { new: true }
-      );
-      if (user) totalPoints = user.loyaltyPoints;
-
-      // Sinh Voucher thưởng
       const Voucher = require('../models/voucher.model');
       const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
       rewardVoucherCode = `GIFT-PR-${randomStr}`;
@@ -110,12 +121,10 @@ exports.createFeedback = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: pointsEarned > 0 
-        ? "Gửi đánh giá thành công! Bạn được cộng 50 điểm và 1 Voucher quà tặng." 
+      message: rewardVoucherCode 
+        ? "Gửi đánh giá thành công! Bạn được tặng 1 Voucher quà tặng." 
         : "Gửi đánh giá thành công! Cảm ơn bạn.",
       data: {
-        pointsEarned,
-        totalPoints,
         rewardVoucherCode
       }
     });
@@ -148,9 +157,38 @@ exports.getFeedbacksByProduct = async (req, res) => {
 
     const total = await ProductFeedback.countDocuments(query);
 
+    // Xử lý ẩn danh hoặc format guest name nếu cần, tạm thời để tự nhiên
+    const formattedFeedbacks = await Promise.all(feedbacks.map(async (fb) => {
+      let userName = "Khách Hàng Hallo";
+      let userAvatar = `https://ui-avatars.com/api/?name=KH&background=random`;
+      
+      if (fb.userId) {
+        userName = fb.userId.name;
+        userAvatar = fb.userId.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(fb.userId.name)}&background=random`;
+      } else {
+         // Thử lấy thông tin Guest từ Order
+         const orderInfo = await Order.findById(fb.orderId).select("customerName");
+         if (orderInfo && orderInfo.customerName) {
+           userName = orderInfo.customerName;
+           userAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(orderInfo.customerName)}&background=random`;
+         }
+      }
+
+      return {
+        _id: fb._id,
+        productId: fb.productId,
+        orderId: fb.orderId,
+        rating: fb.rating,
+        comment: fb.comment,
+        createdAt: fb.createdAt,
+        userName,
+        userAvatar
+      };
+    }));
+
     return res.status(200).json({
       success: true,
-      data: feedbacks,
+      data: formattedFeedbacks,
       pagination: {
         total,
         page,
@@ -159,6 +197,103 @@ exports.getFeedbacksByProduct = async (req, res) => {
       }
     });
 
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
+
+// ADMIN: GET /api/products/feedbacks/all
+exports.getAllProductFeedbacks = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (req.query.rating) {
+      query.rating = parseInt(req.query.rating);
+    }
+
+    // Nếu muốn search theo tên SP, phải lookup Product, nhưng cho đơn giản tạm bỏ qua search text
+
+    const feedbacks = await ProductFeedback.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("productId", "name image")
+      .populate("userId", "name email");
+
+    const total = await ProductFeedback.countDocuments(query);
+
+    // Format cho Guest
+    const formattedFeedbacks = await Promise.all(feedbacks.map(async (fb) => {
+      let customerInfo = null;
+      if (fb.userId) {
+        customerInfo = { name: fb.userId.name, email: fb.userId.email, isMember: true };
+      } else {
+        const orderInfo = await Order.findById(fb.orderId).select("customerName customerPhone");
+        if (orderInfo) {
+          customerInfo = { name: orderInfo.customerName, phone: orderInfo.customerPhone, isMember: false };
+        } else {
+          customerInfo = { name: "Guest", isMember: false };
+        }
+      }
+
+      return {
+        ...fb.toObject(),
+        customerInfo
+      };
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formattedFeedbacks,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
+
+// ADMIN: DELETE /api/products/feedbacks/:id
+exports.deleteFeedback = async (req, res) => {
+  try {
+    const feedback = await ProductFeedback.findByIdAndDelete(req.params.id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy đánh giá" });
+    }
+
+    // Cập nhật lại số sao
+    const stats = await ProductFeedback.aggregate([
+      { $match: { productId: feedback.productId } },
+      { $group: {
+          _id: "$productId",
+          avgRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+    if (stats.length > 0) {
+      await Product.findByIdAndUpdate(feedback.productId, {
+        averageRating: Math.round(stats[0].avgRating * 10) / 10,
+        totalReviews: stats[0].totalReviews
+      });
+    } else {
+      await Product.findByIdAndUpdate(feedback.productId, {
+        averageRating: 0,
+        totalReviews: 0
+      });
+    }
+
+    return res.status(200).json({ success: true, message: "Xóa đánh giá thành công." });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ success: false, message: "Lỗi server." });

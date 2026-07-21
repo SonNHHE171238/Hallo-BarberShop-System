@@ -455,7 +455,7 @@ exports.confirmCODPayment = async (req, res, next) => {
         note: 'Admin xác nhận đã nhận được tiền mặt từ khách hàng/shipper.',
       });
 
-      if (order.status === 'completed') {
+    if (order.status === 'completed') {
         order.historyLog.push({
           action: 'Đơn hàng giao dịch thành công',
           actor: 'System',
@@ -466,6 +466,36 @@ exports.confirmCODPayment = async (req, res, next) => {
     }
 
     res.json({ success: true, message: 'Xác nhận thu tiền thành công', data: order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/orders/:orderCode/reviewed-products
+exports.getReviewedProducts = async (req, res, next) => {
+  try {
+    const orderCode = Number(req.params.code);
+    const order = await Order.findOne({ 
+      $or: [
+        { orderCode: orderCode },
+        { previousOrderCodes: orderCode }
+      ]
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    }
+
+    // Lấy danh sách ProductFeedback cho order này
+    const ProductFeedback = require('../models/product-feedback.model');
+    const feedbacks = await ProductFeedback.find({ orderId: order._id }).select('productId');
+
+    const reviewedProductIds = feedbacks.map(fb => fb.productId.toString());
+
+    res.json({
+      success: true,
+      data: reviewedProductIds
+    });
   } catch (error) {
     next(error);
   }

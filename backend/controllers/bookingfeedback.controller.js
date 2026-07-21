@@ -275,3 +275,62 @@ exports.createFeedback = async (req, res) => {
     return res.status(500).json({ success: false, message: "Lỗi server." });
   }
 };
+
+// ADMIN: GET /api/bookingfeedbacks/all
+exports.getAllBookingFeedbacks = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (req.query.rating) {
+      query.rating = parseInt(req.query.rating);
+    }
+
+    const feedbacks = await BookingFeedback.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "bookingId",
+        select: "customerName customerPhone barberId services bookingDate",
+        populate: [
+          { path: "barberId", select: "userId" }, // Need to populate barberId to get the barber name later if needed
+          { path: "services", select: "name" }
+        ]
+      });
+
+    const total = await BookingFeedback.countDocuments(query);
+
+    return res.status(200).json({
+      success: true,
+      data: feedbacks,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
+
+// ADMIN: DELETE /api/bookingfeedbacks/:id
+exports.deleteBookingFeedback = async (req, res) => {
+  try {
+    const feedback = await BookingFeedback.findByIdAndDelete(req.params.id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy đánh giá" });
+    }
+
+    // Xóa liên kết hoặc cập nhật lại điểm nếu cần. Ở đây đơn giản chỉ cần xóa bình luận
+    return res.status(200).json({ success: true, message: "Xóa đánh giá thành công." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};

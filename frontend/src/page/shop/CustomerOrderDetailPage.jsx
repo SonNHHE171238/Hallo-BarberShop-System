@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { QRCodeSVG } from 'qrcode.react';
+import ProductReviewModal from "@/components/shop/ProductReviewModal";
 
 function OrderDetailContent({ orderCode }) {
   const router = useRouter();
@@ -19,6 +20,10 @@ function OrderDetailContent({ orderCode }) {
   const [showTimeline, setShowTimeline] = useState(false);
   const [payosData, setPayosData] = useState(null);
   const [loadingPayos, setLoadingPayos] = useState(false);
+  
+  const [reviewedProducts, setReviewedProducts] = useState([]);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const fetchOrder = async () => {
     try {
@@ -38,6 +43,23 @@ function OrderDetailContent({ orderCode }) {
       fetchOrder();
     }
   }, [orderCode]);
+
+  const fetchReviewedProducts = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/orders/${orderCode}/reviewed-products`);
+      if (res.data.success) {
+        setReviewedProducts(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (order?.status === 'completed') {
+      fetchReviewedProducts();
+    }
+  }, [order?.status, orderCode]);
 
   // Polling check payment status
   useEffect(() => {
@@ -227,7 +249,6 @@ function OrderDetailContent({ orderCode }) {
 
           {/* Main Content: Two Columns */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
-            {/* Left: Products */}
             <div className="lg:col-span-8 flex flex-col gap-6">
               <div className="glass-panel p-8 rounded-lg">
                 <h2 className="font-headline-md text-headline-md text-primary mb-8 border-b border-outline-variant pb-4">Sản phẩm đã mua</h2>
@@ -243,6 +264,40 @@ function OrderDetailContent({ orderCode }) {
                       <div className="flex-grow">
                         <h3 className="font-headline-sm text-base text-on-surface line-clamp-2">{item.productId?.name || 'Sản phẩm không xác định'}</h3>
                         <p className="text-on-surface-variant text-sm mt-1">Số lượng: {item.quantity}</p>
+                        
+                        {/* Logic hiển thị nút Đánh giá */}
+                        {order.status === 'completed' && item.productId && (
+                          <div className="mt-3">
+                            {reviewedProducts.includes(item.productId._id) ? (
+                               <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-success bg-success/10 px-2 py-1 rounded">
+                                 <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                 Đã đánh giá
+                               </span>
+                            ) : (() => {
+                               const completedLog = order.historyLog?.findLast(log => log.action === 'Đơn hàng giao dịch thành công') || order.historyLog?.[order.historyLog.length - 1];
+                               const completedDate = completedLog ? new Date(completedLog.timestamp) : new Date(order.updatedAt || order.createdAt);
+                               const diffTime = Math.abs(new Date() - completedDate);
+                               const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                               return diffDays > 7 ? (
+                                 <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant bg-surface-variant/20 px-2 py-1 rounded">
+                                   <span className="material-symbols-outlined text-[14px]">history</span>
+                                   Hết hạn đánh giá
+                                 </span>
+                               ) : (
+                                 <button 
+                                   onClick={() => {
+                                     setSelectedProduct(item.productId);
+                                     setIsReviewModalOpen(true);
+                                   }}
+                                   className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-primary border border-primary hover:bg-primary/10 px-3 py-1.5 rounded transition-colors active:scale-95"
+                                 >
+                                   <span className="material-symbols-outlined text-[14px]">reviews</span>
+                                   Đánh giá ({7 - diffDays} ngày)
+                                 </button>
+                               );
+                            })()}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="font-headline-sm text-base text-primary">{formatPrice(item.priceAtPurchase * item.quantity)}</p>
@@ -433,6 +488,15 @@ function OrderDetailContent({ orderCode }) {
       </main>
 
       <Footer />
+      <ProductReviewModal 
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        product={selectedProduct}
+        orderCode={orderCode}
+        onSuccess={(productId) => {
+           setReviewedProducts(prev => [...prev, productId]);
+        }}
+      />
     </div>
   );
 }
