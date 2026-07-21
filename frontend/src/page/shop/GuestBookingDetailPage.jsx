@@ -108,19 +108,48 @@ export default function GuestBookingDetailPage() {
 
   const handlePayment = async (type) => {
     try {
-      const amount = type === "full" ? remaining : (booking.totalPrice / 2);
+      const amountPaid = booking.amountPaid || 0;
+      const remainingVal = Math.max(0, booking.totalPrice - amountPaid);
+      const amount = type === "full" ? remainingVal : (booking.totalPrice / 2);
+      
       setPaymentType(type);
       toast.loading("Đang khởi tạo mã thanh toán...");
-      const paymentRes = await axios.post("http://localhost:5000/api/payments/create", {
-        amount: Math.round(amount),
-        bookingId: id,
-        type: type,
+
+      const serviceName = booking.services?.map(s => s.name).join(", ") || "Dịch vụ";
+      const timeStr = booking.date ? new Date(booking.date).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : (booking.time || "N/A");
+      const dateStr = booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "";
+      
+      const queryParams = new URLSearchParams({
+        id: booking._id,
+        service: serviceName,
+        price: booking.totalPrice || 0,
+        barber: booking.barberName || "Sắp xếp tự động",
+        time: timeStr,
+        dateStr: dateStr,
       });
+      if (phone) {
+        queryParams.append("phone", phone);
+      } else if (booking.customerPhone) {
+        queryParams.append("phone", booking.customerPhone);
+      }
+
+      const successUrl = `${window.location.origin}/booking/success?${queryParams.toString()}&status=PAID`;
+      const cancelUrl = `${window.location.origin}/booking/success?${queryParams.toString()}&payment=cancelled`;
+
+      const paymentRes = await axios.post("http://localhost:5000/api/payment/create-link", {
+        bookingId: id,
+        amount: Math.round(amount),
+        returnUrl: successUrl,
+        cancelUrl: cancelUrl
+      });
+      
       toast.dismiss();
-      setPayosData({ ...paymentRes.data });
+      const resData = paymentRes.data.data || paymentRes.data;
+      setPayosData({ ...resData });
       setShowQR(true);
     } catch (error) {
       toast.dismiss();
+      console.error("Payment creation error:", error);
       toast.error("Lỗi khi tạo mã thanh toán. Vui lòng thử lại.");
     }
   };
