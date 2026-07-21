@@ -124,6 +124,10 @@ export default function BookingPage() {
         dateStr: dateStr
       });
 
+      if (additionalPayload?.phone) {
+        queryParams.append("phone", additionalPayload.phone);
+      }
+
       if (response.paymentLinkData && response.paymentLinkData.checkoutUrl) {
         if (response.noShowCount && response.noShowCount > 0) {
           toast.error(`Yêu cầu đặt cọc: Hệ thống ghi nhận bạn đã không đến ${response.noShowCount} lần trước đó! Đang chuyển hướng thanh toán...`, { duration: 4000 });

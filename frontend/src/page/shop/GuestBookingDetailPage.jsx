@@ -90,6 +90,11 @@ export default function GuestBookingDetailPage() {
               dateStr: dateStr,
               status: "PAID"
             });
+            if (phone) {
+              queryParams.append("phone", phone);
+            } else if (booking.customerPhone) {
+              queryParams.append("phone", booking.customerPhone);
+            }
             
             router.push(`/booking/success?${queryParams.toString()}`);
           }

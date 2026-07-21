@@ -9,6 +9,7 @@ function BookingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("id");
+  const phone = searchParams.get("phone");
   const { user } = useAuth();
   
   const [booking, setBooking] = useState(null);
@@ -208,11 +209,11 @@ function BookingSuccessContent() {
                   </button>
                 ) : (
                   <button 
-                    onClick={() => router.push('/login')}
+                    onClick={() => router.push(phone ? `/lookup/bookings?phone=${phone}` : '/lookup/bookings')}
                     className="border border-outline-variant text-on-surface h-12 rounded-lg font-label-md flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors"
                   >
-                    <span className="material-symbols-outlined text-primary/70">login</span>
-                    Đăng nhập để quản lý
+                    <span className="material-symbols-outlined text-primary/70">receipt_long</span>
+                    Quản lý lịch hẹn
                   </button>
                 )}
                 <button 
