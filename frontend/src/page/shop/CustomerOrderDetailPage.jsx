@@ -23,7 +23,6 @@ function OrderDetailContent({ orderCode }) {
   
   const [reviewedProducts, setReviewedProducts] = useState([]);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const fetchOrder = async () => {
     try {
@@ -139,11 +138,23 @@ function OrderDetailContent({ orderCode }) {
   // Status mapping
   const statusMap = {
     'pending': { label: 'Đơn mới', color: 'bg-primary text-on-primary' },
-    'processing': { label: 'Đang chuẩn bị', color: 'bg-secondary text-on-secondary' },
-    'shipped': { label: 'Đang giao hàng', color: 'bg-tertiary text-on-tertiary' },
-    'completed': { label: 'Hoàn thành', color: 'bg-success text-on-success' },
-    'cancelled': { label: 'Đã hủy', color: 'bg-error text-on-error' }
+    'confirmed': { label: 'Đã xác nhận', color: 'bg-secondary text-on-secondary' },
+    'processing': { label: 'Đang xử lý', color: 'bg-secondary text-on-secondary' },
+    'shipped': { label: 'Đang giao', color: 'bg-tertiary text-on-tertiary' },
+    'completed': { label: 'Đã giao', color: 'bg-success text-on-success' },
+    'cancelled': { label: 'Đã hủy', color: 'bg-error text-on-error' },
   };
+
+  // Calculate review eligibility
+  const completedLog = order?.historyLog?.find(log => log.action === 'Đơn hàng giao dịch thành công') || order?.historyLog?.[order?.historyLog?.length - 1];
+  const completedDate = completedLog ? new Date(completedLog.timestamp) : new Date(order?.updatedAt || order?.createdAt || Date.now());
+  const diffTime = Math.abs(new Date() - completedDate);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const isReviewExpired = diffDays > 7;
+  
+  const eligibleProductsToReview = order?.status === 'completed' && !isReviewExpired
+    ? order.items.filter(item => item.productId && !reviewedProducts.includes(item.productId._id)).map(i => i.productId)
+    : [];
 
   return (
     <div className="bg-background min-h-screen text-on-surface flex flex-col font-body-md overflow-x-hidden selection:bg-primary selection:text-on-primary">
@@ -251,7 +262,18 @@ function OrderDetailContent({ orderCode }) {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
             <div className="lg:col-span-8 flex flex-col gap-6">
               <div className="glass-panel p-8 rounded-lg">
-                <h2 className="font-headline-md text-headline-md text-primary mb-8 border-b border-outline-variant pb-4">Sản phẩm đã mua</h2>
+                <div className="flex justify-between items-end border-b border-outline-variant pb-4 mb-8">
+                  <h2 className="font-headline-md text-headline-md text-primary">Sản phẩm đã mua</h2>
+                  {eligibleProductsToReview.length > 0 && (
+                    <button 
+                      onClick={() => setIsReviewModalOpen(true)}
+                      className="bg-primary text-on-primary px-6 py-2 rounded font-label-md uppercase tracking-widest text-xs hover:bg-primary-fixed-dim transition-colors shadow-md flex items-center gap-2 active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">reviews</span>
+                      Đánh giá ({eligibleProductsToReview.length})
+                    </button>
+                  )}
+                </div>
                 <div className="flex flex-col gap-8">
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex gap-6 items-center">
@@ -273,29 +295,12 @@ function OrderDetailContent({ orderCode }) {
                                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
                                  Đã đánh giá
                                </span>
-                            ) : (() => {
-                               const completedLog = order.historyLog?.findLast(log => log.action === 'Đơn hàng giao dịch thành công') || order.historyLog?.[order.historyLog.length - 1];
-                               const completedDate = completedLog ? new Date(completedLog.timestamp) : new Date(order.updatedAt || order.createdAt);
-                               const diffTime = Math.abs(new Date() - completedDate);
-                               const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                               return diffDays > 7 ? (
-                                 <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant bg-surface-variant/20 px-2 py-1 rounded">
-                                   <span className="material-symbols-outlined text-[14px]">history</span>
-                                   Hết hạn đánh giá
-                                 </span>
-                               ) : (
-                                 <button 
-                                   onClick={() => {
-                                     setSelectedProduct(item.productId);
-                                     setIsReviewModalOpen(true);
-                                   }}
-                                   className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-primary border border-primary hover:bg-primary/10 px-3 py-1.5 rounded transition-colors active:scale-95"
-                                 >
-                                   <span className="material-symbols-outlined text-[14px]">reviews</span>
-                                   Đánh giá ({7 - diffDays} ngày)
-                                 </button>
-                               );
-                            })()}
+                            ) : isReviewExpired ? (
+                               <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant bg-surface-variant/20 px-2 py-1 rounded">
+                                 <span className="material-symbols-outlined text-[14px]">history</span>
+                                 Hết hạn đánh giá
+                               </span>
+                            ) : null}
                           </div>
                         )}
                       </div>
@@ -491,7 +496,7 @@ function OrderDetailContent({ orderCode }) {
       <ProductReviewModal 
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
-        product={selectedProduct}
+        products={eligibleProductsToReview}
         orderCode={orderCode}
         onSuccess={(productId) => {
            setReviewedProducts(prev => [...prev, productId]);

@@ -57,12 +57,26 @@ export default function AdminRosterPage() {
 
       // 3. Select default roster
       if (allRosters.length > 0) {
-        await loadRosterDetails(allRosters[0]._id);
+        const today = new Date();
+        const currentRoster = allRosters.find(r => {
+           const start = new Date(r.weekStartDate);
+           const end = new Date(r.weekEndDate);
+           start.setHours(0,0,0,0);
+           end.setHours(23,59,59,999);
+           return today >= start && today <= end;
+        });
+        
+        if (currentRoster) {
+           await loadRosterDetails(currentRoster._id);
+        } else {
+           await loadRosterDetails(allRosters[0]._id);
+        }
       } else {
         // Tự động tạo Roster ảo cho tuần hiện tại nếu DB trống
         const now = new Date();
         const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        // Cộng thêm 7 ngày để mặc định là tuần kế tiếp
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1) + 7;
         
         const monday = new Date(now);
         monday.setDate(diff);
@@ -462,7 +476,23 @@ export default function AdminRosterPage() {
           </div>
 
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              const now = new Date();
+              const day = now.getDay();
+              const diff = now.getDate() - day + (day === 0 ? -6 : 1) + 7;
+              const monday = new Date(now);
+              monday.setDate(diff);
+              
+              const saturday = new Date(monday);
+              saturday.setDate(monday.getDate() - 2);
+
+              setNewRoster({
+                weekStartDate: monday.toISOString().split("T")[0],
+                registrationDeadline: saturday.toISOString().split("T")[0],
+                closedDays: []
+              });
+              setShowCreateModal(true);
+            }}
             className="px-4 py-2 bg-transparent text-primary border border-primary hover:bg-primary/10 transition-all font-bold uppercase text-xs tracking-widest flex items-center gap-2 rounded-sm"
           >
             <span className="material-symbols-outlined text-[16px]">add_circle</span>
@@ -781,7 +811,7 @@ export default function AdminRosterPage() {
               </div>
 
               <div>
-                <label className="block text-on-surface-variant font-bold uppercase mb-1">Hạn Chót Nhân Viên Đăng Ký (Hạn chót):</label>
+                <label className="block text-on-surface-variant font-bold uppercase mb-1">Hạn Chót Nhân Viên Đăng Ký (Không bắt buộc):</label>
                 <input
                   type="date"
                   className="w-full bg-surface-container-lowest border border-outline-gold rounded px-3 py-2 focus:ring-1 focus:ring-primary focus:outline-none"
