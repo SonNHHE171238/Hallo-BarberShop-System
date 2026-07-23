@@ -174,6 +174,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
       autoAssignBarber = false,
       isAutoAssign = false,
       bookingType,
+      discountType,
+      pointsToUse,
     } = req.body;
 
     const services = reqServices && reqServices.length > 0 ? reqServices : (serviceId ? [serviceId] : []);
@@ -231,6 +233,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
       customerId,
       autoAssignBarber: shouldAutoAssign,
       voucherCode: req.body.voucherCode,
+      discountType,
+      pointsToUse,
     });
 
     let paymentLinkData = null;

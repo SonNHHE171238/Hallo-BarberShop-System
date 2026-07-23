@@ -96,6 +96,15 @@ const bookingSchema = new Schema(
       type: String,
       default: null,
     },
+    discountType: {
+      type: String,
+      enum: ['new_user', 'loyalty_points', 'voucher', 'none'],
+      default: 'none'
+    },
+    pointsUsed: {
+      type: Number,
+      default: 0,
+    },
     discountAmount: {
       type: Number,
       default: 0,

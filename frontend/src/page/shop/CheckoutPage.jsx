@@ -37,7 +37,9 @@ function CheckoutPageContent() {
     paymentMethod: "bank_transfer"
   });
 
-  // Voucher State
+  // Voucher & Discount State
+  const [discountType, setDiscountType] = useState('none');
+  const [pointsToUseInput, setPointsToUseInput] = useState(0);
   const [voucherCodeInput, setVoucherCodeInput] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -75,6 +77,26 @@ function CheckoutPageContent() {
   const subTotal = cartItems.reduce((total, item) => total + (item.productId.price * item.quantity), 0);
   const totalAmount = Math.max(0, subTotal - discountAmount);
 
+  React.useEffect(() => {
+    if (discountType === 'loyalty_points' && user) {
+      let maxPointsByBill = Math.floor(subTotal / 2 / 1000); 
+      let maxPointsAllowed = 50; 
+      let pointsWillUse = Math.min(user.loyaltyPoints, maxPointsByBill, maxPointsAllowed);
+      
+      if (subTotal < 50000 || pointsWillUse <= 0) {
+        setPointsToUseInput(0);
+        setDiscountAmount(0);
+      } else {
+        setPointsToUseInput(pointsWillUse);
+        setDiscountAmount(pointsWillUse * 1000);
+      }
+    } else if (discountType === 'new_user') {
+      let dAmount = subTotal * 0.5;
+      if (dAmount > 50000) dAmount = 50000;
+      setDiscountAmount(dAmount);
+    }
+  }, [subTotal, discountType, user]);
+
   const handleApplyVoucher = async () => {
     if (!voucherCodeInput.trim()) return;
     setApplyingVoucher(true);
@@ -103,6 +125,69 @@ function CheckoutPageContent() {
     setVoucherError("");
   };
 
+  const handleApplyNewUserDiscount = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để sử dụng ưu đãi!");
+      return;
+    }
+    if (user.loyaltyPoints > 0) {
+      toast.error("Ưu đãi Khách mới chỉ dành cho khách hàng mới (chưa có điểm thưởng)!");
+      return;
+    }
+    setApplyingVoucher(true);
+    setVoucherError("");
+    try {
+      // Simulate checking from backend, or we can just apply it and let backend validate when checkout
+      // But it's better to hit a check endpoint. Since we don't have one, we just calculate it locally 
+      // and backend will double check.
+      let dAmount = subTotal * 0.5;
+      if (dAmount > 50000) dAmount = 50000;
+      setDiscountAmount(dAmount);
+      setDiscountType('new_user');
+      setVoucherError("Đã áp dụng ưu đãi Khách mới"); // Using error state to show success msg for now, or just alert
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
+  const handleApplyLoyaltyPoints = () => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để sử dụng điểm thưởng!");
+      return;
+    }
+    if (user.loyaltyPoints <= 0) {
+      alert("Bạn chưa có điểm thưởng nào.");
+      return;
+    }
+    if (subTotal < 50000) {
+      alert("Đơn hàng phải tối thiểu 50,000đ để áp dụng tiêu điểm.");
+      return;
+    }
+
+    let maxPointsByBill = Math.floor(subTotal / 2 / 1000); 
+    let maxPointsAllowed = 50; 
+    let pointsWillUse = Math.min(user.loyaltyPoints, maxPointsByBill, maxPointsAllowed);
+
+    if (pointsWillUse <= 0) {
+      alert("Không thể áp dụng điểm thưởng cho đơn hàng này.");
+      return;
+    }
+
+    let dAmount = pointsWillUse * 1000;
+
+    setPointsToUseInput(pointsWillUse);
+    setDiscountAmount(dAmount);
+    setDiscountType('loyalty_points');
+    setVoucherError(`Đã dùng ${pointsWillUse} điểm thưởng`);
+  };
+
+  const clearDiscount = () => {
+    setDiscountType('none');
+    setDiscountAmount(0);
+    setPointsToUseInput(0);
+    removeVoucher();
+  };
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -129,7 +214,8 @@ function CheckoutPageContent() {
         shippingAddress: formData.address,
         paymentMethod: formData.paymentMethod === 'bank_transfer' ? 'payos' : 'cod',
         voucherCode: appliedVoucher,
-        discountAmount: discountAmount,
+        discountType: discountType,
+        pointsToUse: pointsToUseInput,
         returnUrl: "http://localhost:3000/shop/checkout/success",
         cancelUrl: "http://localhost:3000/shop/checkout"
       }, { withCredentials: true });
@@ -308,25 +394,50 @@ function CheckoutPageContent() {
               {/* Totals */}
               <div className="space-y-3 pt-6 border-t border-outline-variant">
 
-                {/* Voucher input */}
-                <div className="pb-4 mb-4 border-b border-outline-variant">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Mã giảm giá"
-                      value={voucherCodeInput}
-                      onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
-                      disabled={appliedVoucher || applyingVoucher}
-                      className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm uppercase focus:border-primary outline-none disabled:opacity-50"
-                    />
-                    {appliedVoucher ? (
-                      <button onClick={removeVoucher} className="px-4 bg-error text-white font-bold rounded text-sm hover:bg-error/90">Hủy</button>
-                    ) : (
-                      <button onClick={handleApplyVoucher} disabled={applyingVoucher || !voucherCodeInput} className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary disabled:opacity-50">Áp dụng</button>
+                {/* Discount Section */}
+                <div className="pb-4 mb-4 border-b border-outline-variant space-y-4">
+                  <h3 className="font-headline-sm text-sm uppercase font-bold text-on-surface">Ưu đãi của bạn</h3>
+                  
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="discount" checked={discountType === 'none'} onChange={clearDiscount} className="text-primary focus:ring-primary" />
+                      <span className="text-sm">Không dùng ưu đãi</span>
+                    </label>
+                    {(!user || user.loyaltyPoints === 0) && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="discount" checked={discountType === 'new_user'} onChange={handleApplyNewUserDiscount} className="text-primary focus:ring-primary" disabled={!user} />
+                        <span className="text-sm">Khách mới (Giảm 50% tối đa 50k) {!user && <span className="text-error text-[10px] ml-1">(Chỉ dành cho tài khoản mới)</span>}</span>
+                      </label>
                     )}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="discount" checked={discountType === 'loyalty_points'} onChange={handleApplyLoyaltyPoints} className="text-primary focus:ring-primary" disabled={!user || user.loyaltyPoints <= 0} />
+                      <span className="text-sm">Dùng điểm thưởng (Hiện đang có {user?.loyaltyPoints || 0} điểm) {!user && <span className="text-error text-[10px] ml-1">(Chỉ dành cho thành viên)</span>}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="discount" checked={discountType === 'voucher'} onChange={() => setDiscountType('voucher')} className="text-primary focus:ring-primary" />
+                      <span className="text-sm">Mã giảm giá</span>
+                    </label>
                   </div>
-                  {voucherError && <p className="text-error text-xs mt-1">{voucherError}</p>}
-                  {appliedVoucher && <p className="text-success text-xs mt-1">Đã áp dụng mã {appliedVoucher}</p>}
+
+                  {discountType === 'voucher' && (
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="text"
+                        placeholder="Mã giảm giá"
+                        value={voucherCodeInput}
+                        onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                        disabled={appliedVoucher || applyingVoucher}
+                        className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm uppercase focus:border-primary outline-none disabled:opacity-50"
+                      />
+                      {appliedVoucher ? (
+                        <button onClick={removeVoucher} className="px-4 bg-error text-white font-bold rounded text-sm hover:bg-error/90">Hủy</button>
+                      ) : (
+                        <button onClick={handleApplyVoucher} disabled={applyingVoucher || !voucherCodeInput} className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary disabled:opacity-50">Áp dụng</button>
+                      )}
+                    </div>
+                  )}
+                  {voucherError && <p className={`text-xs mt-1 ${voucherError.includes('Đã') ? 'text-success' : 'text-error'}`}>{voucherError}</p>}
+                  {appliedVoucher && discountType === 'voucher' && <p className="text-success text-xs mt-1">Đã áp dụng mã {appliedVoucher}</p>}
                 </div>
 
                 <div className="flex justify-between text-on-surface-variant">

@@ -186,9 +186,29 @@ export default function BookingDetailPage({ id }) {
             </div>
             
             {/* Total Divider */}
-            <div className="border-t border-outline-variant/30 pt-4 flex justify-between items-end">
-              <p className="font-headline-sm text-headline-sm text-on-surface">Tổng Tiền</p>
-              <p className="font-headline-md text-headline-md text-primary font-bold">{amountStr}</p>
+            <div className="border-t border-outline-variant/30 pt-4 flex flex-col gap-2">
+              <div className="flex justify-between items-end">
+                <p className="font-body-md text-on-surface-variant">Tạm tính</p>
+                <p className="font-body-md text-on-surface">
+                  {((booking.totalPrice || 0) + (booking.discountAmount || 0)).toLocaleString('vi-VN')} ₫
+                </p>
+              </div>
+              
+              {booking.discountAmount > 0 && (
+                <div className="flex justify-between items-end text-success">
+                  <p className="font-body-md">
+                    Giảm giá {booking.discountType === 'new_user' ? '(Khách mới)' : booking.discountType === 'loyalty_points' ? '(Điểm thưởng)' : booking.voucherCode ? `(${booking.voucherCode})` : ''}
+                  </p>
+                  <p className="font-body-md">
+                    -{booking.discountAmount.toLocaleString('vi-VN')} ₫
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex justify-between items-end mt-2">
+                <p className="font-headline-sm text-headline-sm text-on-surface">Tổng Tiền</p>
+                <p className="font-headline-md text-headline-md text-primary font-bold">{amountStr}</p>
+              </div>
             </div>
           </div>
           

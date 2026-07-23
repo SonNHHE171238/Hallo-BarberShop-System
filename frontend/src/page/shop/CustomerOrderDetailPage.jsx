@@ -322,7 +322,9 @@ function OrderDetailContent({ orderCode }) {
                   </div>
                   {discountAmount > 0 && (
                     <div className="flex justify-between items-center text-success">
-                      <span>Giảm giá</span>
+                      <span>
+                        Giảm giá {order.discountType === 'new_user' ? '(Khách mới)' : order.discountType === 'loyalty_points' ? '(Điểm thưởng)' : order.voucherCode ? `(${order.voucherCode})` : ''}
+                      </span>
                       <span className="font-label-md text-label-md">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}

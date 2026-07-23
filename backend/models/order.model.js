@@ -52,6 +52,15 @@ const orderSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    discountType: {
+      type: String,
+      enum: ['new_user', 'loyalty_points', 'voucher', 'none'],
+      default: 'none'
+    },
+    pointsUsed: {
+      type: Number,
+      default: 0,
+    },
     voucherLockId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'VoucherLock',
