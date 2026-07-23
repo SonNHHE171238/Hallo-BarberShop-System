@@ -32,6 +32,8 @@ function BookingPageContent() {
   const [payosData, setPayosData] = useState(null);
   
   // Voucher State
+  const [discountType, setDiscountType] = useState('none');
+  const [pointsToUseInput, setPointsToUseInput] = useState(0);
   const [voucherCodeInput, setVoucherCodeInput] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -105,6 +107,8 @@ function BookingPageContent() {
         timeSlot: selectedTime, 
         durationMinutes: selectedServices.reduce((total, s) => total + (s.durationMinutes || s.duration || 30), 0),
         voucherCode: appliedVoucher,
+        discountType: discountType,
+        pointsToUse: pointsToUseInput,
         discountAmount: discountAmount,
         ...additionalPayload
       };
@@ -234,6 +238,11 @@ function BookingPageContent() {
                 onConfirm={handleConfirm}
                 isLoading={isLoading}
                 isGuest={!user}
+                user={user}
+                discountType={discountType}
+                setDiscountType={setDiscountType}
+                pointsToUseInput={pointsToUseInput}
+                setPointsToUseInput={setPointsToUseInput}
                 voucherCodeInput={voucherCodeInput}
                 setVoucherCodeInput={setVoucherCodeInput}
                 appliedVoucher={appliedVoucher}

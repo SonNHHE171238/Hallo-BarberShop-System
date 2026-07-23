@@ -14,7 +14,7 @@ const payos = new PayOS({
 // Tạo đơn hàng mới
 exports.createOrder = async (req, res, next) => {
   try {
-    const { items, customerName, customerPhone, shippingAddress, paymentMethod, voucherCode } = req.body;
+    const { items, customerName, customerPhone, shippingAddress, paymentMethod, voucherCode, discountType = 'none', pointsToUse = 0 } = req.body;
     const userId = req.userId || null; // Hỗ trợ cả guest
 
     if (!items || items.length === 0) {
@@ -49,12 +49,19 @@ exports.createOrder = async (req, res, next) => {
     // Generate unique order code (Number) for PayOS
     const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
 
-    // Process Voucher Lock
+    // Process Voucher & Discount
     let discountAmount = 0;
     let voucherLockId = null;
     let appliedVoucherCode = null;
+    let pointsUsed = 0;
+    let appliedDiscountType = 'none';
 
-    if (voucherCode) {
+    let actualDiscountType = discountType;
+    if (voucherCode && actualDiscountType === 'none') {
+      actualDiscountType = 'voucher'; // fallback for backward compatibility
+    }
+
+    if (actualDiscountType === 'voucher' && voucherCode) {
       try {
         const productIds = orderItems.map(i => i.productId);
         const lockInfo = await voucherController.validateAndLockVoucher(voucherCode, totalAmount, userId, customerPhone, productIds);
@@ -62,9 +69,30 @@ exports.createOrder = async (req, res, next) => {
           discountAmount = lockInfo.discountAmount;
           voucherLockId = lockInfo.lockId;
           appliedVoucherCode = voucherCode.toUpperCase();
+          appliedDiscountType = 'voucher';
         }
       } catch (err) {
         return res.status(400).json({ success: false, message: 'Lỗi mã giảm giá: ' + err.message });
+      }
+    } else if (['new_user', 'loyalty_points'].includes(actualDiscountType)) {
+      const DiscountService = require('../services/discount.service');
+      try {
+        const discountResult = await DiscountService.calculateDiscount({
+          userId: userId,
+          totalAmount: totalAmount,
+          discountType: actualDiscountType,
+          pointsToUse,
+        });
+        discountAmount = discountResult.discountAmount;
+        pointsUsed = discountResult.pointsUsed;
+        appliedDiscountType = discountResult.discountType;
+  
+        // Deduct points immediately
+        if (appliedDiscountType === 'loyalty_points' && pointsUsed > 0) {
+          await DiscountService.deductPoints(userId, pointsUsed);
+        }
+      } catch (err) {
+        return res.status(400).json({ success: false, message: err.message });
       }
     }
 
@@ -86,7 +114,9 @@ exports.createOrder = async (req, res, next) => {
       }],
       voucherCode: appliedVoucherCode,
       discountAmount,
-      voucherLockId
+      voucherLockId,
+      discountType: appliedDiscountType,
+      pointsUsed,
     });
 
     await newOrder.save();
@@ -400,6 +430,8 @@ exports.updateOrderStatus = async (req, res, next) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
 
+    const oldStatus = order.status;
+
     // Chỉ log khi thực sự có thay đổi trạng thái
     if (order.status !== status) {
       const actionLabels = {
@@ -443,6 +475,20 @@ exports.updateOrderStatus = async (req, res, next) => {
           await voucherController.releaseVoucherLock(order.voucherLockId);
         } catch (err) {
           console.error("Failed to release voucher lock for order:", err);
+        }
+      }
+
+      if (order.userId) {
+        const DiscountService = require('../services/discount.service');
+        try {
+          if (status === 'completed' && oldStatus !== 'completed') {
+            await DiscountService.addPointsForCompletion(order.userId);
+          } else if (status === 'cancelled' && oldStatus !== 'cancelled') {
+            const wasCompleted = (oldStatus === 'completed');
+            await DiscountService.revertPoints(order.userId, order.pointsUsed || 0, wasCompleted);
+          }
+        } catch (pointError) {
+          console.error("Error updating points for order:", pointError);
         }
       }
     }

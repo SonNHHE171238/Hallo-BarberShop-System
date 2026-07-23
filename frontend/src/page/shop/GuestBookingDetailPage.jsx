@@ -418,14 +418,38 @@ export default function GuestBookingDetailPage() {
                 </div>
 
                 <div className="shrink-0 border-t border-outline-variant/50 pt-6 mt-auto flex flex-col gap-4">
-                  <div className="flex justify-between items-end bg-surface-container p-6 rounded-xl border border-outline-variant shadow-inner">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Dịch Vụ</span>
-                      <span className="font-body-md text-xs text-on-surface-variant opacity-70">Đã bao gồm VAT</span>
+                  <div className="flex flex-col gap-2 bg-surface-container p-6 rounded-xl border border-outline-variant shadow-inner">
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Dịch Vụ</span>
+                      </div>
+                      <span className="font-display-md text-xl md:text-2xl font-bold text-on-surface tracking-tighter">
+                        {((booking.totalPrice || 0) + (booking.discountAmount || 0)).toLocaleString("vi-VN")} <span className="text-lg font-normal">đ</span>
+                      </span>
                     </div>
-                    <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
-                      {(booking.totalPrice || 0).toLocaleString("vi-VN")} <span className="text-xl text-primary/70 font-normal">đ</span>
-                    </span>
+
+                    {booking.discountAmount > 0 && (
+                      <div className="flex justify-between items-end text-success">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-label-md text-[11px] font-bold uppercase tracking-widest">
+                            Giảm giá {booking.discountType === 'new_user' ? '(Khách mới)' : booking.discountType === 'loyalty_points' ? '(Điểm thưởng)' : booking.voucherCode ? `(${booking.voucherCode})` : ''}
+                          </span>
+                        </div>
+                        <span className="font-display-md text-xl md:text-2xl font-bold tracking-tighter">
+                          -{(booking.discountAmount || 0).toLocaleString("vi-VN")} <span className="text-lg font-normal">đ</span>
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-end border-t border-outline-variant/30 pt-4 mt-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Cộng</span>
+                        <span className="font-body-md text-xs text-on-surface-variant opacity-70">Đã bao gồm VAT</span>
+                      </div>
+                      <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
+                        {(booking.totalPrice || 0).toLocaleString("vi-VN")} <span className="text-xl text-primary/70 font-normal">đ</span>
+                      </span>
+                    </div>
                   </div>
 
                   {!isCancelledOrNoShow && (

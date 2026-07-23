@@ -23,6 +23,8 @@ exports.processCreateBooking = async ({
   customerEmail,
   customerPhone,
   voucherCode,
+  discountType = 'none',
+  pointsToUse = 0,
 }) => {
   // Normalize Date to prevent race conditions
   const requestedDateTime = new Date(bookingDate);
@@ -182,12 +184,18 @@ exports.processCreateBooking = async ({
     throw error;
   }
 
-  // Voucher Validation and Lock
+  // Voucher & Discount Validation
   let discountAmount = 0;
   let voucherLockId = null;
   let appliedVoucherCode = null;
+  let pointsUsed = 0;
+  let appliedDiscountType = 'none';
 
-  if (voucherCode) {
+  if (voucherCode && discountType === 'none') {
+    discountType = 'voucher'; // fallback for backward compatibility
+  }
+
+  if (discountType === 'voucher' && voucherCode) {
     try {
       const lockInfo = await voucherController.validateAndLockVoucher(
         voucherCode,
@@ -201,9 +209,32 @@ exports.processCreateBooking = async ({
         discountAmount = lockInfo.discountAmount;
         voucherLockId = lockInfo.lockId;
         appliedVoucherCode = voucherCode.toUpperCase();
+        appliedDiscountType = 'voucher';
       }
     } catch (err) {
       const error = new Error('Lỗi mã giảm giá: ' + err.message);
+      error.statusCode = 400;
+      throw error;
+    }
+  } else if (['new_user', 'loyalty_points'].includes(discountType)) {
+    const DiscountService = require('./discount.service');
+    try {
+      const discountResult = await DiscountService.calculateDiscount({
+        userId: customerId,
+        totalAmount: totalPrice,
+        discountType,
+        pointsToUse,
+      });
+      discountAmount = discountResult.discountAmount;
+      pointsUsed = discountResult.pointsUsed;
+      appliedDiscountType = discountResult.discountType;
+
+      // Deduct points immediately
+      if (appliedDiscountType === 'loyalty_points' && pointsUsed > 0) {
+        await DiscountService.deductPoints(customerId, pointsUsed);
+      }
+    } catch (err) {
+      const error = new Error(err.message);
       error.statusCode = 400;
       throw error;
     }
@@ -227,6 +258,8 @@ exports.processCreateBooking = async ({
     voucherCode: appliedVoucherCode,
     discountAmount,
     voucherLockId,
+    discountType: appliedDiscountType,
+    pointsUsed,
   };
 
   // The default status from the schema is "pending".
@@ -440,6 +473,8 @@ exports.processCreateSinglePageBooking = async (data) => {
     customerId,
     autoAssignBarber,
     voucherCode,
+    discountType,
+    pointsToUse,
   } = data;
 
   const foundServices = await Service.find({ _id: { $in: services } });
@@ -478,6 +513,8 @@ exports.processCreateSinglePageBooking = async (data) => {
     customerEmail,
     customerPhone,
     voucherCode,
+    discountType,
+    pointsToUse,
   });
 
   return { populatedBooking, shouldAutoAssign, noShowCount };

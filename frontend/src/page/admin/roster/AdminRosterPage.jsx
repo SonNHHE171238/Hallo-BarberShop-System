@@ -127,7 +127,7 @@ export default function AdminRosterPage() {
   };
 
   const handleDateFilter = async (e) => {
-    const val = e.target.value;
+    const val = e?.target?.value || e;
     if (!val) return;
     const filterDate = new Date(val);
     filterDate.setHours(12, 0, 0, 0); // Tránh lệch múi giờ
@@ -174,32 +174,73 @@ export default function AdminRosterPage() {
     }
   };
 
+  const handlePrevWeek = () => {
+    if (!selectedRoster) return;
+    const d = new Date(selectedRoster.weekStartDate);
+    d.setDate(d.getDate() - 7);
+    handleDateFilter(getLocalDateString(d));
+  };
+
+  const handleNextWeek = () => {
+    if (!selectedRoster) return;
+    const d = new Date(selectedRoster.weekStartDate);
+    d.setDate(d.getDate() + 7);
+    handleDateFilter(getLocalDateString(d));
+  };
+
   // Helper to format date strings
   const formatDate = (dateStr, options = { day: "2-digit", month: "2-digit" }) => {
     if (!dateStr) return "";
     return new Date(dateStr).toLocaleDateString("vi-VN", options);
   };
 
+  const getLocalDateString = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatWeekRange = (startStr, endStr) => {
+    if (!startStr || !endStr) return "";
+    const startDate = new Date(startStr);
+    const endDate = new Date(endStr);
+    const sDay = String(startDate.getDate()).padStart(2, '0');
+    const sMonth = String(startDate.getMonth() + 1).padStart(2, '0');
+    const eDay = String(endDate.getDate()).padStart(2, '0');
+    const eMonth = String(endDate.getMonth() + 1).padStart(2, '0');
+    const eYear = endDate.getFullYear();
+    return `${sDay}/${sMonth} - ${eDay}/${eMonth}/${eYear}`;
+  };
+
   const getWeekDays = () => {
     if (!selectedRoster) return [];
     const days = [];
+    
+    // Always start from Monday
     const start = new Date(selectedRoster.weekStartDate);
-    const dayNames = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật"];
+    const currentDayOfWeek = start.getDay();
+    const diff = start.getDate() - currentDayOfWeek + (currentDayOfWeek === 0 ? -6 : 1);
+    start.setDate(diff);
+    start.setHours(0, 0, 0, 0);
+
+    const dayNames = ["Chủ Nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
 
     for (let i = 0; i < 7; i++) {
       const current = new Date(start);
       current.setDate(start.getDate() + i);
-      const dateStr = current.toISOString().split("T")[0];
+      const dateStr = getLocalDateString(current);
+      
       const isClosed = selectedRoster.closedDays?.some(
-        cd => new Date(cd.date).toISOString().split("T")[0] === dateStr
+        cd => getLocalDateString(new Date(cd.date)) === dateStr
       );
       const closedReason = selectedRoster.closedDays?.find(
-        cd => new Date(cd.date).toISOString().split("T")[0] === dateStr
+        cd => getLocalDateString(new Date(cd.date)) === dateStr
       )?.reason;
 
       days.push({
         dateStr,
-        label: dayNames[i],
+        label: dayNames[current.getDay()],
         dateNum: current.getDate().toString().padStart(2, "0"),
         isClosed,
         closedReason
@@ -218,7 +259,7 @@ export default function AdminRosterPage() {
       if (role !== "staff") return false;
 
       const dayShift = reg.registeredShifts?.find(s => {
-        const dStr = new Date(s.date).toISOString().split('T')[0];
+        const dStr = getLocalDateString(new Date(s.date));
         return dStr === dateStr;
       });
       return dayShift && dayShift.shifts?.includes(shiftType);
@@ -261,11 +302,17 @@ export default function AdminRosterPage() {
         updatedShifts = JSON.parse(JSON.stringify(userReg.registeredShifts || []));
       }
 
-      let dayEntry = updatedShifts.find(s => new Date(s.date).toISOString().split("T")[0] === dateStr);
+      let dayEntry = updatedShifts.find(s => getLocalDateString(new Date(s.date)) === dateStr);
 
       if (!dayEntry) {
-        dayEntry = { date: dateStr, shifts: [] };
-        updatedShifts.push(dayEntry);
+        // Find existing index by strictly comparing dateStr
+        const existingIdx = updatedShifts.findIndex(s => getLocalDateString(new Date(s.date)) === dateStr);
+        if (existingIdx !== -1) {
+            dayEntry = updatedShifts[existingIdx];
+        } else {
+            dayEntry = { date: dateStr, shifts: [] };
+            updatedShifts.push(dayEntry);
+        }
       }
 
       if (shouldAdd) {
@@ -389,7 +436,7 @@ export default function AdminRosterPage() {
     staffUsers.forEach(staff => {
       weekDays.forEach(day => {
         const assignedShifts = registrations.find(r => (r.userId?._id || r.userId) === staff._id)
-          ?.registeredShifts?.find(s => new Date(s.date).toISOString().split("T")[0] === day.dateStr)
+          ?.registeredShifts?.find(s => getLocalDateString(new Date(s.date)) === day.dateStr)
           ?.shifts || [];
         
         if (assignedShifts.includes("morning") && assignedShifts.includes("afternoon")) {
@@ -464,15 +511,22 @@ export default function AdminRosterPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {/* Date Picker Filter */}
+          {/* Date Picker Filter with Arrows */}
           <div className="flex items-center gap-2 bg-surface-container-high px-4 py-2 border border-outline-gold rounded-sm">
+            <button onClick={handlePrevWeek} className="hover:text-primary transition-colors flex items-center">
+              <span className="material-symbols-outlined text-sm">arrow_back_ios</span>
+            </button>
             <span className="material-symbols-outlined text-primary text-sm">calendar_month</span>
             <input
               type="date"
               className="bg-transparent text-sm focus:outline-none border-none text-on-surface cursor-pointer [color-scheme:dark]"
               onChange={handleDateFilter}
+              value={selectedRoster ? getLocalDateString(new Date(selectedRoster.weekStartDate)) : ""}
               title="Chọn một ngày bất kỳ để tìm lịch tuần tương ứng"
             />
+            <button onClick={handleNextWeek} className="hover:text-primary transition-colors flex items-center">
+              <span className="material-symbols-outlined text-sm">arrow_forward_ios</span>
+            </button>
           </div>
 
           <button
@@ -672,33 +726,33 @@ export default function AdminRosterPage() {
             <div>
               <h3 className="font-headline-sm text-primary mb-1">Nhân Sự & Đăng Ký</h3>
               <p className="text-xs text-on-surface-variant font-label-md">
-                Tổng số Staff: {staffUsers.length} | Chỉ số ca làm tuần này
+                Tổng số Staff: {staffUsers.length} | Chỉ số ca làm tuần {formatWeekRange(selectedRoster?.weekStartDate, selectedRoster?.weekEndDate)}
               </p>
             </div>
 
             <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
               {staffUsers.map((staff, idx) => {
-                                const shiftCount = getStaffShiftsCount(staff._id);
-                                const reg = registrations.find(r => (r.userId?._id || r.userId) === staff._id);
-                                
-                                // Determine registration status colors
-                                let statusBadge = "Chưa đăng ký";
-                                let statusColor = "text-on-surface-variant bg-surface-container-high";
-                                if (reg) {
-                                  if (reg.status === "adjusted") {
-                                    statusBadge = "Admin chỉnh sửa";
-                                    statusColor = "text-yellow-400 bg-yellow-500/10 border border-yellow-500/20";
-                                  } else if (reg.status === "approved" || selectedRoster.status === "published") {
-                                    statusBadge = "Đã duyệt";
-                                    statusColor = "text-green-400 bg-green-500/10 border border-green-500/20";
-                                  } else {
-                                    statusBadge = "Đã đăng ký nháp";
-                                    statusColor = "text-primary bg-primary/10 border border-primary/20";
-                                  }
-                                }
+                const shiftCount = getStaffShiftsCount(staff._id);
+                const reg = registrations.find(r => (r.userId?._id || r.userId) === staff._id);
                 
-                                return (
-                                  <div key={staff._id || staff.id || idx} className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-gold rounded hover:border-primary/40 transition-all group">
+                // Determine registration status colors
+                let statusBadge = "Chưa đăng ký";
+                let statusColor = "text-on-surface-variant bg-surface-container-high";
+                if (reg) {
+                  if (reg.status === "adjusted") {
+                    statusBadge = "Admin chỉnh sửa";
+                    statusColor = "text-yellow-400 bg-yellow-500/10 border border-yellow-500/20";
+                  } else if (reg.status === "approved" || selectedRoster.status === "published") {
+                    statusBadge = "Đã duyệt";
+                    statusColor = "text-green-400 bg-green-500/10 border border-green-500/20";
+                  } else {
+                    statusBadge = "Đã đăng ký nháp";
+                    statusColor = "text-primary bg-primary/10 border border-primary/20";
+                  }
+                }
+
+                return (
+                  <div key={staff._id || staff.id || idx} className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-gold rounded hover:border-primary/40 transition-all group">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-primary/20 text-primary flex items-center justify-center rounded-full font-bold">
                         {staff.name.charAt(0)}
@@ -712,7 +766,7 @@ export default function AdminRosterPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-primary">{shiftCount} Ca</p>
-                      <p className="text-[9px] text-on-surface-variant font-label-md">Tuần này</p>
+                      <p className="text-[9px] text-on-surface-variant font-label-md">Tuần {formatWeekRange(selectedRoster?.weekStartDate, selectedRoster?.weekEndDate)}</p>
                     </div>
                   </div>
                 );

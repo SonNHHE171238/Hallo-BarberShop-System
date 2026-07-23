@@ -215,13 +215,29 @@ exports.getCurrentRoster = async (req, res) => {
 
 exports.getCurrentPublishedRoster = async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const { date } = req.query;
+    let targetStartOfDay = new Date();
+    if (date) {
+      targetStartOfDay = new Date(date);
+    }
+    
+    // Calculate Monday of that week
+    const currentDayOfWeek = targetStartOfDay.getDay();
+    const diff = targetStartOfDay.getDate() - currentDayOfWeek + (currentDayOfWeek === 0 ? -6 : 1);
+    targetStartOfDay.setDate(diff);
+    targetStartOfDay.setHours(0, 0, 0, 0);
 
-    // Find the published roster for the current week
+    // Calculate Sunday of that week
+    let targetEndOfDay = new Date(targetStartOfDay);
+    targetEndOfDay.setDate(targetStartOfDay.getDate() + 6);
+    targetEndOfDay.setHours(23, 59, 59, 999);
+
+    // Find the published roster that overlaps with the target WEEK (Monday-Sunday)
+    // Proper range intersection: rosterStart <= targetEnd AND rosterEnd >= targetStart
     const roster = await WeeklyRoster.findOne({
       status: 'published',
-      weekEndDate: { $gte: today }
+      weekStartDate: { $lte: targetEndOfDay },
+      weekEndDate: { $gte: targetStartOfDay }
     }).sort({ weekStartDate: 1 });
 
     if (!roster) {

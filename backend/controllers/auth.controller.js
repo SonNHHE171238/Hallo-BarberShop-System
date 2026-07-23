@@ -202,6 +202,7 @@ exports.getMe = async (req, res, next) => {
         role: user.role,
         avatarUrl: user.avatarUrl || '',
         status: user.status,
+        loyaltyPoints: user.loyaltyPoints || 0,
       },
     });
   } catch (error) {
@@ -235,6 +236,7 @@ exports.googleLogin = async (req, res, next) => {
         role: user.role,
         avatarUrl: user.avatarUrl,
         isVerified: user.isVerified,
+        loyaltyPoints: user.loyaltyPoints || 0,
       },
     });
   } catch (error) {
