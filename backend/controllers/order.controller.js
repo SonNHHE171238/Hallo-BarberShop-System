@@ -160,6 +160,36 @@ exports.trackOrderByCode = async (req, res, next) => {
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng với mã này' });
     }
+
+    // Sync with PayOS for polling
+    if (order.paymentStatus === 'pending' && order.orderCode) {
+      try {
+        const { PayOS } = require("@payos/node");
+        const payos = new PayOS({
+          clientId: process.env.PAYOS_CLIENT_ID,
+          apiKey: process.env.PAYOS_API_KEY,
+          checksumKey: process.env.PAYOS_CHECKSUM_KEY
+        });
+        const paymentInfo = await payos.getPaymentLinkInformation(order.orderCode);
+        if (paymentInfo && paymentInfo.status === 'PAID') {
+          order.paymentStatus = 'paid';
+          order.status = 'processing';
+          order.historyLog.push({
+            action: 'Thanh toán thành công',
+            actor: 'System',
+            note: 'Cập nhật thanh toán tự động qua API poll.'
+          });
+          if (order.voucherLockId) {
+            const voucherController = require('./voucher.controller');
+            await voucherController.redeemVoucherLock(order.voucherLockId);
+          }
+          await order.save();
+        }
+      } catch (payosErr) {
+        // Bỏ qua lỗi nếu mã QR chưa được khởi tạo hoặc đã hết hạn
+      }
+    }
+
     res.json({ success: true, data: order });
   } catch (error) {
     next(error);

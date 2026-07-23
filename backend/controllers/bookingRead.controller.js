@@ -362,8 +362,32 @@ exports.getBookingDetail = async (req, res) => {
 
 exports.getBookingPaymentStatus = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id).select("paymentStatus status");
+    const booking = await Booking.findById(req.params.id).select("paymentStatus status orderCode amountPaid totalPrice voucherLockId");
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    // Sync with PayOS for polling
+    if ((booking.paymentStatus === 'pending' || booking.paymentStatus === 'partial_paid') && booking.orderCode) {
+      try {
+        const { PayOS } = require("@payos/node");
+        const payos = new PayOS({
+          clientId: process.env.PAYOS_CLIENT_ID,
+          apiKey: process.env.PAYOS_API_KEY,
+          checksumKey: process.env.PAYOS_CHECKSUM_KEY
+        });
+        const paymentInfo = await payos.getPaymentLinkInformation(booking.orderCode);
+        if (paymentInfo && paymentInfo.status === 'PAID') {
+          booking.paymentStatus = 'paid';
+          if (booking.voucherLockId) {
+            const voucherController = require('./voucher.controller');
+            await voucherController.redeemVoucherLock(booking.voucherLockId);
+          }
+          await booking.save();
+        }
+      } catch (payosErr) {
+        // Bỏ qua lỗi nếu mã QR chưa được khởi tạo hoặc đã hết hạn
+      }
+    }
+
     res.json({ success: true, data: booking });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
