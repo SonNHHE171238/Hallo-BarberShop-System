@@ -6,6 +6,6 @@ export const metadata = {
 };
 
 export default async function Page({ params }) {
-  const { slug } = await params;
-  return <BlogDetailPage slug={slug} />;
+  const resolvedParams = await params;
+  return <BlogDetailPage slug={resolvedParams?.slug} />;
 }

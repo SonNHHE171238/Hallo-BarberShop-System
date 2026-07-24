@@ -1,8 +1,10 @@
 import React from "react";
 import Link from "next/link";
 
-export default function BlogDetailHeader({ title, author, createdAt }) {
-  const dateObj = createdAt ? new Date(createdAt) : new Date();
+export default function BlogDetailHeader({ blog }) {
+  if (!blog) return null;
+
+  const dateObj = new Date(blog.createdAt);
   const formattedDate = `${dateObj.getDate()} Tháng ${dateObj.getMonth() + 1}, ${dateObj.getFullYear()}`;
 
   return (
@@ -13,40 +15,32 @@ export default function BlogDetailHeader({ title, author, createdAt }) {
           Blog
         </Link>
         <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span className="text-on-surface-variant">Xu hướng</span>
+        <span className="text-on-surface-variant">Bài viết</span>
       </nav>
-      
+
       <h1 className="font-headline-lg text-headline-lg md:text-display-lg md:font-display-lg text-on-surface leading-tight mb-8">
-        {title || "Đang tải tiêu đề bài viết..."}
+        {blog.title}
       </h1>
-      
+
       <div className="flex flex-col md:flex-row md:items-center justify-between border-y border-outline-variant py-6 gap-4">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-full bg-surface-container border border-outline-gold overflow-hidden flex items-center justify-center">
-            {author?.avatarUrl ? (
-              <img 
-                alt={author.name} 
-                className="w-full h-full object-cover" 
-                src={author.avatarUrl} 
-              />
-            ) : (
-              <span className="material-symbols-outlined text-outline">person</span>
-            )}
+          <div className="w-12 h-12 rounded-full bg-surface-container border border-outline-variant flex items-center justify-center overflow-hidden">
+            <span className="material-symbols-outlined text-primary">person</span>
           </div>
           <div>
-            <p className="text-body-md font-semibold text-primary">Bởi {author?.name || "Admin"}</p>
-            <p className="text-label-md text-outline">Barber Shop</p>
+            <p className="text-body-md font-semibold text-primary">Bởi {blog.author?.name || "Admin"}</p>
+            <p className="text-label-md text-outline">Tác giả</p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-6 text-label-md text-on-surface-variant">
           <div className="flex items-center space-x-2">
             <span className="material-symbols-outlined text-primary">calendar_today</span>
             <span>{formattedDate}</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="material-symbols-outlined text-primary">schedule</span>
-            <span>8 phút đọc</span>
+            <span className="material-symbols-outlined text-primary">visibility</span>
+            <span>{blog.views || 0} lượt xem</span>
           </div>
         </div>
       </div>

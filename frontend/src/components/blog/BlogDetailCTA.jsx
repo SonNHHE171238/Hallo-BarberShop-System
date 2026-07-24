@@ -24,11 +24,6 @@ export default function BlogDetailCTA() {
               Đặt Lịch Ngay
             </button>
           </Link>
-          <Link href="/services">
-            <button className="bg-transparent border-2 border-primary text-primary px-10 py-4 rounded-lg font-bold text-headline-sm hover:bg-primary/10 transition-all active:scale-95 w-full md:w-auto">
-              Xem Bảng Giá
-            </button>
-          </Link>
         </div>
       </div>
     </section>
