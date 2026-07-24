@@ -9,10 +9,9 @@ const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware
 // This route file is for the global feedback management.
 
 // Admin routes
-router.use(authenticate);
-router.use(authorizeRoles('admin'));
+router.get('/all', authenticate, authorizeRoles('admin'), productFeedbackController.getAllProductFeedbacks);
 
-router.get('/all', productFeedbackController.getAllProductFeedbacks);
-router.delete('/:id', productFeedbackController.deleteFeedback);
+// Customer delete route
+router.delete('/:id', authenticate, authorizeRoles('customer'), productFeedbackController.deleteFeedback);
 
 module.exports = router;

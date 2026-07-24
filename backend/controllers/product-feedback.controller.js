@@ -178,6 +178,7 @@ exports.getFeedbacksByProduct = async (req, res) => {
         _id: fb._id,
         productId: fb.productId,
         orderId: fb.orderId,
+        userId: fb.userId ? fb.userId._id : null,
         rating: fb.rating,
         comment: fb.comment,
         createdAt: fb.createdAt,
@@ -262,13 +263,27 @@ exports.getAllProductFeedbacks = async (req, res) => {
   }
 };
 
-// ADMIN: DELETE /api/products/feedbacks/:id
+// DELETE /api/products/feedbacks/:id
 exports.deleteFeedback = async (req, res) => {
   try {
-    const feedback = await ProductFeedback.findByIdAndDelete(req.params.id);
+    // 1. Chỉ cho phép role 'customer' gỡ đánh giá
+    if (req.role !== 'customer') {
+      return res.status(403).json({ success: false, message: "Quyền bị từ chối. Chỉ khách hàng mới có thể gỡ đánh giá." });
+    }
+
+    // 2. Tìm đánh giá trước để kiểm tra tính sở hữu
+    const feedback = await ProductFeedback.findById(req.params.id);
     if (!feedback) {
       return res.status(404).json({ success: false, message: "Không tìm thấy đánh giá" });
     }
+
+    // 3. Kiểm tra xem có đúng là chủ sở hữu đánh giá không (so khớp userId)
+    if (!feedback.userId || feedback.userId.toString() !== req.userId.toString()) {
+      return res.status(403).json({ success: false, message: "Quyền bị từ chối. Bạn không thể gỡ đánh giá của người khác." });
+    }
+
+    // 4. Thực hiện xóa
+    await ProductFeedback.findByIdAndDelete(req.params.id);
 
     // Cập nhật lại số sao
     const stats = await ProductFeedback.aggregate([
