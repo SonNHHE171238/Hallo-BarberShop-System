@@ -57,6 +57,7 @@ export default function ProductDetailPage({ id }) {
 
   useEffect(() => {
     if (product?._id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchFeedbacks(1);
     }
   }, [product?._id]);

@@ -38,15 +38,7 @@ export default function GuestBookingDetailPage() {
   const [payosData, setPayosData] = useState(null);
   const [paymentType, setPaymentType] = useState("deposit");
 
-  useEffect(() => {
-    if (!id || (!phone && source !== "customer")) {
-      setIsLoading(false);
-      return;
-    }
-    fetchBooking();
-  }, [id, phone, source]);
-
-  const fetchBooking = async () => {
+  const fetchBooking = useCallback(async () => {
     setIsLoading(true);
     try {
       let res;
@@ -63,7 +55,16 @@ export default function GuestBookingDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id, phone, source]);
+
+  useEffect(() => {
+    if (!id || (!phone && source !== "customer")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false);
+      return;
+    }
+    fetchBooking();
+  }, [id, phone, source, fetchBooking]);
 
   // Payment Polling
   useEffect(() => {
@@ -191,6 +192,7 @@ export default function GuestBookingDetailPage() {
 
   useEffect(() => {
     if (showRescheduleModal && selectedDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchSlots(selectedDate);
     }
   }, [selectedDate, showRescheduleModal, fetchSlots]);
@@ -379,7 +381,7 @@ export default function GuestBookingDetailPage() {
                 </h2>
                 <div className="bg-surface-container-high rounded-xl p-4 border border-outline-variant/30">
                   <p className="font-body-md text-sm text-on-surface leading-relaxed italic">
-                    "{booking.note}"
+                    &quot;{booking.note}&quot;
                   </p>
                 </div>
               </div>

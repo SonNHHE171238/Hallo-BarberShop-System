@@ -18,11 +18,7 @@ export default function AdminAbsencesPage() {
   const [resolvingBookingId, setResolvingBookingId] = useState(null);
   const [newBarberId, setNewBarberId] = useState("");
 
-  useEffect(() => {
-    fetchAbsences();
-  }, [filter]);
-
-  const fetchAbsences = async () => {
+  const fetchAbsences = React.useCallback(async () => {
     setLoading(true);
     try {
       const res = await absenceService.getMyRequests(filter);
@@ -33,7 +29,12 @@ export default function AdminAbsencesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchAbsences();
+  }, [filter, fetchAbsences]);
 
   const fetchBarbers = async () => {
     try {

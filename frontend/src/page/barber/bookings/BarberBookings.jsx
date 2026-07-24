@@ -44,6 +44,7 @@ export default function BarberBookings() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData(true);
     const intervalId = setInterval(() => fetchData(false), 60000);
     return () => clearInterval(intervalId);

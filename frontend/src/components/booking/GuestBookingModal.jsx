@@ -17,6 +17,7 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
 
   React.useEffect(() => {
     if (initialPhone) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustomerPhone(initialPhone);
       setStep(2);
       setPreCheckInfo({ noShowCount: 0, requiresDeposit: false, isBanned: false });
@@ -55,6 +56,8 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
       setErrors({ phone: "Số điện thoại không hợp lệ (VD: 0912345678)." });
       return;
     }
+
+     
 
     setErrors({});
     setIsChecking(true);

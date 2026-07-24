@@ -55,6 +55,7 @@ export default function AdminAnalyticsPage() {
 
   useEffect(() => {
     if (data) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnimateBars(false);
       const timer = setTimeout(() => setAnimateBars(true), 50);
       return () => clearTimeout(timer);

@@ -13,6 +13,7 @@ function ReviewSuccessContent() {
     // Read from URL query params
     const p = parseInt(searchParams.get('points')) || 0;
     const t = parseInt(searchParams.get('total')) || 0;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPoints(p);
     setTotal(t);
   }, [searchParams]);

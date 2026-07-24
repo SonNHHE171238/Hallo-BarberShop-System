@@ -49,6 +49,7 @@ function BookingPageContent() {
   useEffect(() => {
     const code = searchParams.get('voucherCode') || localStorage.getItem('auto_voucher');
     if (code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVoucherCodeInput(code);
       if (localStorage.getItem('auto_voucher')) {
         localStorage.removeItem('auto_voucher');

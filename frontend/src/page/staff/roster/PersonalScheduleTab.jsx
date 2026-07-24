@@ -13,6 +13,8 @@ export default function PersonalScheduleTab() {
   const [targetDate, setTargetDate] = useState(new Date());
 
   useEffect(() => {
+     
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

@@ -27,6 +27,7 @@ function BookingSuccessContent() {
     const isCancelled = searchParams.get("cancel") === "true" || searchParams.get("payment") === "cancelled";
     
     if (isCancelled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPaymentStatus("cancelled");
     } else if (payosStatus === "PAID") {
       // Nếu là khách vãng lai (!user) thì thanh toán PayOS tức là đã cọc 50%

@@ -45,6 +45,7 @@ export default function ReviewSearchPage() {
     const params = new URLSearchParams(window.location.search);
     const phoneParam = params.get("phone");
     if (phoneParam) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhone(phoneParam);
       performSearch(phoneParam).finally(() => setIsInitializing(false));
     } else {

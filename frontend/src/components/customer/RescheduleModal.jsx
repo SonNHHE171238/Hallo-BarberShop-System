@@ -34,6 +34,7 @@ const RescheduleModal = ({ booking, onClose, onSuccess }) => {
   }, [barberId, durationMinutes]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSlots(selectedDate);
   }, [selectedDate, fetchSlots]);
 

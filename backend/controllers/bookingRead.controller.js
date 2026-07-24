@@ -151,16 +151,7 @@ exports.getAllBookings = async (req, res) => {
     if (serviceId) filter.services = serviceId;
     
     if (barberId) {
-      const Barber = require('../models/barber.model');
-      // Thử tìm barber document xem barberId truyền lên có phải là userId không
-      const barberByUserId = await Barber.findOne({ userId: barberId });
-      
-      filter.$or = filter.$or || [];
-      filter.$or.push({ barberId: barberId }); // Trường hợp barberId thực sự là Barber._id hoặc DB lưu nhầm userId vào barberId
-      
-      if (barberByUserId) {
-        filter.$or.push({ barberId: barberByUserId._id });
-      }
+      filter.barberId = barberId;
     }
     if (search) {
       const regex = { $regex: search, $options: "i" };
@@ -222,13 +213,8 @@ exports.getBarberHistoryBookings = async (req, res, next) => {
       }
     }
 
-    // Hỗ trợ lấy theo cả barber._id (chuẩn) và req.userId (phòng trường hợp DB lưu nhầm)
-    const filter = {
-      $or: [
-        { barberId: barber ? barber._id : null },
-        { barberId: req.userId }
-      ]
-    };
+    // Chỉ dùng barber._id
+    const filter = { barberId: barber._id };
 
     if (date) {
       const localISOTime = date; // date from frontend is already YYYY-MM-DD
@@ -323,8 +309,8 @@ exports.getBarberBookingDetail = async (req, res, next) => {
     const barber = await Barber.findOne({ userId: req.userId });
     const barberIdStr = booking.barberId ? booking.barberId._id.toString() : null;
     
-    // Hỗ trợ cả trường hợp DB lưu nhầm userId vào barberId
-    if (!barber || (barberIdStr !== barber._id.toString() && barberIdStr !== req.userId)) {
+    // Chỉ kiểm tra Barber._id
+    if (!barber || barberIdStr !== barber._id.toString()) {
       return res.status(403).json({ success: false, message: "Bạn không có quyền xem chi tiết lịch hẹn này" });
     }
 
@@ -366,10 +352,7 @@ exports.getBarberTodayBookings = async (req, res, next) => {
     const endOfDay = new Date(`${localISOTime}T23:59:59.999Z`);
 
     const bookings = await Booking.find({
-      $or: [
-        { barberId: barber ? barber._id : null },
-        { barberId: req.userId }
-      ],
+      barberId: barber._id,
       bookingDate: {
         $gte: startOfDay,
         $lte: endOfDay

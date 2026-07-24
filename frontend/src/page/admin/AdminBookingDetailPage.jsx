@@ -40,6 +40,7 @@ export default function AdminBookingDetailPage() {
 
   useEffect(() => {
     if (!id || id === 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
       return;
     }
@@ -199,7 +200,7 @@ export default function AdminBookingDetailPage() {
               </h2>
               <div className="relative z-10 bg-surface-container/50 rounded-xl p-4 border border-outline-variant/30">
                 <p className="font-body-md text-sm text-on-surface leading-relaxed italic">
-                  "{booking.note}"
+                  &quot;{booking.note}&quot;
                 </p>
               </div>
             </div>

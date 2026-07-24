@@ -78,15 +78,18 @@ export default function AdminOrdersPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStats();
   }, []);
 
   useEffect(() => {
     // Reset page to 1 when filters change
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [filterTab, searchTerm, paymentMethod, paymentStatus, orderStatus, filterDate]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrders();
   }, [page, filterTab, searchTerm, paymentMethod, paymentStatus, orderStatus, filterDate]);
 

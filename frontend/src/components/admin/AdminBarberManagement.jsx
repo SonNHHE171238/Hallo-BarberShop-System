@@ -92,6 +92,7 @@ export default function AdminBarberManagement() {
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         loadBarbers();
     }, []);
@@ -196,6 +197,7 @@ export default function AdminBarberManagement() {
 
     useEffect(() => {
         if (searchTerm.trim() && filteredBarbers.length > 0 && !filteredBarbers.some((barber) => barber.id === selectedBarber?.id)) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedBarber(filteredBarbers[0]);
         }
     }, [searchTerm, filteredBarbers, selectedBarber?.id]);

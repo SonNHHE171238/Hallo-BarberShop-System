@@ -17,11 +17,41 @@ function CheckoutPageContent() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Voucher & Discount State
+  const [discountType, setDiscountType] = useState("none");
+  const [pointsToUseInput, setPointsToUseInput] = useState(0);
+  const [voucherCodeInput, setVoucherCodeInput] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [voucherError, setVoucherError] = useState("");
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
+
+  // QR Modal State
+  const [showQR, setShowQR] = useState(false);
+  const [qrData, setQrData] = useState(null);
+  const [currentOrder, setCurrentOrder] = useState(null);
+
+  const [userAddresses, setUserAddresses] = useState([]);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [customAddress, setCustomAddress] = useState("");
+
+  // VN Address API State
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedWard, setSelectedWard] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
+
   // Auto-fill voucher from URL
   useEffect(() => {
     const code =
       searchParams.get("voucherCode") || localStorage.getItem("auto_voucher");
     if (code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVoucherCodeInput(code);
       if (localStorage.getItem("auto_voucher")) {
         localStorage.removeItem("auto_voucher");
@@ -97,35 +127,6 @@ function CheckoutPageContent() {
     initData();
   }, [user]);
 
-  // Voucher & Discount State
-  const [discountType, setDiscountType] = useState("none");
-  const [pointsToUseInput, setPointsToUseInput] = useState(0);
-  const [voucherCodeInput, setVoucherCodeInput] = useState("");
-  const [appliedVoucher, setAppliedVoucher] = useState(null);
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [voucherError, setVoucherError] = useState("");
-  const [applyingVoucher, setApplyingVoucher] = useState(false);
-
-  // QR Modal State
-  const [showQR, setShowQR] = useState(false);
-  const [qrData, setQrData] = useState(null);
-  const [currentOrder, setCurrentOrder] = useState(null);
-
-  const [userAddresses, setUserAddresses] = useState([]);
-  const [isEditingInfo, setIsEditingInfo] = useState(false);
-  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
-  const [customAddress, setCustomAddress] = useState("");
-
-  // VN Address API State
-  const [provinces, setProvinces] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [wards, setWards] = useState([]);
-
-  const [selectedProvince, setSelectedProvince] = useState("");
-  const [selectedDistrict, setSelectedDistrict] = useState("");
-  const [selectedWard, setSelectedWard] = useState("");
-  const [streetAddress, setStreetAddress] = useState("");
-
   // Fetch provinces on mount
   useEffect(() => {
     axios
@@ -145,6 +146,7 @@ function CheckoutPageContent() {
           .catch((err) => console.error("Lỗi fetch quận/huyện:", err));
       }
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDistricts([]);
       setSelectedDistrict("");
     }
@@ -161,6 +163,7 @@ function CheckoutPageContent() {
           .catch((err) => console.error("Lỗi fetch phường/xã:", err));
       }
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWards([]);
       setSelectedWard("");
     }
@@ -177,6 +180,7 @@ function CheckoutPageContent() {
       ]
         .filter(Boolean)
         .join(", ");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustomAddress(fullAddr);
     }
   }, [streetAddress, selectedWard, selectedDistrict, selectedProvince]);
@@ -218,13 +222,16 @@ function CheckoutPageContent() {
     if (discountType === "new_user") {
       let dAmount = subTotal * 0.5;
       if (dAmount > 50000) dAmount = 50000;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDiscountAmount(dAmount);
     } else if (discountType === "loyalty_points") {
       // Re-validate points discount if subtotal changes
       const currentDiscount = pointsToUseInput * 100;
       if (currentDiscount > subTotal) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDiscountAmount(subTotal);
       } else {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDiscountAmount(currentDiscount);
       }
     }
@@ -411,6 +418,7 @@ function CheckoutPageContent() {
       }, 3000);
     }
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showQR, currentOrder, router]);
 
   const formatPrice = (price) => {

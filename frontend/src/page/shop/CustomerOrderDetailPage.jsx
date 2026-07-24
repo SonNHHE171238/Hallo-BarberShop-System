@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, useMemo, Suspense } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,6 +39,7 @@ function OrderDetailContent({ orderCode }) {
 
   useEffect(() => {
     if (orderCode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchOrder();
     }
   }, [orderCode]);
@@ -56,6 +57,7 @@ function OrderDetailContent({ orderCode }) {
 
   useEffect(() => {
     if (order?.status === 'completed') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchReviewedProducts();
     }
   }, [order?.status, orderCode]);
@@ -95,6 +97,17 @@ function OrderDetailContent({ orderCode }) {
   };
 
   // Đã bỏ hiệu ứng hover theo yêu cầu
+
+  // Calculate review eligibility - must be before early returns to comply with rules-of-hooks
+  const completedLog = order?.historyLog?.find(log => log.action === 'Đơn hàng giao dịch thành công') || order?.historyLog?.[order?.historyLog?.length - 1];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const isReviewExpired = useMemo(() => {
+    const base = completedLog?.timestamp || order?.updatedAt || order?.createdAt;
+    const completedDate = base ? new Date(base) : new Date(0);
+    const diffTime = Math.abs(Date.now() - completedDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 7;
+  }, [completedLog, order?.updatedAt, order?.createdAt]);
 
   if (loading) {
     return (
@@ -144,13 +157,7 @@ function OrderDetailContent({ orderCode }) {
     'cancelled': { label: 'Đã hủy', color: 'bg-error text-on-error' },
   };
 
-  // Calculate review eligibility
-  const completedLog = order?.historyLog?.find(log => log.action === 'Đơn hàng giao dịch thành công') || order?.historyLog?.[order?.historyLog?.length - 1];
-  const completedDate = completedLog ? new Date(completedLog.timestamp) : new Date(order?.updatedAt || order?.createdAt || Date.now());
-  const diffTime = Math.abs(new Date() - completedDate);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  const isReviewExpired = diffDays > 7;
-  
+  // Calculate eligible products (isReviewExpired already computed above)
   const eligibleProductsToReview = order?.status === 'completed' && !isReviewExpired
     ? order.items.filter(item => item.productId && !reviewedProducts.includes(item.productId._id)).map(i => i.productId)
     : [];

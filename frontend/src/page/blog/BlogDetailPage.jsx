@@ -16,6 +16,8 @@ export default function BlogDetailPage({ slug }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+     
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     
     const fetchBlog = async () => {

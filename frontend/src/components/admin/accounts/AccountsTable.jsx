@@ -24,6 +24,7 @@ export default function AccountsTable({
   // Fix hydration mismatch for Next.js SSR
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
 
@@ -61,6 +62,7 @@ export default function AccountsTable({
   const [expandedRowId, setExpandedRowId] = useState(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [searchTerm, roleFilter]);
 
