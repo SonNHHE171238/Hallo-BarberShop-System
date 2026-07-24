@@ -2,9 +2,14 @@ const authService = require('../services/auth.service');
 const { setAuthCookies, clearAuthCookies } = require('../utils/authCookies');
 const { sendSuccess } = require('../utils/response.helper');
 const Address = require('../models/address.model');
+const Order = require('../models/order.model');
+const Booking = require('../models/booking.model');
 
 const getUserPayload = async (user) => {
   const addressDocs = await Address.find({ userId: user._id });
+  const hasOrder = await Order.exists({ userId: user._id, status: { $ne: 'cancelled' } });
+  const hasBooking = await Booking.exists({ customerId: user._id, status: { $ne: 'cancelled' } });
+  const isNewUser = !hasOrder && !hasBooking;
   return {
     id: user._id.toString(),
     name: user.name,
@@ -15,6 +20,7 @@ const getUserPayload = async (user) => {
     status: user.status,
     isVerified: user.isVerified,
     loyaltyPoints: user.loyaltyPoints || 0,
+    isNewUser: !!isNewUser,
     addresses: addressDocs.map(a => a.address),
   };
 };
