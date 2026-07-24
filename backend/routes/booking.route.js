@@ -26,6 +26,7 @@ router.post('/single-page', optionalAuthenticate, bookingCreateController.create
 router.get('/me', authenticate, applyRoleBasedBookingFilter, bookingReadController.getMyBookings);
 router.get('/barber/today', authenticate, authorizeRoles('barber'), bookingReadController.getBarberTodayBookings);
 router.get('/barber/history', authenticate, authorizeRoles('barber'), bookingReadController.getBarberHistoryBookings);
+router.get('/barber/detail/:id', authenticate, authorizeRoles('barber'), bookingReadController.getBarberBookingDetail);
 router.get('/all', authenticate, applyRoleBasedBookingFilter, bookingReadController.getAllBookings);
 
 // Stats

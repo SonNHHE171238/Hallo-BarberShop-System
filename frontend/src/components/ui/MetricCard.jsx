@@ -11,7 +11,7 @@ const MetricCard = ({
   className = "" 
 }) => {
   return (
-    <div className={`bg-surface-container-low border border-outline-gold rounded p-container-padding flex flex-col gap-4 relative overflow-hidden group ${isHighlight ? 'hover:border-primary' : ''} transition-colors ${className}`}>
+    <div className={`bg-surface-container-low border border-outline-gold rounded p-5 flex flex-col gap-3 relative overflow-hidden group ${isHighlight ? 'hover:border-primary' : ''} transition-colors ${className}`}>
       {isHighlight && (
         <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 transition-all duration-300 group-hover:bg-primary"></div>
       )}
@@ -22,7 +22,7 @@ const MetricCard = ({
       </div>
 
       <div className="flex items-baseline gap-4">
-        <div className={`font-display-lg text-headline-lg-mobile md:text-headline-lg serif-heading ${isHighlight ? 'text-primary' : 'text-on-surface'}`}>
+        <div className={`font-headline-md md:text-headline-lg serif-heading ${isHighlight ? 'text-primary' : 'text-on-surface'}`}>
           {value}
         </div>
         

@@ -15,7 +15,7 @@ export default function FeaturedPost({ post }) {
   const plainTextContent = post.content ? post.content.replace(/<[^>]+>/g, '') : "";
 
   return (
-    <section className="px-margin-mobile md:px-margin-desktop py-base max-w-container-max mx-auto -mt-24 relative z-20">
+    <section className="px-margin-mobile md:px-margin-desktop py-base max-w-container-max mx-auto">
       <div className="glass-card group grayscale-hover overflow-hidden rounded-xl flex flex-col md:flex-row shadow-2xl">
         <div className="md:w-3/5 h-[300px] md:h-[500px] overflow-hidden">
           <img

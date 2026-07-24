@@ -1,6 +1,29 @@
 const authService = require('../services/auth.service');
 const { setAuthCookies, clearAuthCookies } = require('../utils/authCookies');
 const { sendSuccess } = require('../utils/response.helper');
+const Address = require('../models/address.model');
+const Order = require('../models/order.model');
+const Booking = require('../models/booking.model');
+
+const getUserPayload = async (user) => {
+  const addressDocs = await Address.find({ userId: user._id });
+  const hasOrder = await Order.exists({ userId: user._id, status: { $ne: 'cancelled' } });
+  const hasBooking = await Booking.exists({ customerId: user._id, status: { $ne: 'cancelled' } });
+  const isNewUser = !hasOrder && !hasBooking;
+  return {
+    id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    avatarUrl: user.avatarUrl || '',
+    status: user.status,
+    isVerified: user.isVerified,
+    loyaltyPoints: user.loyaltyPoints || 0,
+    isNewUser: !!isNewUser,
+    addresses: addressDocs.map(a => a.address),
+  };
+};
 
 exports.register = async (req, res, next) => {
   try {
@@ -52,15 +75,7 @@ exports.verifyOtp = async (req, res, next) => {
     }
 
     return sendSuccess(res, 200, 'Email verification successful.', {
-      user: {
-        id: verifiedUser._id.toString(),
-        name: verifiedUser.name,
-        email: verifiedUser.email,
-        phone: verifiedUser.phone,
-        role: verifiedUser.role,
-        avatarUrl: verifiedUser.avatarUrl || '',
-        status: verifiedUser.status,
-      },
+      user: await getUserPayload(verifiedUser),
     });
   } catch (error) {
     next(error);
@@ -194,16 +209,7 @@ exports.getMe = async (req, res, next) => {
     const user = await authService.getUserById(req.userId);
 
     return sendSuccess(res, 200, 'User data retrieved', {
-      user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        avatarUrl: user.avatarUrl || '',
-        status: user.status,
-        loyaltyPoints: user.loyaltyPoints || 0,
-      },
+      user: await getUserPayload(user),
     });
   } catch (error) {
     next(error);
@@ -228,16 +234,7 @@ exports.googleLogin = async (req, res, next) => {
 
     const { sendSuccess } = require('../utils/response.helper');
     return sendSuccess(res, 200, 'Login with Google successful', {
-      user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        avatarUrl: user.avatarUrl,
-        isVerified: user.isVerified,
-        loyaltyPoints: user.loyaltyPoints || 0,
-      },
+      user: await getUserPayload(user),
     });
   } catch (error) {
     next(error);
@@ -269,20 +266,12 @@ exports.changePassword = async (req, res, next) => {
 
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { phone, avatarUrl } = req.body;
+    const { phone, avatarUrl, newAddress } = req.body;
     
-    const updatedUser = await authService.updateUserProfile(req.userId, { phone, avatarUrl });
+    const updatedUser = await authService.updateUserProfile(req.userId, { phone, avatarUrl, newAddress });
 
     return sendSuccess(res, 200, 'Cập nhật thông tin thành công', {
-      user: {
-        id: updatedUser._id.toString(),
-        name: updatedUser.name,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        role: updatedUser.role,
-        avatarUrl: updatedUser.avatarUrl || '',
-        status: updatedUser.status,
-      },
+      user: await getUserPayload(updatedUser),
     });
   } catch (error) {
     next(error);
@@ -301,15 +290,7 @@ exports.uploadAvatar = async (req, res, next) => {
     const updatedUser = await authService.updateUserProfile(req.userId, { avatarUrl });
     const { sendSuccess } = require('../utils/response.helper');
     return sendSuccess(res, 200, 'Tải ảnh lên thành công', { 
-      user: {
-        id: updatedUser._id.toString(),
-        name: updatedUser.name,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        role: updatedUser.role,
-        avatarUrl: updatedUser.avatarUrl || '',
-        status: updatedUser.status,
-      }
+      user: await getUserPayload(updatedUser)
     });
   } catch (error) {
     next(error);

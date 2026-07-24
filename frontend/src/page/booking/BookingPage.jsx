@@ -39,6 +39,7 @@ function BookingPageContent() {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [voucherError, setVoucherError] = useState("");
   const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [verifiedPhone, setVerifiedPhone] = useState("");
 
   const { user } = useAuth();
   const router = useRouter();
@@ -253,6 +254,7 @@ function BookingPageContent() {
                 setVoucherError={setVoucherError}
                 applyingVoucher={applyingVoucher}
                 setApplyingVoucher={setApplyingVoucher}
+                setVerifiedPhone={setVerifiedPhone}
               />
             )}
           </div>
@@ -273,6 +275,7 @@ function BookingPageContent() {
           isLoading={isLoading}
           discountAmount={discountAmount}
           finalTotal={selectedServices.reduce((acc, curr) => acc + (curr.price || 0), 0) - discountAmount}
+          initialPhone={verifiedPhone}
         />
       )}
 

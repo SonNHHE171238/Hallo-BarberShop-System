@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function BlogDetailCTA() {
   return (
-    <section className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop mt-32">
+    <section className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop mt-32 mb-24">
       <div className="relative bg-surface-container-high rounded-2xl overflow-hidden border border-outline-gold p-8 md:p-16 flex flex-col items-center text-center">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <img 

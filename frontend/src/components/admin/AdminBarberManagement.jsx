@@ -69,6 +69,8 @@ export default function AdminBarberManagement() {
                 maxDailyBookings: item.barber?.maxDailyBookings || 12,
                 autoAssignmentEligible: item.barber?.autoAssignmentEligible ?? true,
                 experienceYears: item.barber?.experienceYears || '',
+                level: item.barber?.level || 'standard',
+                vipMultiplier: item.barber?.vipMultiplier ?? 0.2,
                 rating: item.barber?.averageRating || item.barber?.rating || 0,
                 status: item.user?.status || item.barber?.status || 'inactive',
                 scheduleSummary: item.scheduleSummary || [],

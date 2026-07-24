@@ -1,7 +1,8 @@
 import React from "react";
 import BarberProfilePage from "@/page/shop/BarberProfilePage";
 
-export function generateMetadata({ params }) {
+export async function generateMetadata({ params }) {
+  const resolvedParams = await params;
   return {
     title: `Barber Profile | HALLO BARBER`,
     description: "Hồ sơ chuyên gia cắt tóc tại Hallo Barber.",

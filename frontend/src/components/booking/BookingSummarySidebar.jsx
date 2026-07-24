@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { voucherService } from "@/services/voucher.service";
+import { bookingService } from "@/services/booking.service";
 
 export default function BookingSummarySidebar({
   selectedServices = [], selectedBarber, selectedDate, selectedTime,
@@ -7,8 +8,10 @@ export default function BookingSummarySidebar({
   user, discountType, setDiscountType, pointsToUseInput, setPointsToUseInput,
   voucherCodeInput, setVoucherCodeInput, appliedVoucher, setAppliedVoucher,
   discountAmount, setDiscountAmount, voucherError, setVoucherError,
-  applyingVoucher, setApplyingVoucher
+  applyingVoucher, setApplyingVoucher, setVerifiedPhone
 }) {
+  const [newUserPhone, setNewUserPhone] = useState("");
+  const [isNewUserVerified, setIsNewUserVerified] = useState(false);
   const isReady = selectedServices.length > 0 && selectedBarber && selectedDate && selectedTime;
 
   const subTotal = selectedServices.reduce((total, s) => total + (s.price || 0), 0);
@@ -124,6 +127,8 @@ export default function BookingSummarySidebar({
     setDiscountAmount(0);
     setPointsToUseInput(0);
     removeVoucher();
+    setIsNewUserVerified(false);
+    if (setVerifiedPhone) setVerifiedPhone("");
   };
 
   return (
@@ -239,16 +244,53 @@ export default function BookingSummarySidebar({
                   <input type="radio" name="discount" checked={discountType === 'none'} onChange={clearDiscount} className="text-primary focus:ring-primary" disabled={!isReady} />
                   <span className="text-sm">Không dùng ưu đãi</span>
                 </label>
-                {(!user || user.loyaltyPoints === 0) && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="discount" checked={discountType === 'new_user'} onChange={handleApplyNewUserDiscount} className="text-primary focus:ring-primary" disabled={!isReady || !user} />
-                    <span className="text-sm">Khách mới (Giảm 50% tối đa 50k) {!user && <span className="text-error text-[10px] ml-1">(Chỉ dành cho tài khoản mới)</span>}</span>
-                  </label>
-                )}
+                
+                {/* NEW USER DISCOUNT */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="discount"
+                    checked={discountType === 'new_user'}
+                    onChange={() => {
+                      let dAmount = subTotal * 0.5;
+                      if (dAmount > 50000) dAmount = 50000;
+                      setDiscountAmount(dAmount);
+                      setDiscountType('new_user');
+                      setVoucherError("Đã áp dụng ưu đãi Khách mới");
+                      setPointsToUseInput(0);
+                      removeVoucher();
+                    }}
+                    className="text-primary focus:ring-primary"
+                    disabled={!isReady || !user || !user.isNewUser}
+                  />
+                  <span className="text-sm">
+                    Khách mới (Giảm 50% tối đa 50k){" "}
+                    {!user ? (
+                      <span className="text-error text-[10px] ml-1">
+                        (Chỉ dành cho tài khoản mới)
+                      </span>
+                    ) : !user.isNewUser ? (
+                      <span className="text-error text-[10px] ml-1">
+                        (Đã sử dụng)
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+
+                {/* LOYALTY POINTS */}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="discount" checked={discountType === 'loyalty_points'} onChange={handleApplyLoyaltyPoints} className="text-primary focus:ring-primary" disabled={!isReady || !user || user.loyaltyPoints <= 0} />
-                  <span className="text-sm">Dùng điểm thưởng (Hiện đang có {user?.loyaltyPoints || 0} điểm) {!user && <span className="text-error text-[10px] ml-1">(Chỉ dành cho thành viên)</span>}</span>
+                  <span className="text-sm">
+                    Dùng điểm thưởng
+                    {user && (
+                      <> (Đang có <span className="text-primary font-bold">{user.loyaltyPoints || 0}</span> điểm)</>
+                    )}
+                    {!user && (
+                      <span className="text-error text-[10px] ml-1">(Chỉ dành cho thành viên)</span>
+                    )}
+                  </span>
                 </label>
+
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="discount" checked={discountType === 'voucher'} onChange={() => setDiscountType('voucher')} className="text-primary focus:ring-primary" disabled={!isReady} />
                   <span className="text-sm">Mã giảm giá</span>

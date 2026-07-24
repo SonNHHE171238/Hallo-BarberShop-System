@@ -167,12 +167,17 @@ exports.processCreateBooking = async ({
     }
   }
 
-  // Barber Daily Limit
+  // Fetch Barber Info, VIP Pricing & Daily Limit
   const barber = await Barber.findById(barberId);
   if (!barber) {
     const error = new Error("Không tìm thấy thợ cắt tóc");
     error.statusCode = 404;
     throw error;
+  }
+
+  // Apply VIP Multiplier if Barber is VIP
+  if (barber.level === 'vip' && barber.vipMultiplier > 0) {
+    totalPrice += Math.round(totalPrice * barber.vipMultiplier);
   }
 
   if (barberBookings.length >= barber.maxDailyBookings) {

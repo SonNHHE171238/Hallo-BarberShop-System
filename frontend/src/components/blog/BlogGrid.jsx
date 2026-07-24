@@ -14,7 +14,7 @@ export default function BlogGrid({ posts = [] }) {
   return (
     <>
       {/* Blog Grid */}
-      <section className="px-margin-mobile md:px-margin-desktop py-12 max-w-container-max mx-auto pt-24">
+      <section className="px-margin-mobile md:px-margin-desktop py-12 max-w-container-max mx-auto">
         {posts.length === 0 ? (
           <div className="text-center py-20">
             <span className="material-symbols-outlined text-4xl text-outline mb-4">article</span>

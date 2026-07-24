@@ -248,10 +248,10 @@ exports.updateBookingStatus = async (req, res) => {
       const DiscountService = require('../services/discount.service');
       try {
         if (status === "completed" && oldStatus !== "completed") {
-          await DiscountService.addPointsForCompletion(booking.customerId);
+          await DiscountService.addPointsForCompletion(booking.customerId, booking.totalPrice);
         } else if (status === "cancelled" && oldStatus !== "cancelled") {
           const wasCompleted = (oldStatus === "completed");
-          await DiscountService.revertPoints(booking.customerId, booking.pointsUsed || 0, wasCompleted);
+          await DiscountService.revertPoints(booking.customerId, booking.pointsUsed || 0, wasCompleted, booking.totalPrice);
         }
       } catch (pointError) {
         console.error("Error updating points:", pointError);
@@ -426,7 +426,7 @@ exports.updateBookingDetails = async (req, res) => {
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
       updateFields,
-      { new: true },
+      { returnDocument: "after" },
     )
       .populate("services", "name price durationMinutes")
       .populate({
