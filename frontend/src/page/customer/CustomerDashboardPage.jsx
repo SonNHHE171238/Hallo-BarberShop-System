@@ -37,7 +37,7 @@ export default function CustomerDashboardPage() {
 
       {/* Main Content Canvas */}
       <main className="flex-grow max-w-5xl mx-auto w-full px-gutter py-12 flex flex-col gap-16">
-        <DashboardHero userName={user?.name || ''} />
+        <DashboardHero userName={user?.name || ''} loyaltyPoints={user?.loyaltyPoints || 0} />
         
         {/* Bento Grid Dashboard */}
         <section className="bento-grid">

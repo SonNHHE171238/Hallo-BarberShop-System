@@ -19,6 +19,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -48,6 +49,7 @@ export default function Navbar() {
   }, [user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveHash(window.location.hash);
     const handleHashChange = () => {
       setActiveHash(window.location.hash);
@@ -102,7 +104,6 @@ export default function Navbar() {
             <div className="absolute top-full left-0 w-48 bg-surface-container-high border border-outline-variant rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden flex flex-col mt-2">
               <Link href="/#about" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Về chúng tôi</Link>
               <Link href="/#services" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Dịch vụ</Link>
-              <Link href="/vouchers" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Khuyến mãi</Link>
               <Link href="/#team" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors">Đội ngũ</Link>
             </div>
           </div>
@@ -251,7 +252,6 @@ export default function Navbar() {
           <div className="flex flex-col space-y-4 pl-4 border-l-2 border-outline-variant/30">
             <Link href="/#about" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Về chúng tôi</Link>
             <Link href="/#services" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Dịch vụ</Link>
-            <Link href="/#deals" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Khuyến mãi</Link>
             <Link href="/#team" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Đội ngũ</Link>
           </div>
           <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>

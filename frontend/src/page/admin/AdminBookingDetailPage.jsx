@@ -40,6 +40,7 @@ export default function AdminBookingDetailPage() {
 
   useEffect(() => {
     if (!id || id === 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
       return;
     }
@@ -76,7 +77,7 @@ export default function AdminBookingDetailPage() {
           <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-50">search_off</span>
           <h3 className="font-headline-sm text-on-surface">Không tìm thấy lịch hẹn</h3>
           <p className="font-body-md text-on-surface-variant mb-4">Lịch hẹn này có thể đã bị xóa hoặc không tồn tại.</p>
-          <button onClick={() => router.push('/admin/bookings')} className="px-6 py-2.5 rounded-lg bg-surface-container hover:bg-surface-variant text-primary font-label-md tracking-wider uppercase transition-all duration-300 active:scale-95 border border-outline-variant/50">
+          <button onClick={() => router.back()} className="px-6 py-2.5 rounded-lg bg-surface-container hover:bg-surface-variant text-primary font-label-md tracking-wider uppercase transition-all duration-300 active:scale-95 border border-outline-variant/50">
             Quay lại danh sách
           </button>
         </div>
@@ -108,7 +109,7 @@ export default function AdminBookingDetailPage() {
       <header className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-6">
         <div>
           <button 
-            onClick={() => router.push('/admin/bookings')} 
+            onClick={() => router.back()} 
             className="group flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors mb-4 font-label-md text-xs uppercase tracking-widest"
           >
             <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
@@ -199,7 +200,7 @@ export default function AdminBookingDetailPage() {
               </h2>
               <div className="relative z-10 bg-surface-container/50 rounded-xl p-4 border border-outline-variant/30">
                 <p className="font-body-md text-sm text-on-surface leading-relaxed italic">
-                  "{booking.note}"
+                  &quot;{booking.note}&quot;
                 </p>
               </div>
             </div>
@@ -261,7 +262,7 @@ export default function AdminBookingDetailPage() {
                 <div className="flex justify-between items-end bg-surface-container p-6 rounded-xl border border-outline-gold/20 shadow-inner">
                   <div className="flex flex-col gap-1">
                     <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Dịch Vụ</span>
-                    <span className="font-body-md text-xs text-on-surface-variant opacity-70">Đã bao gồm VAT</span>
+                    <span className="font-body-md text-xs text-on-surface-variant opacity-70">Tổng thanh toán</span>
                   </div>
                   <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
                     {(booking.totalPrice || 0).toLocaleString('vi-VN')} <span className="text-xl text-primary/70 font-normal">đ</span>

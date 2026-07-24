@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function BlogDetailCTA() {
   return (
-    <section className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop mt-32">
+    <section className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop mt-32 mb-24">
       <div className="relative bg-surface-container-high rounded-2xl overflow-hidden border border-outline-gold p-8 md:p-16 flex flex-col items-center text-center">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <img 
@@ -22,11 +22,6 @@ export default function BlogDetailCTA() {
           <Link href="/booking">
             <button className="bg-primary text-on-primary px-10 py-4 rounded-lg font-bold text-headline-sm hover:bg-primary-fixed-dim transition-all active:scale-95 shadow-lg shadow-primary/20 w-full md:w-auto">
               Đặt Lịch Ngay
-            </button>
-          </Link>
-          <Link href="/services">
-            <button className="bg-transparent border-2 border-primary text-primary px-10 py-4 rounded-lg font-bold text-headline-sm hover:bg-primary/10 transition-all active:scale-95 w-full md:w-auto">
-              Xem Bảng Giá
             </button>
           </Link>
         </div>

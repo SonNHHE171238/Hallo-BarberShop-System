@@ -16,8 +16,9 @@ import toast from 'react-hot-toast';
 import GuestBookingModal from "@/components/booking/GuestBookingModal";
 import { QRCodeSVG } from 'qrcode.react';
 import axios from "axios";
+import { Suspense } from "react";
 
-export default function BookingPage() {
+function BookingPageContent() {
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedBarber, setSelectedBarber] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -31,11 +32,14 @@ export default function BookingPage() {
   const [payosData, setPayosData] = useState(null);
   
   // Voucher State
+  const [discountType, setDiscountType] = useState('none');
+  const [pointsToUseInput, setPointsToUseInput] = useState(0);
   const [voucherCodeInput, setVoucherCodeInput] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [voucherError, setVoucherError] = useState("");
   const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [verifiedPhone, setVerifiedPhone] = useState("");
 
   const { user } = useAuth();
   const router = useRouter();
@@ -45,6 +49,7 @@ export default function BookingPage() {
   useEffect(() => {
     const code = searchParams.get('voucherCode') || localStorage.getItem('auto_voucher');
     if (code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVoucherCodeInput(code);
       if (localStorage.getItem('auto_voucher')) {
         localStorage.removeItem('auto_voucher');
@@ -104,6 +109,8 @@ export default function BookingPage() {
         timeSlot: selectedTime, 
         durationMinutes: selectedServices.reduce((total, s) => total + (s.durationMinutes || s.duration || 30), 0),
         voucherCode: appliedVoucher,
+        discountType: discountType,
+        pointsToUse: pointsToUseInput,
         discountAmount: discountAmount,
         ...additionalPayload
       };
@@ -123,6 +130,10 @@ export default function BookingPage() {
         time: selectedTime,
         dateStr: dateStr
       });
+
+      if (additionalPayload?.phone) {
+        queryParams.append("phone", additionalPayload.phone);
+      }
 
       if (response.paymentLinkData && response.paymentLinkData.checkoutUrl) {
         if (response.noShowCount && response.noShowCount > 0) {
@@ -229,6 +240,11 @@ export default function BookingPage() {
                 onConfirm={handleConfirm}
                 isLoading={isLoading}
                 isGuest={!user}
+                user={user}
+                discountType={discountType}
+                setDiscountType={setDiscountType}
+                pointsToUseInput={pointsToUseInput}
+                setPointsToUseInput={setPointsToUseInput}
                 voucherCodeInput={voucherCodeInput}
                 setVoucherCodeInput={setVoucherCodeInput}
                 appliedVoucher={appliedVoucher}
@@ -239,6 +255,7 @@ export default function BookingPage() {
                 setVoucherError={setVoucherError}
                 applyingVoucher={applyingVoucher}
                 setApplyingVoucher={setApplyingVoucher}
+                setVerifiedPhone={setVerifiedPhone}
               />
             )}
           </div>
@@ -259,6 +276,7 @@ export default function BookingPage() {
           isLoading={isLoading}
           discountAmount={discountAmount}
           finalTotal={selectedServices.reduce((acc, curr) => acc + (curr.price || 0), 0) - discountAmount}
+          initialPhone={verifiedPhone}
         />
       )}
 
@@ -307,5 +325,17 @@ export default function BookingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="bg-background min-h-screen text-on-surface flex flex-col items-center justify-center">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+      </div>
+    }>
+      <BookingPageContent />
+    </Suspense>
   );
 }

@@ -1,18 +1,42 @@
-import React from "react";
+import React, { useState } from "react";
 import { voucherService } from "@/services/voucher.service";
+import { bookingService } from "@/services/booking.service";
 
 export default function BookingSummarySidebar({
   selectedServices = [], selectedBarber, selectedDate, selectedTime,
   paymentMethod, setPaymentMethod, onConfirm, isLoading, isGuest,
+  user, discountType, setDiscountType, pointsToUseInput, setPointsToUseInput,
   voucherCodeInput, setVoucherCodeInput, appliedVoucher, setAppliedVoucher,
   discountAmount, setDiscountAmount, voucherError, setVoucherError,
-  applyingVoucher, setApplyingVoucher
+  applyingVoucher, setApplyingVoucher, setVerifiedPhone
 }) {
+  const [newUserPhone, setNewUserPhone] = useState("");
+  const [isNewUserVerified, setIsNewUserVerified] = useState(false);
   const isReady = selectedServices.length > 0 && selectedBarber && selectedDate && selectedTime;
 
   const subTotal = selectedServices.reduce((total, s) => total + (s.price || 0), 0);
   const totalPrice = Math.max(0, subTotal - discountAmount);
   const depositAmount = isGuest ? Math.round(totalPrice / 2) : totalPrice;
+
+  React.useEffect(() => {
+    if (discountType === 'loyalty_points' && user) {
+      let maxPointsByBill = Math.floor(subTotal / 2 / 1000); 
+      let maxPointsAllowed = 50; 
+      let pointsWillUse = Math.min(user.loyaltyPoints, maxPointsByBill, maxPointsAllowed);
+      
+      if (subTotal < 50000 || pointsWillUse <= 0) {
+        setPointsToUseInput(0);
+        setDiscountAmount(0);
+      } else {
+        setPointsToUseInput(pointsWillUse);
+        setDiscountAmount(pointsWillUse * 1000);
+      }
+    } else if (discountType === 'new_user') {
+      let dAmount = subTotal * 0.5;
+      if (dAmount > 50000) dAmount = 50000;
+      setDiscountAmount(dAmount);
+    }
+  }, [subTotal, discountType, user, setDiscountAmount, setPointsToUseInput]);
 
   const handleApplyVoucher = async () => {
     if (!voucherCodeInput.trim()) return;
@@ -43,6 +67,68 @@ export default function BookingSummarySidebar({
     setDiscountAmount(0);
     setVoucherCodeInput("");
     setVoucherError("");
+  };
+
+  const handleApplyNewUserDiscount = async () => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để sử dụng ưu đãi!");
+      return;
+    }
+    if (user.loyaltyPoints > 0) {
+      alert("Ưu đãi Khách mới chỉ dành cho khách hàng mới (chưa có điểm thưởng)!");
+      return;
+    }
+    setApplyingVoucher(true);
+    setVoucherError("");
+    try {
+      let dAmount = subTotal * 0.5;
+      if (dAmount > 50000) dAmount = 50000;
+      setDiscountAmount(dAmount);
+      setDiscountType('new_user');
+      setVoucherError("Đã áp dụng ưu đãi Khách mới");
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
+  const handleApplyLoyaltyPoints = () => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để sử dụng điểm thưởng!");
+      return;
+    }
+    if (user.loyaltyPoints <= 0) {
+      alert("Bạn chưa có điểm thưởng nào.");
+      return;
+    }
+    if (subTotal < 50000) {
+      alert("Dịch vụ phải tối thiểu 50,000đ để áp dụng tiêu điểm.");
+      return;
+    }
+
+    let maxPointsByBill = Math.floor(subTotal / 2 / 1000); 
+    let maxPointsAllowed = 50; 
+    let pointsWillUse = Math.min(user.loyaltyPoints, maxPointsByBill, maxPointsAllowed);
+
+    if (pointsWillUse <= 0) {
+      alert("Không thể áp dụng điểm thưởng cho đơn hàng này.");
+      return;
+    }
+
+    let dAmount = pointsWillUse * 1000;
+
+    setPointsToUseInput(pointsWillUse);
+    setDiscountAmount(dAmount);
+    setDiscountType('loyalty_points');
+    setVoucherError(`Đã dùng ${pointsWillUse} điểm thưởng`);
+  };
+
+  const clearDiscount = () => {
+    setDiscountType('none');
+    setDiscountAmount(0);
+    setPointsToUseInput(0);
+    removeVoucher();
+    setIsNewUserVerified(false);
+    if (setVerifiedPhone) setVerifiedPhone("");
   };
 
   return (
@@ -149,25 +235,87 @@ export default function BookingSummarySidebar({
               </div>
             </div>
 
-            {/* Voucher Section */}
-            <div className={`pt-4 border-t border-outline-variant/30 ${!isReady && 'opacity-50'}`}>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Mã giảm giá"
-                  value={voucherCodeInput}
-                  onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
-                  disabled={!isReady || appliedVoucher || applyingVoucher}
-                  className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm uppercase focus:border-primary outline-none disabled:opacity-50"
-                />
-                {appliedVoucher ? (
-                  <button onClick={removeVoucher} disabled={!isReady} className="px-4 bg-error text-white font-bold rounded text-sm hover:bg-error/90 disabled:opacity-50">Hủy</button>
-                ) : (
-                  <button onClick={handleApplyVoucher} disabled={!isReady || applyingVoucher || !voucherCodeInput} className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary disabled:opacity-50">Áp dụng</button>
-                )}
+            {/* Discount Section */}
+            <div className={`pt-4 border-t border-outline-variant/30 space-y-4 ${!isReady && 'opacity-50'}`}>
+              <h3 className="text-label-md text-on-surface-variant font-bold">ƯU ĐÃI CỦA BẠN</h3>
+              
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="discount" checked={discountType === 'none'} onChange={clearDiscount} className="text-primary focus:ring-primary" disabled={!isReady} />
+                  <span className="text-sm">Không dùng ưu đãi</span>
+                </label>
+                
+                {/* NEW USER DISCOUNT */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="discount"
+                    checked={discountType === 'new_user'}
+                    onChange={() => {
+                      let dAmount = subTotal * 0.5;
+                      if (dAmount > 50000) dAmount = 50000;
+                      setDiscountAmount(dAmount);
+                      setDiscountType('new_user');
+                      setVoucherError("Đã áp dụng ưu đãi Khách mới");
+                      setPointsToUseInput(0);
+                      removeVoucher();
+                    }}
+                    className="text-primary focus:ring-primary"
+                    disabled={!isReady || !user || !user.isNewUser}
+                  />
+                  <span className="text-sm">
+                    Khách mới (Giảm 50% tối đa 50k){" "}
+                    {!user ? (
+                      <span className="text-error text-[10px] ml-1">
+                        (Chỉ dành cho tài khoản mới)
+                      </span>
+                    ) : !user.isNewUser ? (
+                      <span className="text-error text-[10px] ml-1">
+                        (Đã sử dụng)
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+
+                {/* LOYALTY POINTS */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="discount" checked={discountType === 'loyalty_points'} onChange={handleApplyLoyaltyPoints} className="text-primary focus:ring-primary" disabled={!isReady || !user || user.loyaltyPoints <= 0} />
+                  <span className="text-sm">
+                    Dùng điểm thưởng
+                    {user && (
+                      <> (Đang có <span className="text-primary font-bold">{user.loyaltyPoints || 0}</span> điểm)</>
+                    )}
+                    {!user && (
+                      <span className="text-error text-[10px] ml-1">(Chỉ dành cho thành viên)</span>
+                    )}
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="discount" checked={discountType === 'voucher'} onChange={() => setDiscountType('voucher')} className="text-primary focus:ring-primary" disabled={!isReady} />
+                  <span className="text-sm">Mã giảm giá</span>
+                </label>
               </div>
-              {voucherError && <p className="text-error text-xs mt-1">{voucherError}</p>}
-              {appliedVoucher && <p className="text-success text-xs mt-1">Đã áp dụng mã {appliedVoucher}</p>}
+
+              {discountType === 'voucher' && (
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    placeholder="Mã giảm giá"
+                    value={voucherCodeInput}
+                    onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                    disabled={!isReady || appliedVoucher || applyingVoucher}
+                    className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm uppercase focus:border-primary outline-none disabled:opacity-50"
+                  />
+                  {appliedVoucher ? (
+                    <button onClick={removeVoucher} disabled={!isReady} className="px-4 bg-error text-white font-bold rounded text-sm hover:bg-error/90 disabled:opacity-50">Hủy</button>
+                  ) : (
+                    <button onClick={handleApplyVoucher} disabled={!isReady || applyingVoucher || !voucherCodeInput} className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary disabled:opacity-50">Áp dụng</button>
+                  )}
+                </div>
+              )}
+              {voucherError && <p className={`text-xs mt-1 ${voucherError.includes('Đã') ? 'text-success' : 'text-error'}`}>{voucherError}</p>}
+              {appliedVoucher && discountType === 'voucher' && <p className="text-success text-xs mt-1">Đã áp dụng mã {appliedVoucher}</p>}
             </div>
 
             <div className="pt-6 border-t border-outline-variant">

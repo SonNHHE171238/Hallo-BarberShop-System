@@ -117,9 +117,8 @@ export default function CartPage() {
   };
 
   const subTotal = cartItems.reduce((total, item) => total + ((item.productId?.price || 0) * item.quantity), 0);
-  const shippingFee = subTotal > 2000000 ? 0 : 35000;
   const discount = 0; // Tương lai có thể áp mã giảm giá
-  const total = subTotal + shippingFee - discount;
+  const total = subTotal - discount;
 
   const hasInvalidItems = cartItems.some(item => !item.productId?.isActive || item.productId?.stock === 0 || item.productId?.isDeleted);
 
@@ -127,7 +126,7 @@ export default function CartPage() {
     <div className="bg-background min-h-screen text-on-surface flex flex-col font-body-md">
       <Navbar />
 
-      <main className="flex-grow pt-32 pb-section-padding px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto w-full">
+      <main className="flex-grow pt-32 pb-section-padding mb-24 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto w-full">
         {/* Page Title */}
         <header className="mb-12">
           <h1 className="font-headline-lg text-headline-lg text-primary uppercase tracking-widest mb-2">Giỏ Hàng Của Bạn</h1>
@@ -149,8 +148,8 @@ export default function CartPage() {
                   Giỏ hàng của bạn đang trống.
                 </div>
               ) : (
-                cartItems.map((item) => (
-                  <div key={item._id || item.productId?._id || Math.random()} className={`bg-surface-container/60 backdrop-blur-md border border-outline-variant p-6 flex flex-col md:flex-row gap-6 group ${(!item.productId?.isActive || item.productId?.stock === 0 || item.productId?.isDeleted) ? 'opacity-60' : ''}`}>
+                cartItems.map((item, idx) => (
+                  <div key={item._id || item.productId?._id || idx} className={`bg-surface-container/60 backdrop-blur-md border border-outline-variant p-6 flex flex-col md:flex-row gap-6 group ${(!item.productId?.isActive || item.productId?.stock === 0 || item.productId?.isDeleted) ? 'opacity-60' : ''}`}>
                     <div className="w-full md:w-32 h-32 overflow-hidden flex-shrink-0 bg-surface-container-high border border-outline-variant relative">
                       <img 
                         src={item.productId?.image || "/placeholder.png"} 
@@ -226,28 +225,13 @@ export default function CartPage() {
 
           {/* Right Column: Order Summary */}
           <aside className="lg:col-span-4 sticky top-28">
-            <div className="bg-surface-container/60 backdrop-blur-md border border-outline-variant p-8 space-y-8">
-              <h2 className="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-4 uppercase tracking-tighter">Tóm tắt đơn hàng</h2>
+            <div className="bg-surface-container/60 backdrop-blur-md border border-outline-variant p-8">
+              <h2 className="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-6 mb-6 uppercase tracking-tighter">Tóm tắt đơn hàng</h2>
               
-              <div className="space-y-4">
-                {/* Promo Code */}
-                <div className="space-y-2">
-                  <label className="font-label-md text-xs text-on-surface-variant uppercase">Mã giảm giá</label>
-                  <div className="flex">
-                    <input type="text" placeholder="NHẬP MÃ..." className="flex-grow bg-surface-container-lowest border-outline-variant text-on-surface placeholder:text-outline focus:ring-primary focus:border-primary px-4" />
-                    <button className="bg-outline-variant text-primary px-4 py-2 font-bold hover:bg-primary hover:text-on-primary transition-all">ÁP DỤNG</button>
-                  </div>
-                </div>
-
-                {/* Calculations */}
-                <div className="space-y-3 pt-4">
+              <div className="space-y-6">
                   <div className="flex justify-between text-on-surface-variant">
                     <span className="font-body-md">Tạm tính</span>
                     <span className="font-label-md">{formatPrice(subTotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-on-surface-variant">
-                    <span className="font-body-md">Phí vận chuyển</span>
-                    <span className="font-label-md">{cartItems.length > 0 ? formatPrice(shippingFee) : '0 ₫'}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-primary">
@@ -256,15 +240,14 @@ export default function CartPage() {
                     </div>
                   )}
                   
-                  <div className="pt-4 mt-4 border-t border-outline-variant flex justify-between items-baseline">
+                  <div className="pt-6 border-t border-outline-variant flex justify-between items-baseline">
                     <span className="font-headline-sm text-on-surface uppercase">Tổng cộng</span>
                     <span className="font-headline-lg text-primary">{cartItems.length > 0 ? formatPrice(total) : '0 ₫'}</span>
                   </div>
                 </div>
-              </div>
 
               {hasInvalidItems && (
-                <div className="bg-error-container/20 border-l-2 border-error p-3 text-sm text-error mb-4">
+                <div className="bg-error-container/20 border-l-2 border-error p-3 text-sm text-error mt-6 mb-4">
                   Có sản phẩm hết hàng hoặc ngừng kinh doanh trong giỏ. Vui lòng xóa đi để tiếp tục.
                 </div>
               )}
@@ -272,7 +255,7 @@ export default function CartPage() {
               <Link href={cartItems.length > 0 && !hasInvalidItems ? "/shop/checkout" : "#"}>
                 <button 
                   disabled={cartItems.length === 0 || hasInvalidItems}
-                  className="w-full mt-4 bg-primary text-on-primary font-headline-sm font-bold py-5 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full mt-8 bg-primary text-on-primary font-headline-sm font-bold py-5 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   TIẾN HÀNH THANH TOÁN
                   <span className="material-symbols-outlined">trending_flat</span>
@@ -280,9 +263,7 @@ export default function CartPage() {
               </Link>
               
               <div className="text-center">
-                <p className="font-body-md text-xs text-outline leading-relaxed italic mt-4">
-                  Giá đã bao gồm VAT. Miễn phí vận chuyển cho đơn hàng trên 2.000.000đ.
-                </p>
+
               </div>
             </div>
           </aside>

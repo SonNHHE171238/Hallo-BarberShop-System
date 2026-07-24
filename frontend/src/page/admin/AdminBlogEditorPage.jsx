@@ -33,11 +33,12 @@ export default function AdminBlogEditorPage({ isEdit = false, blogId = null }) {
           // For now, we assume the public route or admin list returns all details.
           // Wait, backend has getAdminBlogs and getBlogBySlug. We don't have getBlogById.
           // Actually, we can just fetch all admin blogs and find the one with this ID.
-          const res = await axios.get("http://localhost:5000/api/blogs/admin", {
+          const res = await axios.get("http://localhost:5000/api/blogs/admin?limit=1000", {
             withCredentials: true
           });
           if (res.data.success) {
-            const blog = res.data.data.find(b => b._id === blogId);
+            const blogsList = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.blogs || []);
+            const blog = blogsList.find(b => b._id === blogId);
             if (blog) {
               const canEdit = user?.role === 'admin' || blog.author?._id === user?.id;
               if (!canEdit) {

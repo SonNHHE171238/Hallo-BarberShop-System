@@ -38,15 +38,7 @@ export default function GuestBookingDetailPage() {
   const [payosData, setPayosData] = useState(null);
   const [paymentType, setPaymentType] = useState("deposit");
 
-  useEffect(() => {
-    if (!id || (!phone && source !== "customer")) {
-      setIsLoading(false);
-      return;
-    }
-    fetchBooking();
-  }, [id, phone, source]);
-
-  const fetchBooking = async () => {
+  const fetchBooking = useCallback(async () => {
     setIsLoading(true);
     try {
       let res;
@@ -63,7 +55,16 @@ export default function GuestBookingDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id, phone, source]);
+
+  useEffect(() => {
+    if (!id || (!phone && source !== "customer")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false);
+      return;
+    }
+    fetchBooking();
+  }, [id, phone, source, fetchBooking]);
 
   // Payment Polling
   useEffect(() => {
@@ -90,6 +91,11 @@ export default function GuestBookingDetailPage() {
               dateStr: dateStr,
               status: "PAID"
             });
+            if (phone) {
+              queryParams.append("phone", phone);
+            } else if (booking.customerPhone) {
+              queryParams.append("phone", booking.customerPhone);
+            }
             
             router.push(`/booking/success?${queryParams.toString()}`);
           }
@@ -103,19 +109,48 @@ export default function GuestBookingDetailPage() {
 
   const handlePayment = async (type) => {
     try {
-      const amount = type === "full" ? remaining : (booking.totalPrice / 2);
+      const amountPaid = booking.amountPaid || 0;
+      const remainingVal = Math.max(0, booking.totalPrice - amountPaid);
+      const amount = type === "full" ? remainingVal : (booking.totalPrice / 2);
+      
       setPaymentType(type);
       toast.loading("Đang khởi tạo mã thanh toán...");
-      const paymentRes = await axios.post("http://localhost:5000/api/payments/create", {
-        amount: Math.round(amount),
-        bookingId: id,
-        type: type,
+
+      const serviceName = booking.services?.map(s => s.name).join(", ") || "Dịch vụ";
+      const timeStr = booking.date ? new Date(booking.date).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : (booking.time || "N/A");
+      const dateStr = booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "";
+      
+      const queryParams = new URLSearchParams({
+        id: booking._id,
+        service: serviceName,
+        price: booking.totalPrice || 0,
+        barber: booking.barberName || "Sắp xếp tự động",
+        time: timeStr,
+        dateStr: dateStr,
       });
+      if (phone) {
+        queryParams.append("phone", phone);
+      } else if (booking.customerPhone) {
+        queryParams.append("phone", booking.customerPhone);
+      }
+
+      const successUrl = `${window.location.origin}/booking/success?${queryParams.toString()}&status=PAID`;
+      const cancelUrl = `${window.location.origin}/booking/success?${queryParams.toString()}&payment=cancelled`;
+
+      const paymentRes = await axios.post("http://localhost:5000/api/payment/create-link", {
+        bookingId: id,
+        amount: Math.round(amount),
+        returnUrl: successUrl,
+        cancelUrl: cancelUrl
+      });
+      
       toast.dismiss();
-      setPayosData({ ...paymentRes.data });
+      const resData = paymentRes.data.data || paymentRes.data;
+      setPayosData({ ...resData });
       setShowQR(true);
     } catch (error) {
       toast.dismiss();
+      console.error("Payment creation error:", error);
       toast.error("Lỗi khi tạo mã thanh toán. Vui lòng thử lại.");
     }
   };
@@ -157,6 +192,7 @@ export default function GuestBookingDetailPage() {
 
   useEffect(() => {
     if (showRescheduleModal && selectedDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchSlots(selectedDate);
     }
   }, [selectedDate, showRescheduleModal, fetchSlots]);
@@ -345,7 +381,7 @@ export default function GuestBookingDetailPage() {
                 </h2>
                 <div className="bg-surface-container-high rounded-xl p-4 border border-outline-variant/30">
                   <p className="font-body-md text-sm text-on-surface leading-relaxed italic">
-                    "{booking.note}"
+                    &quot;{booking.note}&quot;
                   </p>
                 </div>
               </div>
@@ -384,14 +420,38 @@ export default function GuestBookingDetailPage() {
                 </div>
 
                 <div className="shrink-0 border-t border-outline-variant/50 pt-6 mt-auto flex flex-col gap-4">
-                  <div className="flex justify-between items-end bg-surface-container p-6 rounded-xl border border-outline-variant shadow-inner">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Dịch Vụ</span>
-                      <span className="font-body-md text-xs text-on-surface-variant opacity-70">Đã bao gồm VAT</span>
+                  <div className="flex flex-col gap-2 bg-surface-container p-6 rounded-xl border border-outline-variant shadow-inner">
+                    <div className="flex justify-between items-end">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Dịch Vụ</span>
+                      </div>
+                      <span className="font-display-md text-xl md:text-2xl font-bold text-on-surface tracking-tighter">
+                        {((booking.totalPrice || 0) + (booking.discountAmount || 0)).toLocaleString("vi-VN")} <span className="text-lg font-normal">đ</span>
+                      </span>
                     </div>
-                    <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
-                      {(booking.totalPrice || 0).toLocaleString("vi-VN")} <span className="text-xl text-primary/70 font-normal">đ</span>
-                    </span>
+
+                    {booking.discountAmount > 0 && (
+                      <div className="flex justify-between items-end text-success">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-label-md text-[11px] font-bold uppercase tracking-widest">
+                            Giảm giá {booking.discountType === 'new_user' ? '(Khách mới)' : booking.discountType === 'loyalty_points' ? '(Điểm thưởng)' : booking.voucherCode ? `(${booking.voucherCode})` : ''}
+                          </span>
+                        </div>
+                        <span className="font-display-md text-xl md:text-2xl font-bold tracking-tighter">
+                          -{(booking.discountAmount || 0).toLocaleString("vi-VN")} <span className="text-lg font-normal">đ</span>
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-end border-t border-outline-variant/30 pt-4 mt-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Cộng</span>
+                        <span className="font-body-md text-xs text-on-surface-variant opacity-70">Tổng thanh toán</span>
+                      </div>
+                      <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
+                        {(booking.totalPrice || 0).toLocaleString("vi-VN")} <span className="text-xl text-primary/70 font-normal">đ</span>
+                      </span>
+                    </div>
                   </div>
 
                   {!isCancelledOrNoShow && (

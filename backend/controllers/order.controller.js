@@ -14,7 +14,7 @@ const payos = new PayOS({
 // Tạo đơn hàng mới
 exports.createOrder = async (req, res, next) => {
   try {
-    const { items, customerName, customerPhone, shippingAddress, paymentMethod, voucherCode } = req.body;
+    const { items, customerName, customerPhone, shippingAddress, paymentMethod, voucherCode, discountType = 'none', pointsToUse = 0 } = req.body;
     const userId = req.userId || null; // Hỗ trợ cả guest
 
     if (!items || items.length === 0) {
@@ -49,12 +49,19 @@ exports.createOrder = async (req, res, next) => {
     // Generate unique order code (Number) for PayOS
     const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
 
-    // Process Voucher Lock
+    // Process Voucher & Discount
     let discountAmount = 0;
     let voucherLockId = null;
     let appliedVoucherCode = null;
+    let pointsUsed = 0;
+    let appliedDiscountType = 'none';
 
-    if (voucherCode) {
+    let actualDiscountType = discountType;
+    if (voucherCode && actualDiscountType === 'none') {
+      actualDiscountType = 'voucher'; // fallback for backward compatibility
+    }
+
+    if (actualDiscountType === 'voucher' && voucherCode) {
       try {
         const productIds = orderItems.map(i => i.productId);
         const lockInfo = await voucherController.validateAndLockVoucher(voucherCode, totalAmount, userId, customerPhone, productIds);
@@ -62,9 +69,30 @@ exports.createOrder = async (req, res, next) => {
           discountAmount = lockInfo.discountAmount;
           voucherLockId = lockInfo.lockId;
           appliedVoucherCode = voucherCode.toUpperCase();
+          appliedDiscountType = 'voucher';
         }
       } catch (err) {
         return res.status(400).json({ success: false, message: 'Lỗi mã giảm giá: ' + err.message });
+      }
+    } else if (['new_user', 'loyalty_points'].includes(actualDiscountType)) {
+      const DiscountService = require('../services/discount.service');
+      try {
+        const discountResult = await DiscountService.calculateDiscount({
+          userId: userId,
+          totalAmount: totalAmount,
+          discountType: actualDiscountType,
+          pointsToUse,
+        });
+        discountAmount = discountResult.discountAmount;
+        pointsUsed = discountResult.pointsUsed;
+        appliedDiscountType = discountResult.discountType;
+  
+        // Deduct points immediately
+        if (appliedDiscountType === 'loyalty_points' && pointsUsed > 0) {
+          await DiscountService.deductPoints(userId, pointsUsed);
+        }
+      } catch (err) {
+        return res.status(400).json({ success: false, message: err.message });
       }
     }
 
@@ -86,7 +114,9 @@ exports.createOrder = async (req, res, next) => {
       }],
       voucherCode: appliedVoucherCode,
       discountAmount,
-      voucherLockId
+      voucherLockId,
+      discountType: appliedDiscountType,
+      pointsUsed,
     });
 
     await newOrder.save();
@@ -160,6 +190,36 @@ exports.trackOrderByCode = async (req, res, next) => {
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng với mã này' });
     }
+
+    // Sync with PayOS for polling
+    if (order.paymentStatus === 'pending' && order.orderCode) {
+      try {
+        const { PayOS } = require("@payos/node");
+        const payos = new PayOS({
+          clientId: process.env.PAYOS_CLIENT_ID,
+          apiKey: process.env.PAYOS_API_KEY,
+          checksumKey: process.env.PAYOS_CHECKSUM_KEY
+        });
+        const paymentInfo = await payos.getPaymentLinkInformation(order.orderCode);
+        if (paymentInfo && paymentInfo.status === 'PAID') {
+          order.paymentStatus = 'paid';
+          order.status = 'processing';
+          order.historyLog.push({
+            action: 'Thanh toán thành công',
+            actor: 'System',
+            note: 'Cập nhật thanh toán tự động qua API poll.'
+          });
+          if (order.voucherLockId) {
+            const voucherController = require('./voucher.controller');
+            await voucherController.redeemVoucherLock(order.voucherLockId);
+          }
+          await order.save();
+        }
+      } catch (payosErr) {
+        // Bỏ qua lỗi nếu mã QR chưa được khởi tạo hoặc đã hết hạn
+      }
+    }
+
     res.json({ success: true, data: order });
   } catch (error) {
     next(error);
@@ -370,6 +430,8 @@ exports.updateOrderStatus = async (req, res, next) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
 
+    const oldStatus = order.status;
+
     // Chỉ log khi thực sự có thay đổi trạng thái
     if (order.status !== status) {
       const actionLabels = {
@@ -415,6 +477,20 @@ exports.updateOrderStatus = async (req, res, next) => {
           console.error("Failed to release voucher lock for order:", err);
         }
       }
+
+      if (order.userId) {
+        const DiscountService = require('../services/discount.service');
+        try {
+          if (status === 'completed' && oldStatus !== 'completed') {
+            await DiscountService.addPointsForCompletion(order.userId, order.totalAmount);
+          } else if (status === 'cancelled' && oldStatus !== 'cancelled') {
+            const wasCompleted = (oldStatus === 'completed');
+            await DiscountService.revertPoints(order.userId, order.pointsUsed || 0, wasCompleted, order.totalAmount);
+          }
+        } catch (pointError) {
+          console.error("Error updating points for order:", pointError);
+        }
+      }
     }
 
     await order.save();
@@ -428,7 +504,7 @@ exports.updateOrderStatus = async (req, res, next) => {
 exports.updateInternalNote = async (req, res, next) => {
   try {
     const { internalNote } = req.body;
-    const order = await Order.findByIdAndUpdate(req.params.id, { internalNote }, { new: true });
+    const order = await Order.findByIdAndUpdate(req.params.id, { internalNote }, { returnDocument: "after" });
     if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     res.json({ success: true, message: 'Cập nhật ghi chú thành công', data: order });
   } catch (error) {
@@ -455,7 +531,7 @@ exports.confirmCODPayment = async (req, res, next) => {
         note: 'Admin xác nhận đã nhận được tiền mặt từ khách hàng/shipper.',
       });
 
-      if (order.status === 'completed') {
+    if (order.status === 'completed') {
         order.historyLog.push({
           action: 'Đơn hàng giao dịch thành công',
           actor: 'System',
@@ -466,6 +542,36 @@ exports.confirmCODPayment = async (req, res, next) => {
     }
 
     res.json({ success: true, message: 'Xác nhận thu tiền thành công', data: order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/orders/:orderCode/reviewed-products
+exports.getReviewedProducts = async (req, res, next) => {
+  try {
+    const orderCode = Number(req.params.code);
+    const order = await Order.findOne({ 
+      $or: [
+        { orderCode: orderCode },
+        { previousOrderCodes: orderCode }
+      ]
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    }
+
+    // Lấy danh sách ProductFeedback cho order này
+    const ProductFeedback = require('../models/product-feedback.model');
+    const feedbacks = await ProductFeedback.find({ orderId: order._id }).select('productId');
+
+    const reviewedProductIds = feedbacks.map(fb => fb.productId.toString());
+
+    res.json({
+      success: true,
+      data: reviewedProductIds
+    });
   } catch (error) {
     next(error);
   }

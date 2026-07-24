@@ -18,9 +18,21 @@ export default function BarberAbsencePage() {
   const [message, setMessage] = useState({ text: '', type: '' });
   const [showUrgentWarning, setShowUrgentWarning] = useState(false);
 
-  useEffect(() => {
-    fetchRequests();
+  const fetchRequests = useCallback(async () => {
+    try {
+      const res = await absenceService.getMyRequests(filter);
+      if (res && res.absences) {
+        setRequests(res.absences);
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải lịch sử:", error);
+    }
   }, [filter]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchRequests();
+  }, [filter, fetchRequests]);
 
   useEffect(() => {
     if (startDate) {
@@ -31,6 +43,7 @@ export default function BarberAbsencePage() {
       const diffTime = Math.abs(selectedDate - today);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowUrgentWarning(diffDays <= 1);
       
       // Auto set endDate if it's empty or earlier than startDate
@@ -39,17 +52,6 @@ export default function BarberAbsencePage() {
       }
     }
   }, [startDate, endDate]);
-
-  const fetchRequests = async () => {
-    try {
-      const res = await absenceService.getMyRequests(filter);
-      if (res && res.absences) {
-        setRequests(res.absences);
-      }
-    } catch (error) {
-      console.error("Lỗi khi tải lịch sử:", error);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -35,12 +35,16 @@ export default function EmployeeListTab() {
         const u = item.user || {};
         const bId = String(b._id || b.id || "000000");
         const uId = String(u._id || u.id || "000000");
+        const computedExp = b.workingSince 
+          ? Math.max(0, new Date().getFullYear() - new Date(b.workingSince).getFullYear()) 
+          : (b.experienceYears || 0);
+          
         return {
           id: bId.length > 6 ? bId.substring(bId.length - 6).toUpperCase() : bId.toUpperCase(),
           fullId: uId,
           barberId: bId,
           name: u.name,
-          role: b.experienceYears >= 5 ? "Master Barber" : "Junior Barber",
+          role: computedExp >= 3 ? "Senior Barber" : computedExp > 1 ? "Junior Barber" : "Barber",
           type: "barber",
           avatar: u.avatarUrl,
           rating: b.rating || b.averageRating || 5.0, 
@@ -84,6 +88,7 @@ export default function EmployeeListTab() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStaff();
   }, []);
 

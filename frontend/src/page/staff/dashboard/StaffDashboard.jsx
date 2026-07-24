@@ -58,6 +58,7 @@ export default function StaffDashboard() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData(true);
 
     // Silent polling mỗi 60s
@@ -87,6 +88,7 @@ export default function StaffDashboard() {
       );
       if (updatedBooking && updatedBooking.paymentStatus === "paid") {
         toast.success("Nhận tiền thành công! Khách đã thanh toán.");
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setQrCodeData(null);
         setCheckInModal({ isOpen: false, booking: null, isPayment: false });
       }

@@ -10,16 +10,21 @@ export default function PersonalScheduleTab() {
   const [roster, setRoster] = useState(null);
   const [registration, setRegistration] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [targetDate, setTargetDate] = useState(new Date());
 
   useEffect(() => {
+     
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true);
       try {
+        const dateStr = targetDate.toISOString().split("T")[0];
         const rosterRes = await axios.get(
-          "http://localhost:5000/api/rosters/current/published",
+          `http://localhost:5000/api/rosters/current/published?date=${dateStr}`,
           {
             withCredentials: true,
           },
@@ -29,10 +34,17 @@ export default function PersonalScheduleTab() {
           setRoster(rosterRes.data.roster);
           if (rosterRes.data.registration) {
             setRegistration(rosterRes.data.registration);
+          } else {
+            setRegistration(null);
           }
+        } else {
+          setRoster(null);
+          setRegistration(null);
         }
       } catch (error) {
         console.error("Failed to fetch published roster:", error);
+        setRoster(null);
+        setRegistration(null);
       } finally {
         setIsLoading(false);
       }
@@ -41,7 +53,7 @@ export default function PersonalScheduleTab() {
     if (mounted) {
       fetchData();
     }
-  }, [mounted]);
+  }, [mounted, targetDate]);
 
   if (!mounted) return null;
 
@@ -53,26 +65,71 @@ export default function PersonalScheduleTab() {
     );
   }
 
+  const handlePrevWeek = () => {
+    const d = new Date(targetDate);
+    d.setDate(d.getDate() - 7);
+    setTargetDate(d);
+  };
+
+  const handleNextWeek = () => {
+    const d = new Date(targetDate);
+    d.setDate(d.getDate() + 7);
+    setTargetDate(d);
+  };
+
+  const formatDateStr = (dateStr) => {
+    const parts = dateStr.split("-");
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+
+  const getLocalDateString = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   if (!roster) {
     return (
-      <div className="bg-surface-container border border-outline-variant p-10 rounded-xl text-center shadow-sm">
-        <span className="material-symbols-outlined text-outline text-5xl mb-4">
-          calendar_month
-        </span>
-        <h3 className="font-headline-md text-headline-md text-on-surface mb-2">
-          Chưa có lịch làm việc
-        </h3>
-        <p className="text-on-surface-variant">
-          Tuần này bạn chưa có lịch làm việc nào được phân công.
-        </p>
+      <div className="animate-fade-in font-body-md">
+        <div className="flex justify-between items-center mb-6">
+          <button onClick={handlePrevWeek} className="flex items-center gap-2 px-4 py-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors text-on-surface">
+            <span className="material-symbols-outlined text-sm">arrow_back_ios</span>
+            Tuần trước
+          </button>
+          <h3 className="font-headline-md text-on-surface">Tuần {formatDateStr(getLocalDateString(targetDate))}</h3>
+          <button onClick={handleNextWeek} className="flex items-center gap-2 px-4 py-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors text-on-surface">
+            Tuần sau
+            <span className="material-symbols-outlined text-sm">arrow_forward_ios</span>
+          </button>
+        </div>
+        <div className="bg-surface-container border border-outline-variant p-10 rounded-xl text-center shadow-sm">
+          <span className="material-symbols-outlined text-outline text-5xl mb-4">
+            calendar_month
+          </span>
+          <h3 className="font-headline-md text-headline-md text-on-surface mb-2">
+            Chưa có lịch làm việc
+          </h3>
+          <p className="text-on-surface-variant">
+            Tuần này bạn chưa có lịch làm việc nào được phân công.
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Generate days
+  // Generate exactly 7 days: Monday to Sunday
   const days = [];
-  const start = new Date(roster.weekStartDate);
-  const end = new Date(roster.weekEndDate);
+  const start = new Date(targetDate);
+  const currentDayOfWeek = start.getDay();
+  const diff = start.getDate() - currentDayOfWeek + (currentDayOfWeek === 0 ? -6 : 1);
+  start.setDate(diff);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
   const dayNames = [
     "CHỦ NHẬT",
     "THỨ 2",
@@ -85,17 +142,19 @@ export default function PersonalScheduleTab() {
 
   let current = new Date(start);
   while (current <= end) {
-    const dateStr = current.toISOString().split("T")[0];
-    const isClosed = roster.closedDays?.some(
-      (cd) => new Date(cd.date).toISOString().split("T")[0] === dateStr,
-    );
+    const dateStr = getLocalDateString(current);
+    const isClosed = roster.closedDays?.some((cd) => {
+      const cdDate = new Date(cd.date);
+      return getLocalDateString(cdDate) === dateStr;
+    });
 
     // Find assigned shifts for this day if staff
     let assignedShifts = [];
     if (registration) {
-      const regDay = registration.registeredShifts.find(
-        (d) => new Date(d.date).toISOString().split("T")[0] === dateStr,
-      );
+      const regDay = registration.registeredShifts.find((d) => {
+        const dDate = new Date(d.date);
+        return getLocalDateString(dDate) === dateStr;
+      });
       if (regDay) {
         assignedShifts = regDay.shifts; // ['morning', 'afternoon']
       }
@@ -116,17 +175,31 @@ export default function PersonalScheduleTab() {
     afternoon: { title: "CA 2", time: "14:00 - 19:00" },
   };
 
-  const getTodayStr = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
+  const getTodayStr = () => getLocalDateString(new Date());
   const todayStr = getTodayStr();
 
   return (
     <div className="animate-fade-in font-body-md">
+      {/* Navigation Header */}
+      <div className="flex justify-between items-center mb-6">
+        <button onClick={handlePrevWeek} className="flex items-center gap-2 px-4 py-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors text-on-surface">
+          <span className="material-symbols-outlined text-sm">arrow_back_ios</span>
+          <span className="hidden sm:inline">Tuần trước</span>
+        </button>
+        <div className="text-center">
+          <h3 className="font-headline-md text-on-surface">
+            Lịch Làm Việc Cá Nhân
+          </h3>
+          <p className="text-sm text-on-surface-variant mt-1">
+            {formatDateStr(roster.weekStartDate.split('T')[0])} - {formatDateStr(roster.weekEndDate.split('T')[0])}
+          </p>
+        </div>
+        <button onClick={handleNextWeek} className="flex items-center gap-2 px-4 py-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors text-on-surface">
+          <span className="hidden sm:inline">Tuần sau</span>
+          <span className="material-symbols-outlined text-sm">arrow_forward_ios</span>
+        </button>
+      </div>
+
       <div className="bg-[#1C1C1C] border border-[#2A2A2A] rounded-xl overflow-hidden shadow-2xl">
         {/* Header/Columns Grid */}
         <div className="grid grid-cols-7 border-b border-[#2A2A2A]">

@@ -32,7 +32,7 @@ export default function BarberHeader() {
         <nav className="hidden md:flex gap-8 items-center">
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/dashboard">Bảng Điều Khiển</Link>
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/bookings">Lịch Hẹn</Link>
-          <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/customers">Khách Hàng</Link>
+          <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/profile">Hồ sơ barber</Link>
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/absence">Xin Nghỉ Phép</Link>
         </nav>
 
@@ -63,7 +63,7 @@ export default function BarberHeader() {
                   <p className="font-body-md text-xs text-on-surface-variant truncate mt-1">{user?.email || "barber@hallobarber.com"}</p>
                 </div>
                 <div className="py-2">
-                  <Link href="/barber/profile" className="flex items-center gap-3 px-4 py-2 font-label-md text-sm text-on-surface hover:bg-surface-variant transition-colors">
+                  <Link href="/barber/account" className="flex items-center gap-3 px-4 py-2 font-label-md text-sm text-on-surface hover:bg-surface-variant transition-colors">
                     <span className="material-symbols-outlined text-[20px]">person</span>
                     Hồ sơ cá nhân
                   </Link>
@@ -99,7 +99,7 @@ export default function BarberHeader() {
         <div className="flex flex-col px-4 space-y-4">
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/dashboard">Bảng Điều Khiển</Link>
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/bookings">Lịch Hẹn</Link>
-          <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/customers">Khách Hàng</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/profile">Hồ sơ barber</Link>
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/absence">Xin Nghỉ Phép</Link>
         </div>
       </div>

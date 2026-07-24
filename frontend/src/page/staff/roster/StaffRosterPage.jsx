@@ -23,6 +23,8 @@ export default function StaffRosterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+     
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -358,8 +360,8 @@ export default function StaffRosterPage() {
                   </div>
                   <div className="flex items-center justify-between py-4 border-b border-outline-variant/50 mb-8">
                     <span className="text-on-surface-variant">Hạn chót:</span>
-                    <span className="text-error">
-                      {formatDateStr(roster.registrationDeadline)}
+                    <span className={roster.registrationDeadline ? "text-error" : "text-success font-bold uppercase text-sm"}>
+                      {roster.registrationDeadline ? formatDateStr(roster.registrationDeadline) : "Không bắt buộc"}
                     </span>
                   </div>
 

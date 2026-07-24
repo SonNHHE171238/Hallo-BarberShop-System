@@ -32,7 +32,7 @@ exports.updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, description, isActive } = req.body;
-    const category = await Category.findByIdAndUpdate(id, { name, description, isActive }, { new: true });
+    const category = await Category.findByIdAndUpdate(id, { name, description, isActive }, { returnDocument: "after" });
     
     if (!category) return res.status(404).json({ success: false, message: 'Không tìm thấy danh mục' });
     res.json({ success: true, data: category, message: 'Cập nhật thành công' });

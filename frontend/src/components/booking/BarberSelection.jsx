@@ -51,7 +51,7 @@ export default function BarberSelection({ selectedBarber, setSelectedBarber }) {
     if (keyword) {
       result = result.filter((barber) => {
         const name = barber.userId?.name || "";
-        const title = barber.specialties?.join(", ") || "";
+        const title = "Stylist";
         return normalizeText(name).includes(keyword) || normalizeText(title).includes(keyword);
       });
     }
@@ -60,12 +60,42 @@ export default function BarberSelection({ selectedBarber, setSelectedBarber }) {
   }, [searchTerm, barbers]);
 
   const handleSelectBarber = (barber) => {
+    if (barber._id === 'auto') {
+      setSelectedBarber({ 
+        ...barber, 
+        id: barber._id,
+        name: barber.name,
+        title: barber.title,
+        experience: "",
+        level: 'standard'
+      });
+      setSearchTerm("");
+      setIsFocus(false);
+      return;
+    }
+
+    const isConfigured = barber.bio || barber.workingSince || (barber.experienceYears && barber.experienceYears > 0) || (barber.gallery && barber.gallery.length > 0) || (barber.specialties && barber.specialties.length > 0);
+
+    const getRoleLabel = (years) => {
+      if (years >= 3) return "Senior Barber";
+      if (years > 1) return "Junior Barber";
+      return "Barber";
+    };
+
+    const computedExp = barber.workingSince 
+      ? Math.max(0, new Date().getFullYear() - new Date(barber.workingSince).getFullYear()) 
+      : (barber.experienceYears || 0);
+
+    const title = isConfigured ? getRoleLabel(computedExp) : "Stylist";
+    const experience = isConfigured ? (computedExp ? `${computedExp} năm kinh nghiệm` : "Barber") : "";
+
     setSelectedBarber({ 
       ...barber, 
       id: barber._id,
       name: barber.name || barber.userId?.name || "Barber",
-      title: barber.title || barber.specialties?.[0] || "Stylist",
-      experience: barber.experienceYears ? `${barber.experienceYears} năm kinh nghiệm` : "Đang cập nhật"
+      title: title,
+      experience: experience,
+      level: barber.level || 'standard'
     });
     setSearchTerm("");
     setIsFocus(false);
@@ -147,8 +177,18 @@ export default function BarberSelection({ selectedBarber, setSelectedBarber }) {
                     displayedBarbers.map((barber) => {
                       const name = barber.userId?.name || "Unknown Barber";
                       const firstChar = name.charAt(0).toUpperCase();
-                      const title = barber.specialties?.join(", ") || "Stylist";
-                      const exp = barber.experienceYears ? `${barber.experienceYears} năm kinh nghiệm` : "Đang cập nhật";
+                      const isConfigured = barber.bio || barber.workingSince || (barber.experienceYears && barber.experienceYears > 0) || (barber.gallery && barber.gallery.length > 0) || (barber.specialties && barber.specialties.length > 0);
+                      const getRoleLabel = (years) => {
+                        if (years >= 3) return "Senior Barber";
+                        if (years > 1) return "Junior Barber";
+                        return "Barber";
+                      };
+                      const computedExp = barber.workingSince 
+                        ? Math.max(0, new Date().getFullYear() - new Date(barber.workingSince).getFullYear()) 
+                        : (barber.experienceYears || 0);
+
+                      const title = isConfigured ? getRoleLabel(computedExp) : "Stylist";
+                      const exp = isConfigured ? (computedExp ? `${computedExp} năm kinh nghiệm` : "Barber") : "";
                       const imageUrl = barber.profileImageUrl;
 
                       return (
@@ -168,15 +208,19 @@ export default function BarberSelection({ selectedBarber, setSelectedBarber }) {
                         <div>
                           <div className="text-body-lg text-on-surface font-semibold group-hover:text-primary transition-colors flex items-center">
                             {name}
-                            <span className="material-symbols-outlined text-[14px] text-primary ml-1" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                            {barber.level === 'vip' && (
+                              <span className="material-symbols-outlined text-[16px] text-yellow-500 ml-1 drop-shadow-sm" style={{ fontVariationSettings: "'FILL' 1" }} title="Barber VIP">workspace_premium</span>
+                            )}
                           </div>
                           <div className="text-label-sm text-primary uppercase tracking-widest mt-0.5">
                             {title}
                           </div>
-                          <div className="text-body-sm text-on-surface-variant mt-0.5 flex items-center">
-                            <span className="material-symbols-outlined text-[14px] mr-1">history_edu</span>
-                            {exp}
-                          </div>
+                          {exp && (
+                            <div className="text-body-sm text-on-surface-variant mt-0.5 flex items-center">
+                              <span className="material-symbols-outlined text-[14px] mr-1">history_edu</span>
+                              {exp}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -218,11 +262,14 @@ export default function BarberSelection({ selectedBarber, setSelectedBarber }) {
               <div className="text-label-md text-primary tracking-widest uppercase mb-1 font-bold">
                 ✂️ Barber đã chọn
               </div>
-              <div className="text-headline-sm font-headline-sm text-on-surface">
+              <div className="text-headline-sm font-headline-sm text-on-surface flex items-center gap-2">
                 {selectedBarber.name}
+                {selectedBarber.level === 'vip' && (
+                  <span className="material-symbols-outlined text-[20px] text-yellow-500 drop-shadow-sm" title="Barber VIP">workspace_premium</span>
+                )}
               </div>
               <div className="text-body-md text-on-surface-variant mt-1">
-                {selectedBarber.title} • {selectedBarber.experience}
+                {selectedBarber.title} {selectedBarber.experience ? `• ${selectedBarber.experience}` : ""}
               </div>
             </div>
           </div>

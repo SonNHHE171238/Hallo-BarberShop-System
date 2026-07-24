@@ -19,13 +19,13 @@ export default function BlogDetailHeader({ blog }) {
           Blog
         </Link>
         <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span className="text-on-surface-variant">Chi tiết</span>
+        <span className="text-on-surface-variant">Bài viết</span>
       </nav>
-      
+
       <h1 className="font-headline-lg text-headline-lg md:text-display-lg md:font-display-lg text-on-surface leading-tight mb-8">
         {blog.title}
       </h1>
-      
+
       <div className="flex flex-col md:flex-row md:items-center justify-between border-y border-outline-variant py-6 gap-4">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 rounded-full bg-surface-container border border-outline-gold overflow-hidden flex items-center justify-center text-primary font-bold">
@@ -36,14 +36,14 @@ export default function BlogDetailHeader({ blog }) {
             <p className="text-label-md text-outline">Tác giả</p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-6 text-label-md text-on-surface-variant">
           <div className="flex items-center space-x-2">
             <span className="material-symbols-outlined text-primary">calendar_today</span>
             <span>{formattedDate}</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="material-symbols-outlined text-primary">schedule</span>
+            <span className="material-symbols-outlined text-primary">visibility</span>
             <span>{blog.views || 0} lượt xem</span>
           </div>
         </div>

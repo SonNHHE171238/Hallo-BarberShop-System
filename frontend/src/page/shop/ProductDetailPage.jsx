@@ -17,6 +17,9 @@ export default function ProductDetailPage({ id }) {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [feedbackPagination, setFeedbackPagination] = useState({ page: 1, totalPages: 1 });
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -36,6 +39,28 @@ export default function ProductDetailPage({ id }) {
     };
     fetchProduct();
   }, [id, router]);
+
+  const fetchFeedbacks = async (page = 1) => {
+    try {
+      setLoadingFeedbacks(true);
+      const res = await axios.get(`http://localhost:5000/api/products/${id}/feedbacks?page=${page}&limit=5`);
+      if (res.data.success) {
+        setFeedbacks(prev => page === 1 ? res.data.data : [...prev, ...res.data.data]);
+        setFeedbackPagination({ page: res.data.pagination.page, totalPages: res.data.pagination.totalPages });
+      }
+    } catch (error) {
+      console.error("Lỗi lấy đánh giá:", error);
+    } finally {
+      setLoadingFeedbacks(false);
+    }
+  };
+
+  useEffect(() => {
+    if (product?._id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchFeedbacks(1);
+    }
+  }, [product?._id]);
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -74,6 +99,30 @@ export default function ProductDetailPage({ id }) {
     } catch (error) {
       console.error("Error adding to cart:", error);
       toast.error("Có lỗi xảy ra khi thêm vào giỏ hàng.");
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn gỡ đánh giá này không?")) return;
+    try {
+      const res = await axios.delete(`http://localhost:5000/api/product-feedbacks/${feedbackId}`, {
+        withCredentials: true
+      });
+      if (res.data.success) {
+        toast.success("Đã gỡ đánh giá!");
+        
+        // Cập nhật lại danh sách đánh giá
+        fetchFeedbacks(1);
+        
+        // Cập nhật lại số lượng đánh giá của sản phẩm trên giao diện
+        setProduct(prev => prev ? {
+          ...prev,
+          totalReviews: Math.max(0, prev.totalReviews - 1)
+        } : null);
+      }
+    } catch (error) {
+      console.error("Lỗi khi gỡ đánh giá:", error);
+      toast.error(error.response?.data?.message || "Không thể gỡ đánh giá.");
     }
   };
 
@@ -224,6 +273,71 @@ export default function ProductDetailPage({ id }) {
                   Thêm Vào Giỏ Hàng - {formatPrice(product.price * quantity)}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Product Feedbacks Section */}
+        <div className="mt-16 lg:mt-24">
+          <h2 className="font-headline-md text-2xl text-primary border-b border-outline-variant pb-4 mb-8">
+            Đánh giá từ khách hàng ({product.totalReviews || 0})
+          </h2>
+          
+          <div className="flex flex-col gap-6">
+            {feedbacks.length === 0 && !loadingFeedbacks ? (
+              <div className="text-center py-12 bg-surface-container-low rounded-lg border border-outline-variant border-dashed">
+                <span className="material-symbols-outlined text-4xl text-outline-variant mb-2">reviews</span>
+                <p className="text-on-surface-variant font-label-md">Chưa có đánh giá nào cho sản phẩm này.</p>
+              </div>
+            ) : (
+              feedbacks.map((fb) => (
+                <div key={fb._id} className="bg-surface-container-lowest p-6 rounded-lg border border-outline-variant flex flex-col gap-4">
+                  <div className="flex items-center gap-4">
+                    <img src={fb.userAvatar} alt={fb.userName} className="w-12 h-12 rounded-full object-cover" />
+                    <div>
+                      <p className="font-headline-sm text-on-surface">{fb.userName}</p>
+                      <p className="text-xs text-on-surface-variant">{new Date(fb.createdAt).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                    <div className="ml-auto flex items-center gap-4">
+                      <div className="flex text-primary">
+                        {[1,2,3,4,5].map(star => (
+                          <span key={star} className="material-symbols-outlined text-lg" style={{ fontVariationSettings: star <= fb.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+                        ))}
+                      </div>
+                      {user && user.role === 'customer' && fb.userId && fb.userId === (user.id || user._id) && (
+                        <button 
+                          onClick={() => handleDeleteFeedback(fb._id)}
+                          className="text-error hover:text-error/85 transition-colors p-1.5 flex items-center justify-center rounded hover:bg-error/10 border border-transparent hover:border-error/20"
+                          title="Gỡ đánh giá"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-on-surface-variant whitespace-pre-line leading-relaxed pl-16">
+                    {fb.comment}
+                  </p>
+                </div>
+              ))
+            )}
+            
+            {loadingFeedbacks && (
+              <div className="flex justify-center py-4">
+                <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+              </div>
+            )}
+            
+            {feedbackPagination.page < feedbackPagination.totalPages && (
+              <div className="flex justify-center mt-4">
+                <button 
+                  onClick={() => fetchFeedbacks(feedbackPagination.page + 1)}
+                  disabled={loadingFeedbacks}
+                  className="px-6 py-2 border border-primary text-primary font-label-md rounded uppercase tracking-widest hover:bg-primary/5 transition-colors"
+                >
+                  Xem thêm đánh giá
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>

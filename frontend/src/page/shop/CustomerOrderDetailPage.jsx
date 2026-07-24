@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, useMemo, Suspense } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { QRCodeSVG } from 'qrcode.react';
+import ProductReviewModal from "@/components/shop/ProductReviewModal";
 
 function OrderDetailContent({ orderCode }) {
   const router = useRouter();
@@ -19,6 +20,9 @@ function OrderDetailContent({ orderCode }) {
   const [showTimeline, setShowTimeline] = useState(false);
   const [payosData, setPayosData] = useState(null);
   const [loadingPayos, setLoadingPayos] = useState(false);
+  
+  const [reviewedProducts, setReviewedProducts] = useState([]);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const fetchOrder = async () => {
     try {
@@ -35,9 +39,28 @@ function OrderDetailContent({ orderCode }) {
 
   useEffect(() => {
     if (orderCode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchOrder();
     }
   }, [orderCode]);
+
+  const fetchReviewedProducts = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/orders/${orderCode}/reviewed-products`);
+      if (res.data.success) {
+        setReviewedProducts(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (order?.status === 'completed') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchReviewedProducts();
+    }
+  }, [order?.status, orderCode]);
 
   // Polling check payment status
   useEffect(() => {
@@ -74,6 +97,17 @@ function OrderDetailContent({ orderCode }) {
   };
 
   // Đã bỏ hiệu ứng hover theo yêu cầu
+
+  // Calculate review eligibility - must be before early returns to comply with rules-of-hooks
+  const completedLog = order?.historyLog?.find(log => log.action === 'Đơn hàng giao dịch thành công') || order?.historyLog?.[order?.historyLog?.length - 1];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const isReviewExpired = useMemo(() => {
+    const base = completedLog?.timestamp || order?.updatedAt || order?.createdAt;
+    const completedDate = base ? new Date(base) : new Date(0);
+    const diffTime = Math.abs(Date.now() - completedDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 7;
+  }, [completedLog, order?.updatedAt, order?.createdAt]);
 
   if (loading) {
     return (
@@ -112,16 +146,21 @@ function OrderDetailContent({ orderCode }) {
   const discountAmount = order.discountAmount || 0;
   const totalAmount = order.totalAmount;
   const subTotal = order.items.reduce((sum, item) => sum + (item.priceAtPurchase * item.quantity), 0);
-  const shippingFee = Math.max(0, totalAmount + discountAmount - subTotal);
 
   // Status mapping
   const statusMap = {
     'pending': { label: 'Đơn mới', color: 'bg-primary text-on-primary' },
-    'processing': { label: 'Đang chuẩn bị', color: 'bg-secondary text-on-secondary' },
-    'shipped': { label: 'Đang giao hàng', color: 'bg-tertiary text-on-tertiary' },
-    'completed': { label: 'Hoàn thành', color: 'bg-success text-on-success' },
-    'cancelled': { label: 'Đã hủy', color: 'bg-error text-on-error' }
+    'confirmed': { label: 'Đã xác nhận', color: 'bg-secondary text-on-secondary' },
+    'processing': { label: 'Đang xử lý', color: 'bg-secondary text-on-secondary' },
+    'shipped': { label: 'Đang giao', color: 'bg-tertiary text-on-tertiary' },
+    'completed': { label: 'Đã giao', color: 'bg-success text-on-success' },
+    'cancelled': { label: 'Đã hủy', color: 'bg-error text-on-error' },
   };
+
+  // Calculate eligible products (isReviewExpired already computed above)
+  const eligibleProductsToReview = order?.status === 'completed' && !isReviewExpired
+    ? order.items.filter(item => item.productId && !reviewedProducts.includes(item.productId._id)).map(i => i.productId)
+    : [];
 
   return (
     <div className="bg-background min-h-screen text-on-surface flex flex-col font-body-md overflow-x-hidden selection:bg-primary selection:text-on-primary">
@@ -227,10 +266,20 @@ function OrderDetailContent({ orderCode }) {
 
           {/* Main Content: Two Columns */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
-            {/* Left: Products */}
             <div className="lg:col-span-8 flex flex-col gap-6">
               <div className="glass-panel p-8 rounded-lg">
-                <h2 className="font-headline-md text-headline-md text-primary mb-8 border-b border-outline-variant pb-4">Sản phẩm đã mua</h2>
+                <div className="flex justify-between items-end border-b border-outline-variant pb-4 mb-8">
+                  <h2 className="font-headline-md text-headline-md text-primary">Sản phẩm đã mua</h2>
+                  {eligibleProductsToReview.length > 0 && (
+                    <button 
+                      onClick={() => setIsReviewModalOpen(true)}
+                      className="bg-primary text-on-primary px-6 py-2 rounded font-label-md uppercase tracking-widest text-xs hover:bg-primary-fixed-dim transition-colors shadow-md flex items-center gap-2 active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">reviews</span>
+                      Đánh giá ({eligibleProductsToReview.length})
+                    </button>
+                  )}
+                </div>
                 <div className="flex flex-col gap-8">
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex gap-6 items-center">
@@ -243,6 +292,23 @@ function OrderDetailContent({ orderCode }) {
                       <div className="flex-grow">
                         <h3 className="font-headline-sm text-base text-on-surface line-clamp-2">{item.productId?.name || 'Sản phẩm không xác định'}</h3>
                         <p className="text-on-surface-variant text-sm mt-1">Số lượng: {item.quantity}</p>
+                        
+                        {/* Logic hiển thị nút Đánh giá */}
+                        {order.status === 'completed' && item.productId && (
+                          <div className="mt-3">
+                            {reviewedProducts.includes(item.productId._id) ? (
+                               <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-success bg-success/10 px-2 py-1 rounded">
+                                 <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                 Đã đánh giá
+                               </span>
+                            ) : isReviewExpired ? (
+                               <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant bg-surface-variant/20 px-2 py-1 rounded">
+                                 <span className="material-symbols-outlined text-[14px]">history</span>
+                                 Hết hạn đánh giá
+                               </span>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="font-headline-sm text-base text-primary">{formatPrice(item.priceAtPurchase * item.quantity)}</p>
@@ -262,14 +328,12 @@ function OrderDetailContent({ orderCode }) {
                   </div>
                   {discountAmount > 0 && (
                     <div className="flex justify-between items-center text-success">
-                      <span>Giảm giá</span>
+                      <span>
+                        Giảm giá {order.discountType === 'new_user' ? '(Khách mới)' : order.discountType === 'loyalty_points' ? '(Điểm thưởng)' : order.voucherCode ? `(${order.voucherCode})` : ''}
+                      </span>
                       <span className="font-label-md text-label-md">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center text-on-surface-variant">
-                    <span>Phí giao hàng</span>
-                    <span className="font-label-md text-label-md">{formatPrice(shippingFee)}</span>
-                  </div>
                   <div className="flex justify-between items-center mt-4 pt-4 border-t border-outline-variant">
                     <span className="font-headline-md text-headline-md text-primary">Tổng cộng</span>
                     <span className="font-headline-md text-headline-md text-primary">{formatPrice(totalAmount)}</span>
@@ -433,6 +497,15 @@ function OrderDetailContent({ orderCode }) {
       </main>
 
       <Footer />
+      <ProductReviewModal 
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        products={eligibleProductsToReview}
+        orderCode={orderCode}
+        onSuccess={(productId) => {
+           setReviewedProducts(prev => [...prev, productId]);
+        }}
+      />
     </div>
   );
 }

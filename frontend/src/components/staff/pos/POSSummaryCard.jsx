@@ -5,7 +5,6 @@ export default function POSSummaryCard({
   hasServices,
   selectedStaff,
   subTotal,
-  vat,
   total,
   decreaseQuantity,
   increaseQuantity,
@@ -157,10 +156,7 @@ export default function POSSummaryCard({
             <span>Tạm tính</span>
             <span className="font-label-md">{subTotal.toLocaleString('vi-VN')}đ</span>
           </div>
-          <div className="flex justify-between font-body-md text-on-surface-variant text-sm border-b border-outline-variant/20 pb-3">
-            <span>Thuế VAT (8%)</span>
-            <span className="font-label-md">{vat.toLocaleString('vi-VN')}đ</span>
-          </div>
+
           <div className="flex justify-between font-headline-md text-2xl text-primary items-end">
             <span className="text-base text-on-surface font-bold uppercase">Tổng</span>
             <span className="font-bold tracking-tight">{total.toLocaleString('vi-VN')}đ</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -11,48 +11,61 @@ import RelatedPosts from "@/components/blog/RelatedPosts";
 import BlogDetailCTA from "@/components/blog/BlogDetailCTA";
 
 export default function BlogDetailPage({ slug }) {
-  const [mounted, setMounted] = useState(false);
+  const resolvedSlug = slug;
   const [blog, setBlog] = useState(null);
-  const [relatedBlogs, setRelatedBlogs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    setMounted(true);
-    const fetchData = async () => {
+     
+    // Guard against React Strict Mode double-invocation (which would double the view count)
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    const fetchBlogDetail = async () => {
+      const targetSlug = typeof resolvedSlug === "object" ? resolvedSlug?.slug : resolvedSlug;
+      if (!targetSlug) {
+        setIsLoading(false);
+        return;
+      }
       try {
-        const [blogRes, allBlogsRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/blogs/public/${slug}`),
-          axios.get("http://localhost:5000/api/blogs/public")
-        ]);
-        
-        if (blogRes.data.success) {
-          setBlog(blogRes.data.data);
+        const res = await axios.get(`http://localhost:5000/api/blogs/public/${targetSlug}`);
+        if (res.data.success) {
+          setBlog(res.data.data);
         }
-        
-        if (allBlogsRes.data.success) {
-          const all = allBlogsRes.data.data;
-          setRelatedBlogs(all.filter(b => b.slug !== slug).slice(0, 3));
-        }
-      } catch (err) {
-        console.error("Failed to fetch blog data:", err);
+      } catch (error) {
+        console.error("Failed to fetch blog detail:", error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
-    fetchData();
-  }, [slug]);
 
-  if (!mounted || loading) return null;
+    fetchBlogDetail();
+  }, [resolvedSlug]);
 
-  if (!blog) return (
-    <div className="bg-background text-on-surface min-h-screen flex flex-col justify-center items-center">
-      <Navbar />
-      <div className="flex-grow flex items-center justify-center">
-        <h1 className="text-2xl">Không tìm thấy bài viết.</h1>
+  if (isLoading) {
+    return (
+      <div className="bg-background text-on-surface font-body-md selection:bg-primary selection:text-on-primary min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex justify-center items-center py-32">
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+        </main>
+        <Footer />
       </div>
-      <Footer />
-    </div>
-  );
+    );
+  }
+
+  if (!blog) {
+    return (
+      <div className="bg-background text-on-surface font-body-md selection:bg-primary selection:text-on-primary min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex flex-col justify-center items-center py-32">
+          <h2 className="text-2xl font-bold mb-4">Không tìm thấy bài viết</h2>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background text-on-surface font-body-md selection:bg-primary selection:text-on-primary min-h-screen flex flex-col">
@@ -62,7 +75,7 @@ export default function BlogDetailPage({ slug }) {
         <BlogDetailHeader blog={blog} />
         <BlogDetailHero blog={blog} />
         <BlogContent blog={blog} />
-        {relatedBlogs.length > 0 && <RelatedPosts posts={relatedBlogs} />}
+        <RelatedPosts />
         <BlogDetailCTA />
       </main>
 

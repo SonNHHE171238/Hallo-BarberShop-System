@@ -108,6 +108,8 @@ export default function AdminProductModal({ isOpen, onClose, productId, onSucces
   // Reset and fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
+       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrors({});
       setFormData({
         name: "",

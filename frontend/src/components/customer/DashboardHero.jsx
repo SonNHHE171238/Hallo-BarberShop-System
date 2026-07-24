@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function DashboardHero({ userName }) {
+export default function DashboardHero({ userName, loyaltyPoints = 0 }) {
   const firstName = userName ? userName.split(' ').pop() : 'Bạn';
   
   return (
@@ -19,6 +19,14 @@ export default function DashboardHero({ userName }) {
         </div>
         <h1 className="font-headline-lg text-4xl md:text-5xl lg:text-6xl text-on-surface serif-title font-bold">Chào mừng trở lại, {firstName}.</h1>
         <p className="font-body-lg text-xl text-on-surface-variant max-w-xl mx-auto italic">Tạo dấu ấn qua mái tóc của bạn.</p>
+        <div className="flex justify-center mt-2">
+          <div className="inline-flex items-center gap-2 bg-primary-container/20 border border-primary-container/40 rounded-full px-4 py-2">
+            <span className="material-symbols-outlined text-primary text-xl">stars</span>
+            <span className="text-on-surface font-bold">
+              {loyaltyPoints} Điểm thưởng
+            </span>
+          </div>
+        </div>
         <div className="mt-4">
           <div className="h-10 w-[1px] bg-primary-container/40 mx-auto"></div>
         </div>

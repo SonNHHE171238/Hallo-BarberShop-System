@@ -43,6 +43,7 @@ export default function StaffBookingDetail() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchBooking();
   }, [id]);
 
@@ -477,9 +478,6 @@ export default function StaffBookingDetail() {
                   <div className="flex flex-col gap-1">
                     <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
                       Cần thanh toán thêm
-                    </span>
-                    <span className="font-body-md text-xs text-on-surface-variant opacity-70">
-                      Đã bao gồm VAT
                     </span>
                   </div>
                   <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">

@@ -14,6 +14,7 @@ const defaultVoucherForm = {
   usageLimit: 100,
   usageLimitPerUser: 1,
   isActive: true,
+  isPublic: true,
   voucherType: 'all',
 };
 
@@ -68,6 +69,7 @@ export default function AdminVouchersPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadVouchers();
   }, []);
 
@@ -98,6 +100,7 @@ export default function AdminVouchersPage() {
       usageLimit: voucher.usageLimit,
       usageLimitPerUser: voucher.usageLimitPerUser || 1,
       isActive: voucher.isActive,
+      isPublic: voucher.isPublic !== undefined ? voucher.isPublic : true,
       voucherType: voucher.voucherType || 'all',
     });
     setFormOpen(true);
@@ -142,13 +145,6 @@ export default function AdminVouchersPage() {
 
       if (!formData.id && validUntilDate < new Date()) {
         setFormError('Ngày kết thúc không được ở trong quá khứ.');
-        setFormLoading(false);
-        return;
-      }
-
-      const currentYear = new Date().getFullYear();
-      if (validUntilDate.getFullYear() > currentYear) {
-        setFormError(`Hạn kết thúc không được vượt quá năm hiện tại (${currentYear}).`);
         setFormLoading(false);
         return;
       }
@@ -247,9 +243,14 @@ export default function AdminVouchersPage() {
                     </td>
                     <td className="p-3">{v.usedCount} / {v.usageLimit}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${v.isActive ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
-                        {v.isActive ? 'Hoạt động' : 'Tạm dừng'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`w-fit px-2 py-1 rounded text-xs font-bold ${v.isActive ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
+                          {v.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                        </span>
+                        <span className={`w-fit px-2 py-1 rounded text-xs font-bold ${v.isPublic ? 'bg-primary/20 text-primary' : 'bg-surface-variant text-on-surface-variant'}`}>
+                          {v.isPublic ? 'Công khai' : 'Riêng tư'}
+                        </span>
+                      </div>
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">
@@ -339,12 +340,18 @@ export default function AdminVouchersPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase">Đến ngày</label>
-                  <input name="validUntil" type="datetime-local" min={formData.validFrom || (!formData.id ? getLocalDatetimeString() : undefined)} max={`${new Date().getFullYear()}-12-31T23:59`} value={formData.validUntil} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
+                  <input name="validUntil" type="datetime-local" min={formData.validFrom || (!formData.id ? getLocalDatetimeString() : undefined)} value={formData.validUntil} onChange={handleChange} required className="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary outline-none p-2 rounded text-sm" />
                 </div>
 
-                <div className="space-y-1 md:col-span-2 flex items-center gap-2">
-                  <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} id="isActive" />
-                  <label htmlFor="isActive" className="text-sm font-bold">Kích hoạt</label>
+                <div className="space-y-1 col-span-1 md:col-span-2 pt-2 border-t border-outline-variant flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                    <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-4 h-4 accent-primary" />
+                    Kích hoạt
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                    <input type="checkbox" name="isPublic" checked={formData.isPublic} onChange={handleChange} className="w-4 h-4 accent-primary" />
+                    Công khai (Public)
+                  </label>
                 </div>
 
                 <div className="md:col-span-2 pt-2 border-t flex justify-end gap-2">

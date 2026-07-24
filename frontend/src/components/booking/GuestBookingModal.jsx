@@ -4,16 +4,25 @@ import { bookingService } from '@/services/booking.service';
 const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedServices = [], selectedBarber, selectedDate, selectedTime, isLoading, discountAmount = 0, finalTotal }) {
+export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedServices = [], selectedBarber, selectedDate, selectedTime, isLoading, discountAmount = 0, finalTotal, initialPhone = '' }) {
   const [step, setStep] = useState(1);
   const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerPhone, setCustomerPhone] = useState(initialPhone);
   const [customerEmail, setCustomerEmail] = useState('');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [preCheckInfo, setPreCheckInfo] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
+
+  React.useEffect(() => {
+    if (initialPhone) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCustomerPhone(initialPhone);
+      setStep(2);
+      setPreCheckInfo({ noShowCount: 0, requiresDeposit: false, isBanned: false });
+    }
+  }, [initialPhone]);
 
   if (!isOpen) return null;
 
@@ -47,6 +56,8 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
       setErrors({ phone: "Số điện thoại không hợp lệ (VD: 0912345678)." });
       return;
     }
+
+     
 
     setErrors({});
     setIsChecking(true);
@@ -229,14 +240,25 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
                     'Xác Nhận Đặt Lịch'
                   )}
                 </button>
-                <button 
-                  type="button" 
-                  onClick={() => setStep(1)}
-                  disabled={isLoading}
-                  className="sm:w-1/3 border-2 border-outline-variant text-on-surface-variant py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:border-primary hover:text-primary active:scale-[0.98] transition-all duration-300"
-                >
-                  Quay Lại
-                </button>
+                {!initialPhone ? (
+                  <button 
+                    type="button" 
+                    onClick={() => setStep(1)}
+                    disabled={isLoading}
+                    className="sm:w-1/3 border-2 border-outline-variant text-on-surface-variant py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:border-primary hover:text-primary active:scale-[0.98] transition-all duration-300"
+                  >
+                    Quay Lại
+                  </button>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={onClose}
+                    disabled={isLoading}
+                    className="sm:w-1/3 border-2 border-outline-variant text-on-surface-variant py-4 px-6 font-headline-sm text-headline-sm font-bold uppercase tracking-widest rounded-lg hover:border-error hover:text-error active:scale-[0.98] transition-all duration-300"
+                  >
+                    Hủy
+                  </button>
+                )}
               </div>
             </form>
           )}

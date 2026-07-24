@@ -293,14 +293,23 @@ const staffDashboardService = {
     // Handle new Services
     if (newServices && newServices.length > 0) {
       const Service = require('../models/service.model');
+      let servicePriceSum = 0;
       for (const sId of newServices) {
         const svc = await Service.findById(sId);
         if (svc) {
           booking.services.push(svc._id);
-          additionalPrice += svc.price || 0;
+          servicePriceSum += svc.price || 0;
           additionalDuration += svc.durationMinutes || 30;
         }
       }
+      
+      if (servicePriceSum > 0 && booking.barberId) {
+        const barber = await Barber.findById(booking.barberId);
+        if (barber && barber.level === 'vip' && barber.vipMultiplier > 0) {
+          servicePriceSum += Math.round(servicePriceSum * barber.vipMultiplier);
+        }
+      }
+      additionalPrice += servicePriceSum;
     }
 
     // Handle new Products
@@ -351,7 +360,16 @@ const staffDashboardService = {
       if (serviceIndex === -1) throw new Error('Service not found in booking');
       
       const removedSvc = booking.services[serviceIndex];
-      booking.totalPrice = Math.max(0, booking.totalPrice - (removedSvc.price || 0));
+      let removedPrice = removedSvc.price || 0;
+      
+      if (removedPrice > 0 && booking.barberId) {
+        const barber = await Barber.findById(booking.barberId);
+        if (barber && barber.level === 'vip' && barber.vipMultiplier > 0) {
+          removedPrice += Math.round(removedPrice * barber.vipMultiplier);
+        }
+      }
+
+      booking.totalPrice = Math.max(0, booking.totalPrice - removedPrice);
       booking.durationMinutes = Math.max(0, booking.durationMinutes - (removedSvc.durationMinutes || 0));
       
       booking.services.splice(serviceIndex, 1);

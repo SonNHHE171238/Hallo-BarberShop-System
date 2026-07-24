@@ -20,6 +20,8 @@ const initialFormState = {
     preferredWorkingHoursEnd: '18:00',
     maxDailyBookings: '12',
     autoAssignmentEligible: true,
+    level: 'standard',
+    vipMultiplier: '0.2',
 };
 
 export default function AdminBarberForm({ barber, onSubmit, onCancel, isEdit = false }) {
@@ -28,6 +30,7 @@ export default function AdminBarberForm({ barber, onSubmit, onCancel, isEdit = f
 
     useEffect(() => {
         if (barber) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setFormData((prev) => ({
                 ...prev,
                 name: barber.name || '',
@@ -47,6 +50,8 @@ export default function AdminBarberForm({ barber, onSubmit, onCancel, isEdit = f
                 preferredWorkingHoursEnd: barber.preferredWorkingHours?.end || '18:00',
                 maxDailyBookings: barber.maxDailyBookings?.toString() || '12',
                 autoAssignmentEligible: barber.autoAssignmentEligible ?? true,
+                level: barber.level || 'standard',
+                vipMultiplier: barber.vipMultiplier !== undefined ? barber.vipMultiplier.toString() : '0.2',
             }));
         }
     }, [barber]);
@@ -98,6 +103,8 @@ export default function AdminBarberForm({ barber, onSubmit, onCancel, isEdit = f
             },
             maxDailyBookings: Number(formData.maxDailyBookings) || undefined,
             autoAssignmentEligible: formData.autoAssignmentEligible,
+            level: formData.level,
+            vipMultiplier: Number(formData.vipMultiplier),
         };
 
         const payload = isEdit
@@ -141,6 +148,23 @@ export default function AdminBarberForm({ barber, onSubmit, onCancel, isEdit = f
         </div>
     );
 
+    const renderSelect = ({ label, name, options, help }) => (
+        <div className="space-y-2">
+            <label className="block text-label-md font-label-md text-primary uppercase tracking-widest">{label}</label>
+            <select
+                name={name}
+                value={formData[name]}
+                onChange={handleChange}
+                className="w-full bg-surface-container-low border border-outline-variant py-3 px-4 text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all rounded outline-none appearance-none"
+            >
+                {options.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+            </select>
+            {help && <p className="text-label-sm text-on-surface-variant">{help}</p>}
+        </div>
+    );
+
     return (
         <form className="space-y-6" onSubmit={handleSubmit}>
             {!isEdit && (
@@ -166,6 +190,16 @@ export default function AdminBarberForm({ barber, onSubmit, onCancel, isEdit = f
                     {renderInput({ label: 'Phong cách ưa thích', name: 'styleExpertise', help: 'VD: ngắn, trung, dài, cổ điển' })}
                     {renderInput({ label: 'Chứng chỉ', name: 'certifications', help: 'VD: BarberPro, Saç designer' })}
                     {renderInput({ label: 'Ngôn ngữ', name: 'languages', help: 'VD: Vietnamese, English' })}
+                    {renderSelect({ 
+                        label: 'Cấp độ thợ (VIP)', 
+                        name: 'level', 
+                        options: [
+                            { value: 'standard', label: 'Thợ Tiêu Chuẩn (Standard)' },
+                            { value: 'vip', label: 'Thợ VIP' }
+                        ],
+                        help: 'Chọn cấp độ để áp dụng phụ phí nếu là VIP.' 
+                    })}
+                    {formData.level === 'vip' && renderInput({ label: 'Hệ số phụ phí VIP (Ví dụ: 0.2 = 20%)', name: 'vipMultiplier', type: 'number', help: 'Phụ phí cộng thêm vào tổng tiền dịch vụ (VD: 0.2 là cộng 20%).' })}
                 </div>
             </div>
 

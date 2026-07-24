@@ -74,7 +74,7 @@ exports.updateProduct = async (req, res, next) => {
     if (req.file) {
       updateData.image = req.file.path;
     }
-    const product = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+    const product = await Product.findByIdAndUpdate(req.params.id, updateData, { returnDocument: "after", runValidators: true });
     if (!product) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' });
     res.json({ success: true, data: product, message: 'Cập nhật sản phẩm thành công' });
   } catch (error) {

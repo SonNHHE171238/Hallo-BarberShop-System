@@ -69,6 +69,8 @@ export default function AdminBarberManagement() {
                 maxDailyBookings: item.barber?.maxDailyBookings || 12,
                 autoAssignmentEligible: item.barber?.autoAssignmentEligible ?? true,
                 experienceYears: item.barber?.experienceYears || '',
+                level: item.barber?.level || 'standard',
+                vipMultiplier: item.barber?.vipMultiplier ?? 0.2,
                 rating: item.barber?.averageRating || item.barber?.rating || 0,
                 status: item.user?.status || item.barber?.status || 'inactive',
                 scheduleSummary: item.scheduleSummary || [],
@@ -90,6 +92,7 @@ export default function AdminBarberManagement() {
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         loadBarbers();
     }, []);
@@ -194,6 +197,7 @@ export default function AdminBarberManagement() {
 
     useEffect(() => {
         if (searchTerm.trim() && filteredBarbers.length > 0 && !filteredBarbers.some((barber) => barber.id === selectedBarber?.id)) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedBarber(filteredBarbers[0]);
         }
     }, [searchTerm, filteredBarbers, selectedBarber?.id]);

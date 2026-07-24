@@ -106,7 +106,11 @@ exports.getMyBookings = async (req, res) => {
 // Assign barber to booking (Admin only)
 exports.getAvailableSlots = async (req, res, next) => {
   try {
-    const { barberId, date, durationMinutes = 30 } = req.body;
+    let { barberId, date, durationMinutes } = req.body;
+    durationMinutes = parseInt(durationMinutes);
+    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      durationMinutes = 30;
+    }
 
     if (!barberId || !date) {
       const error = new Error("Barber ID and date are required");
@@ -144,8 +148,11 @@ exports.getAllBookings = async (req, res) => {
 
     // Apply additional filters
     if (status) filter.status = status;
-    if (barberId) filter.barberId = barberId;
     if (serviceId) filter.services = serviceId;
+    
+    if (barberId) {
+      filter.barberId = barberId;
+    }
     if (search) {
       const regex = { $regex: search, $options: "i" };
       filter.customerName = regex;
@@ -206,16 +213,12 @@ exports.getBarberHistoryBookings = async (req, res, next) => {
       }
     }
 
-    const filter = {
-      barberId: barber._id,
-      status: 'completed'
-    };
+    // Chỉ dùng barber._id
+    const filter = { barberId: barber._id };
 
     if (date) {
-      const dateObj = new Date(date);
-      const tzOffset = dateObj.getTimezoneOffset() * 60000;
-      const localISOTime = (new Date(dateObj.getTime() - tzOffset)).toISOString().split('T')[0];
-
+      const localISOTime = date; // date from frontend is already YYYY-MM-DD
+      
       filter.bookingDate = {
         $gte: new Date(`${localISOTime}T00:00:00.000Z`),
         $lte: new Date(`${localISOTime}T23:59:59.999Z`)
@@ -233,22 +236,47 @@ exports.getBarberHistoryBookings = async (req, res, next) => {
     const total = await Booking.countDocuments(filter);
 
     // Calculate simple stats
-    const totalCompleted = total;
+    const totalCompleted = await Booking.countDocuments({ ...filter, status: 'completed' });
 
     res.status(200).json({
       success: true,
       data: {
-        appointments: bookings.map(b => ({
-          _id: b._id,
-          customerName: b.customerId?.name || b.customerName || "Khách vãng lai",
-          customerType: b.customerId ? "Thành viên" : "Vãng lai",
-          time: b.timeSlot || (b.bookingDate ? new Date(b.bookingDate).toLocaleTimeString("vi-VN", {hour:"2-digit", minute:"2-digit", hour12:false}) : "N/A"),
-          date: b.bookingDate,
-          serviceName: b.services?.map(s => s.name).join(", ") || "Dịch vụ",
-          uiStatus: "Hoàn thành",
-          statusClass: "bg-green-100 text-green-700", // Will be styled by frontend anyway
-          rawStatus: b.status
-        })),
+        appointments: bookings.map(b => {
+          let statusLabel = "Chưa checkin";
+          let statusClass = "bg-yellow-100 text-yellow-700";
+          let icon = "schedule";
+          
+          if (b.status === 'confirmed') {
+            statusLabel = "Đã Check-in";
+            statusClass = "bg-blue-100 text-blue-700";
+            icon = "how_to_reg";
+          } else if (b.status === 'completed') {
+            statusLabel = "Hoàn thành";
+            statusClass = "bg-green-100 text-green-700";
+            icon = "check_circle";
+          } else if (b.status === 'cancelled') {
+            statusLabel = "Đã hủy";
+            statusClass = "bg-red-100 text-red-700";
+            icon = "cancel";
+          } else if (b.status === 'no-show') {
+            statusLabel = "Không đến";
+            statusClass = "bg-gray-100 text-gray-700";
+            icon = "person_off";
+          }
+          
+          return {
+            _id: b._id,
+            customerName: b.customerId?.name || b.customerName || "Khách vãng lai",
+            customerType: b.customerId ? "Thành viên" : "Vãng lai",
+            time: b.timeSlot || (b.bookingDate ? new Date(b.bookingDate).toLocaleTimeString("vi-VN", {hour:"2-digit", minute:"2-digit", hour12:false}) : "N/A"),
+            date: b.bookingDate,
+            totalPrice: b.totalPrice || 0,
+            uiStatus: statusLabel,
+            statusClass: statusClass,
+            icon: icon,
+            rawStatus: b.status
+          };
+        }),
         stats: { total: totalCompleted, serving: 0, emptyChairs: 0 },
         pagination: {
           page: Number(page),
@@ -258,6 +286,35 @@ exports.getBarberHistoryBookings = async (req, res, next) => {
         }
       }
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getBarberBookingDetail = async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate("services", "name price durationMinutes type")
+      .populate("customerId", "name email phone")
+      .populate({
+        path: "barberId",
+        populate: { path: "userId", select: "name" },
+      });
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy lịch hẹn" });
+    }
+
+    const Barber = require('../models/barber.model');
+    const barber = await Barber.findOne({ userId: req.userId });
+    const barberIdStr = booking.barberId ? booking.barberId._id.toString() : null;
+    
+    // Chỉ kiểm tra Barber._id
+    if (!barber || barberIdStr !== barber._id.toString()) {
+      return res.status(403).json({ success: false, message: "Bạn không có quyền xem chi tiết lịch hẹn này" });
+    }
+
+    res.status(200).json({ success: true, data: booking });
   } catch (err) {
     next(err);
   }
@@ -358,8 +415,32 @@ exports.getBookingDetail = async (req, res) => {
 
 exports.getBookingPaymentStatus = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id).select("paymentStatus status");
+    const booking = await Booking.findById(req.params.id).select("paymentStatus status orderCode amountPaid totalPrice voucherLockId");
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    // Sync with PayOS for polling
+    if ((booking.paymentStatus === 'pending' || booking.paymentStatus === 'partial_paid') && booking.orderCode) {
+      try {
+        const { PayOS } = require("@payos/node");
+        const payos = new PayOS({
+          clientId: process.env.PAYOS_CLIENT_ID,
+          apiKey: process.env.PAYOS_API_KEY,
+          checksumKey: process.env.PAYOS_CHECKSUM_KEY
+        });
+        const paymentInfo = await payos.getPaymentLinkInformation(booking.orderCode);
+        if (paymentInfo && paymentInfo.status === 'PAID') {
+          booking.paymentStatus = 'paid';
+          if (booking.voucherLockId) {
+            const voucherController = require('./voucher.controller');
+            await voucherController.redeemVoucherLock(booking.voucherLockId);
+          }
+          await booking.save();
+        }
+      } catch (payosErr) {
+        // Bỏ qua lỗi nếu mã QR chưa được khởi tạo hoặc đã hết hạn
+      }
+    }
+
     res.json({ success: true, data: booking });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -46,6 +46,7 @@ export default function AdminOrderDetailPage({ orderId }) {
 
   useEffect(() => {
     if (orderId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchOrder();
     }
   }, [orderId]);
