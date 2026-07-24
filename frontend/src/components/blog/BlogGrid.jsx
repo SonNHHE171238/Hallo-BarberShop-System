@@ -35,7 +35,7 @@ export default function BlogGrid({ posts = [] }) {
                       <img 
                         alt={blog.title}
                         className="w-full h-full object-cover" 
-                        src={bgImg} 
+                        src={blog.image || bgImg} 
                       />
                     </div>
                     <div className="p-6 flex flex-col flex-grow">

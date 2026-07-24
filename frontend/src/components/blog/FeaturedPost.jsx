@@ -21,7 +21,7 @@ export default function FeaturedPost({ post }) {
           <img
             alt={post.title}
             className="w-full h-full object-cover"
-            src={fallbackImage}
+            src={post.image || fallbackImage}
           />
         </div>
         <div className="md:w-2/5 p-8 md:p-12 flex flex-col justify-center">
