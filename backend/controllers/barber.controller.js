@@ -89,3 +89,84 @@ exports.updateMyAvailability = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.updateMyProfile = async (req, res, next) => {
+  try {
+    const { bio, experienceYears, workingSince } = req.body;
+    
+    let updateFields = {};
+    if (bio !== undefined) updateFields.bio = bio;
+    if (experienceYears !== undefined) updateFields.experienceYears = Number(experienceYears);
+    if (workingSince !== undefined) updateFields.workingSince = new Date(workingSince);
+    if (req.body.specialties !== undefined) updateFields.specialties = req.body.specialties;
+
+    const barber = await Barber.findOneAndUpdate(
+      { userId: req.userId },
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!barber) {
+      return res.status(404).json({ success: false, message: 'Barber profile not found' });
+    }
+
+    return sendSuccess(res, 200, 'Profile updated successfully', { barber });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.uploadGalleryImages = async (req, res, next) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No images uploaded' });
+    }
+
+    const currentBarber = await Barber.findOne({ userId: req.userId });
+    if (!currentBarber) {
+      return res.status(404).json({ success: false, message: 'Barber profile not found' });
+    }
+
+    if (currentBarber.gallery && currentBarber.gallery.length + req.files.length > 4) {
+      return res.status(400).json({ success: false, message: 'Maximum 4 gallery images allowed' });
+    }
+
+    const imageUrls = req.files.map(file => file.path);
+    
+    const barber = await Barber.findOneAndUpdate(
+      { userId: req.userId },
+      { $push: { gallery: { $each: imageUrls } } },
+      { new: true }
+    );
+
+    return sendSuccess(res, 200, 'Images uploaded successfully', { gallery: barber.gallery });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.removeGalleryImage = async (req, res, next) => {
+  try {
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, message: 'Image URL is required' });
+    }
+
+    const barber = await Barber.findOneAndUpdate(
+      { userId: req.userId },
+      { $pull: { gallery: imageUrl } },
+      { new: true }
+    );
+
+    if (!barber) {
+      return res.status(404).json({ success: false, message: 'Barber profile not found' });
+    }
+
+    // Tùy chọn: Gọi Cloudinary API để xoá ảnh thực sự trên mây (cần public_id)
+    // Ở đây ta đơn giản xoá khỏi DB
+
+    return sendSuccess(res, 200, 'Image removed successfully', { gallery: barber.gallery });
+  } catch (error) {
+    next(error);
+  }
+};

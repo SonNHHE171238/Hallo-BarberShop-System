@@ -72,6 +72,8 @@ exports.createAdminBarber = async (req, res) => {
             languages,
             avatarUrl,
             avatarBase64,
+            level,
+            vipMultiplier,
         } = req.body;
 
         if (!isString(name) || !isString(email) || !isString(bio) || !experienceYears) {
@@ -122,6 +124,8 @@ exports.createAdminBarber = async (req, res) => {
             certifications: Array.isArray(certifications) ? certifications : certifications ? [certifications] : [],
             languages: Array.isArray(languages) ? languages : languages ? [languages] : ['Vietnamese'],
             isAvailable: true,
+            level: level || 'standard',
+            vipMultiplier: vipMultiplier !== undefined ? Number(vipMultiplier) : 0.2,
         });
 
         const savedBarber = await newBarber.save();
@@ -275,6 +279,8 @@ exports.updateAdminBarber = async (req, res) => {
             preferredWorkingHours,
             maxDailyBookings,
             autoAssignmentEligible,
+            level,
+            vipMultiplier,
         } = req.body;
 
         const barber = await Barber.findById(barberId);
@@ -296,6 +302,10 @@ exports.updateAdminBarber = async (req, res) => {
         }
         if (typeof autoAssignmentEligible === 'boolean') {
             barber.autoAssignmentEligible = autoAssignmentEligible;
+        }
+        if (level) barber.level = level;
+        if (vipMultiplier !== undefined && vipMultiplier !== null && vipMultiplier !== "") {
+            barber.vipMultiplier = Number(vipMultiplier);
         }
 
         const updatedBarber = await barber.save();

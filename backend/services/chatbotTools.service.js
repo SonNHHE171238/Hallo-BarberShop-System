@@ -179,8 +179,14 @@ const bookAppointment = async (args) => {
       }
     }
 
-    // 5. Tạo Booking
-    const totalPrice = services.reduce((acc, curr) => acc + (curr.price || 0), 0);
+    // 5. Tính giá & Tạo Booking
+    let totalPrice = services.reduce((acc, curr) => acc + (curr.price || 0), 0);
+    if (barberId) {
+      const barber = await Barber.findById(barberId);
+      if (barber && barber.level === 'vip' && barber.vipMultiplier > 0) {
+        totalPrice += Math.round(totalPrice * barber.vipMultiplier);
+      }
+    }
     const newBooking = new Booking({
       bookingType: "guest",
       customerName: customerName,
@@ -272,7 +278,13 @@ const updateAppointment = async (args) => {
     }
 
     // 4. Cập nhật DB
-    const totalPrice = services.reduce((acc, curr) => acc + (curr.price || 0), 0);
+    let totalPrice = services.reduce((acc, curr) => acc + (curr.price || 0), 0);
+    if (barberId) {
+      const barber = await Barber.findById(barberId);
+      if (barber && barber.level === 'vip' && barber.vipMultiplier > 0) {
+        totalPrice += Math.round(totalPrice * barber.vipMultiplier);
+      }
+    }
     existingBooking.customerName = customerName;
     existingBooking.customerPhone = cleanPhone;
     existingBooking.barberId = barberId;

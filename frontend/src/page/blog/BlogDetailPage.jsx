@@ -55,7 +55,6 @@ export default function BlogDetailPage({ slug }) {
             <BlogDetailHeader title={blog.title} author={blog.author} createdAt={blog.createdAt} />
             <BlogDetailHero image={blog.image} title={blog.title} />
             <BlogContent content={blog.content} />
-            <RelatedPosts currentSlug={slug} />
             <BlogDetailCTA />
           </>
         )}

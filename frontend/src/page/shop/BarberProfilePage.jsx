@@ -35,11 +35,14 @@ export default function BarberProfilePage({ id }) {
   }, [id]);
 
   const getRoleLabel = (years) => {
-    if (years >= 10) return "Master Barber";
-    if (years >= 5) return "Senior Barber";
-    if (years >= 3) return "Top Stylist";
-    return "Junior Barber";
+    if (years >= 3) return "Senior Barber";
+    if (years > 1) return "Junior Barber";
+    return "Barber";
   };
+
+  const computedExp = barber?.workingSince 
+    ? Math.max(0, new Date().getFullYear() - new Date(barber.workingSince).getFullYear()) 
+    : (barber?.experienceYears || 0);
 
   if (isLoading) {
     return (
@@ -75,18 +78,27 @@ export default function BarberProfilePage({ id }) {
                 alt={barber.userId?.name || "Barber"} 
                 src={barber.userId?.avatarUrl || "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?q=80&w=600&auto=format&fit=crop"} 
               />
-              <div className="absolute top-4 left-4">
-                <span className="bg-primary/90 text-on-primary px-4 py-1.5 rounded-full text-label-md font-bold flex items-center gap-2 backdrop-blur-sm">
-                  <span className="w-2 h-2 rounded-full bg-on-primary animate-pulse"></span>
-                  Đang hoạt động
+              <div className="absolute top-4 left-4 flex flex-col gap-2">
+                <span className={`px-4 py-1.5 rounded-full text-label-md font-bold flex items-center gap-2 backdrop-blur-sm w-max ${barber.isAvailable !== false ? 'bg-primary/90 text-on-primary' : 'bg-surface-variant/90 text-on-surface-variant border border-outline-variant'}`}>
+                  <span className={`w-2 h-2 rounded-full ${barber.isAvailable !== false ? 'bg-on-primary animate-pulse' : 'bg-on-surface-variant'}`}></span>
+                  {barber.isAvailable !== false ? 'Đang hoạt động' : 'Tạm vắng'}
                 </span>
+                {barber.level === 'vip' && (
+                  <span className="bg-gradient-to-r from-amber-300 to-yellow-500 text-surface-container-lowest px-4 py-1.5 rounded-full text-label-md font-bold flex items-center gap-2 backdrop-blur-sm shadow-lg border border-yellow-300/50 w-max">
+                    <span className="material-symbols-outlined text-[16px] animate-bounce">workspace_premium</span>
+                    Barber VIP
+                  </span>
+                )}
               </div>
             </div>
-            <h1 className="font-serif text-display-lg lg:text-[72px] text-primary mb-2 leading-tight">
+            <h1 className="font-serif text-display-lg lg:text-[72px] text-primary mb-2 leading-tight flex items-center gap-4 flex-wrap">
               {barber.userId?.name || "Thợ cắt tóc"}
+              {barber.level === 'vip' && (
+                <span className="material-symbols-outlined text-yellow-500 text-[40px] md:text-[50px] drop-shadow-md" title="Barber VIP">verified</span>
+              )}
             </h1>
             <p className="text-headline-sm text-on-surface-variant mb-6 uppercase tracking-widest font-light">
-              {getRoleLabel(barber.experienceYears || 0)}
+              {getRoleLabel(computedExp)}
             </p>
             <div className="flex items-center gap-4 mb-8">
               <div className="flex text-primary">
@@ -96,7 +108,9 @@ export default function BarberProfilePage({ id }) {
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>star_half</span>
               </div>
-              <span className="text-label-md text-on-surface-variant">4.9/5 (2,500+ Đánh giá)</span>
+              <span className="text-label-md text-on-surface-variant">
+                {barber.averageRating ? barber.averageRating.toFixed(1) : "0.0"}/5 ({barber.ratingCount || 0} Đánh giá)
+              </span>
             </div>
             <button 
               onClick={() => router.push(`/booking?barber=${barber._id}`)}
@@ -115,7 +129,9 @@ export default function BarberProfilePage({ id }) {
                 <span className="material-symbols-outlined text-primary mb-4 text-4xl">workspace_premium</span>
                 <h3 className="text-on-surface-variant text-label-md uppercase tracking-wider">Kinh nghiệm</h3>
               </div>
-              <p className="text-primary font-headline-lg text-4xl">{barber.experienceYears || 0} Năm</p>
+              <p className="text-primary font-headline-lg text-4xl">
+                {computedExp} Năm
+              </p>
             </div>
             
             {/* Stat Card 2 */}
@@ -124,7 +140,7 @@ export default function BarberProfilePage({ id }) {
                 <span className="material-symbols-outlined text-primary mb-4 text-4xl">military_tech</span>
                 <h3 className="text-on-surface-variant text-label-md uppercase tracking-wider">Đánh giá TB</h3>
               </div>
-              <p className="text-primary font-headline-lg text-4xl">4.9 / 5.0</p>
+              <p className="text-primary font-headline-lg text-4xl">{barber.averageRating ? barber.averageRating.toFixed(1) : "0.0"} / 5.0</p>
             </div>
             
             {/* Stat Card 3 */}
@@ -133,7 +149,11 @@ export default function BarberProfilePage({ id }) {
                 <span className="material-symbols-outlined text-primary mb-4 text-4xl">groups</span>
                 <h3 className="text-on-surface-variant text-label-md uppercase tracking-wider">Tổng lượt khách</h3>
               </div>
-              <p className="text-primary font-headline-lg text-4xl">2500+</p>
+              <p className="text-primary font-headline-lg text-4xl">
+                {(barber.totalBookings || 0) < 100 
+                  ? "100" 
+                  : Math.floor((barber.totalBookings || 0) / 10) * 10}+
+              </p>
             </div>
             
             {/* Stat Card 4 */}
@@ -142,58 +162,64 @@ export default function BarberProfilePage({ id }) {
                 <span className="material-symbols-outlined text-primary mb-4 text-4xl">history</span>
                 <h3 className="text-on-surface-variant text-label-md uppercase tracking-wider">Làm việc từ</h3>
               </div>
-              <p className="text-primary font-headline-lg text-4xl">{new Date().getFullYear() - (barber.experienceYears || 0)}</p>
+              <p className="text-primary font-headline-lg text-4xl">
+                {barber.workingSince ? new Date(barber.workingSince).getFullYear() : (new Date().getFullYear() - (barber.experienceYears || 0))}
+              </p>
             </div>
             
             {/* About Section Card (Large) */}
             <div className="col-span-2 bg-surface-container border border-outline-variant hover:border-primary transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(233,193,118,0.15)] p-10 mt-gutter rounded-xl">
-              <h2 className="font-serif text-headline-lg text-primary mb-6 flex items-center gap-4">
+              <h2 className="font-headline-lg text-primary mb-6 flex items-center gap-4">
                 <span className="w-12 h-px bg-primary/40"></span>
                 Về Master Barber
               </h2>
-              <div className="space-y-6 text-body-lg text-on-surface-variant leading-relaxed max-w-3xl">
-                <p className="font-light italic border-l-2 border-primary/30 pl-6 text-primary/80">
-                  "Mỗi đường kéo không chỉ là một kiểu tóc, mà là lời tuyên ngôn về phong cách và sự tự tin của một quý ông."
-                </p>
+              <div className="space-y-6 text-body-lg text-on-surface-variant leading-relaxed max-w-3xl whitespace-pre-line">
                 <p>
-                  Chuyên gia với {barber.experienceYears || 0} năm kinh nghiệm trong nghệ thuật cắt tóc cổ điển và tạo kiểu hiện đại. Từng tu nghiệp tại các học viện danh tiếng quốc tế. {barber.userId?.name || "Barber"} nổi tiếng với kỹ thuật Fade sắc sảo và khả năng tư vấn kiểu tóc phù hợp nhất với khuôn mặt và phong cách sống của từng khách hàng.
+                  {barber.bio || `Chuyên gia với ${barber.experienceYears || 0} năm kinh nghiệm trong nghệ thuật cắt tóc cổ điển và tạo kiểu hiện đại.`}
                 </p>
               </div>
               <div className="mt-10 flex flex-wrap gap-4">
-                <span className="bg-surface-container-high text-on-surface-variant px-4 py-2 border border-outline-variant rounded-md text-label-md">Classic Cut</span>
-                <span className="bg-surface-container-high text-on-surface-variant px-4 py-2 border border-outline-variant rounded-md text-label-md">Skin Fade</span>
-                <span className="bg-surface-container-high text-on-surface-variant px-4 py-2 border border-outline-variant rounded-md text-label-md">Beard Grooming</span>
-                <span className="bg-surface-container-high text-on-surface-variant px-4 py-2 border border-outline-variant rounded-md text-label-md">Hot Towel Shave</span>
+                {barber.specialties && barber.specialties.length > 0 ? (
+                  barber.specialties.map((tag, idx) => (
+                    <span key={idx} className="bg-surface-container-high text-on-surface-variant px-4 py-2 border border-outline-variant rounded-md text-label-md">
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <>
+                    <span className="bg-surface-container-high text-on-surface-variant px-4 py-2 border border-outline-variant rounded-md text-label-md">Classic Cut</span>
+                    <span className="bg-surface-container-high text-on-surface-variant px-4 py-2 border border-outline-variant rounded-md text-label-md">Skin Fade</span>
+                    <span className="bg-surface-container-high text-on-surface-variant px-4 py-2 border border-outline-variant rounded-md text-label-md">Beard Grooming</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </section>
 
         {/* Gallery Section */}
-        <section className="animate-[fadeIn_0.8s_ease-out_forwards] opacity-0" style={{ animationDelay: "0.5s" }}>
+        <section className="animate-[fadeIn_0.8s_ease-out_forwards] opacity-0 mt-24 lg:mt-32 mb-24 lg:mb-32" style={{ animationDelay: "0.5s" }}>
           <div className="flex justify-between items-end mb-12">
             <div>
               <h2 className="font-serif text-headline-lg text-primary mb-2">Tác phẩm tiêu biểu</h2>
               <p className="text-on-surface-variant font-body-md">Những kiểu tóc tiêu biểu do {barber.userId?.name || "Thợ cắt tóc"} thực hiện</p>
             </div>
-            <button className="text-primary border-b border-primary hover:text-primary-fixed-dim transition-colors text-label-md font-bold pb-1 flex items-center gap-2">
-              Xem tất cả <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </button>
+
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="aspect-square rounded-xl overflow-hidden bg-surface-container border border-outline-variant group cursor-pointer p-0">
-              <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQSD7jwQOBo41eg2KAHV9XfDkt3qjcMWihTc4lyFstVEdR8VceD3xGaMQ_WB4bmZgoVh7cD4FbjZ5b3sK7EOlKfgTpdtFj1zM2sxMCgXKrBsLqV9MkQgSVFklHRMzcaUw5eExqG_m8xvvotSu8HLVtEyCgLl50G5ivUUrIsBqxOsIG12XJZTSIMDIrNm3TQg0qWPvbv-GSgYEMB8etWu7erf8AtPSZJ0HazZSv3j1m4O8zJ5AhomFTPdxGspF9BYfo_HnRbFwb7voD" alt="Gallery" />
+          {barber.gallery && barber.gallery.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {barber.gallery.map((url, idx) => (
+                <div key={idx} className="aspect-square rounded-xl overflow-hidden bg-surface-container border border-outline-variant group cursor-pointer p-0 shadow-sm hover:shadow-md transition-shadow">
+                  <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src={url} alt="Featured work" loading="lazy" />
+                </div>
+              ))}
             </div>
-            <div className="aspect-square rounded-xl overflow-hidden bg-surface-container border border-outline-variant group cursor-pointer p-0">
-              <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmR3ifwHNh53wCcWZc1PCiJMbJ5uxdDjl4ClqYF_eEOz8Frq9I8RtZ6Q9Z1KEVywgsgSxbP9IYY4bnU1g6Bzto7O2cAhJKO-RvjHtLoLt7Xxz2qhr_erBdNVmaG6IXp_ttSDLtwlmQgzARx2Io3BtwHAZMNbLPDpcyp6IWaSClT5fATHtgE2OBOmrVSY4h83217_gFZJwl4of8JxtJtLYwFpOpluKXMdFV6pGQ9T6itqbbI-qwckOKLizpBYpCFF6tfbpH-oOONaCR" alt="Gallery" />
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 bg-surface-container-low rounded-xl border border-dashed border-outline-variant">
+              <span className="material-symbols-outlined text-4xl text-outline mb-2">photo_library</span>
+              <p className="text-on-surface-variant font-body-md text-center">Master Barber này chưa cập nhật tác phẩm tiêu biểu nào.</p>
             </div>
-            <div className="aspect-square rounded-xl overflow-hidden bg-surface-container border border-outline-variant group cursor-pointer p-0">
-              <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRy0GyMkF71fbE6GIKzDqUbym7XxLunRaXfMPBjlBeEmDCl1l3XwmUysPXmFBFMtf50-t9OmTPUS5E5p671eGT3YBql7ko-YZ1GJJ8D52dADU-rl6ffvbWvbF2iRwCEXsnCuWgRo7eiJr4gtIUhkrltW1KDI8I0IaHK_CfD4dK3bmKCxDXV5giqqlnmQMMubqrGhca31ou8-fwcR_CJWtPzbrlZK9yxzDC_dtwQQf8QjLyLz8GLwDzrMJ_iadLJwSp3KCyeC77JcBY" alt="Gallery" />
-            </div>
-            <div className="aspect-square rounded-xl overflow-hidden bg-surface-container border border-outline-variant group cursor-pointer p-0">
-              <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSGBoiOTIBUwi0TIZwQM4rPnkU6org31jX77N-SRafX9owzw_avw6i6mZBorpmXJfqrses7Pj9GiDsEcWMYTqdlajt9mahTKEmNyindLzwPX9UBxWHu2ObHFeqH38pQdz6TyVGvGYSV3OlYWsala-LcPRkXBxrit2raRz10_1mPceUsZg4apMW0C_9dAeQd86adm06tWmuejGR0hRU2A3fi2FRZx3QBKriO9EamvU_0qdSTdS5sP36KASh7Wa98CJLZDOe5ZW4k5TV" alt="Gallery" />
-            </div>
-          </div>
+          )}
         </section>
       </main>
 
