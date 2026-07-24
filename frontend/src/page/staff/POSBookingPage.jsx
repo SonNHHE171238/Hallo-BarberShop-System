@@ -287,8 +287,7 @@ export default function POSBookingPage() {
     const qty = curr.itemType === 'product' ? (curr.quantity || 1) : 1;
     return acc + ((curr.price || 0) * qty);
   }, 0);
-  const vat = Math.round(subTotal * 0.08);
-  const total = subTotal + vat;
+  const total = subTotal;
 
   // Filtered + Sorted items for display
   const displayedItems = allItems
@@ -389,7 +388,6 @@ export default function POSBookingPage() {
         hasServices={hasServices}
         selectedStaff={selectedStaff}
         subTotal={subTotal}
-        vat={vat}
         total={total}
         decreaseQuantity={decreaseQuantity}
         increaseQuantity={increaseQuantity}

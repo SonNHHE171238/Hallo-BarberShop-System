@@ -37,6 +37,55 @@ function CheckoutPageContent() {
     paymentMethod: "bank_transfer"
   });
 
+  // Tự động điền thông tin user vào form nếu đã đăng nhập
+  useEffect(() => {
+    const initData = async () => {
+      if (user) {
+        let defaultAddress = "";
+        let addresses = [];
+
+        if (user.addresses && Array.isArray(user.addresses) && user.addresses.length > 0) {
+          addresses = [...user.addresses];
+        } else if (user.address) {
+          addresses = [user.address];
+        }
+
+        try {
+          const res = await axios.get("http://localhost:5000/api/orders/my-orders", { withCredentials: true });
+          if (res.data.success && res.data.data && res.data.data.length > 0) {
+            const lastOrder = res.data.data[0];
+            if (lastOrder.shippingAddress && !addresses.includes(lastOrder.shippingAddress)) {
+              addresses.unshift(lastOrder.shippingAddress);
+            }
+            if (lastOrder.shippingAddress) {
+              defaultAddress = lastOrder.shippingAddress;
+            }
+          }
+        } catch (error) {
+          console.error("Lỗi lấy đơn hàng gần nhất:", error);
+        }
+
+        if (!defaultAddress && addresses.length > 0) {
+          defaultAddress = addresses[0];
+        }
+
+        setUserAddresses(addresses);
+        
+        setFormData(prev => ({
+          ...prev,
+          customerName: user.name || prev.customerName,
+          phone: user.phone || prev.phone,
+          email: user.email || prev.email,
+          address: defaultAddress || prev.address
+        }));
+        setIsEditingInfo(false);
+      } else {
+        setIsEditingInfo(true);
+      }
+    };
+    initData();
+  }, [user]);
+
   // Voucher & Discount State
   const [discountType, setDiscountType] = useState('none');
   const [pointsToUseInput, setPointsToUseInput] = useState(0);
@@ -50,6 +99,66 @@ function CheckoutPageContent() {
   const [showQR, setShowQR] = useState(false);
   const [qrData, setQrData] = useState(null);
   const [currentOrder, setCurrentOrder] = useState(null);
+
+  const [userAddresses, setUserAddresses] = useState([]);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [customAddress, setCustomAddress] = useState("");
+
+  // VN Address API State
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedWard, setSelectedWard] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
+
+  // Fetch provinces on mount
+  useEffect(() => {
+    axios.get("https://provinces.open-api.vn/api/p/")
+      .then(res => setProvinces(res.data))
+      .catch(err => console.error("Lỗi fetch tỉnh/thành:", err));
+  }, []);
+
+  // Fetch districts when province changes
+  useEffect(() => {
+    if (selectedProvince) {
+      const p = provinces.find(x => x.name === selectedProvince);
+      if (p) {
+        axios.get(`https://provinces.open-api.vn/api/p/${p.code}?depth=2`)
+          .then(res => setDistricts(res.data.districts))
+          .catch(err => console.error("Lỗi fetch quận/huyện:", err));
+      }
+    } else {
+      setDistricts([]);
+      setSelectedDistrict("");
+    }
+  }, [selectedProvince, provinces]);
+
+  // Fetch wards when district changes
+  useEffect(() => {
+    if (selectedDistrict) {
+      const d = districts.find(x => x.name === selectedDistrict);
+      if (d) {
+        axios.get(`https://provinces.open-api.vn/api/d/${d.code}?depth=2`)
+          .then(res => setWards(res.data.wards))
+          .catch(err => console.error("Lỗi fetch phường/xã:", err));
+      }
+    } else {
+      setWards([]);
+      setSelectedWard("");
+    }
+  }, [selectedDistrict, districts]);
+
+  // Update customAddress and formData when address parts change
+  useEffect(() => {
+    if (streetAddress || selectedWard || selectedDistrict || selectedProvince) {
+      const fullAddr = [streetAddress, selectedWard, selectedDistrict, selectedProvince].filter(Boolean).join(", ");
+      setCustomAddress(fullAddr);
+    }
+  }, [streetAddress, selectedWard, selectedDistrict, selectedProvince]);
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -78,24 +187,20 @@ function CheckoutPageContent() {
   const totalAmount = Math.max(0, subTotal - discountAmount);
 
   React.useEffect(() => {
-    if (discountType === 'loyalty_points' && user) {
-      let maxPointsByBill = Math.floor(subTotal / 2 / 1000); 
-      let maxPointsAllowed = 50; 
-      let pointsWillUse = Math.min(user.loyaltyPoints, maxPointsByBill, maxPointsAllowed);
-      
-      if (subTotal < 50000 || pointsWillUse <= 0) {
-        setPointsToUseInput(0);
-        setDiscountAmount(0);
-      } else {
-        setPointsToUseInput(pointsWillUse);
-        setDiscountAmount(pointsWillUse * 1000);
-      }
-    } else if (discountType === 'new_user') {
+    if (discountType === 'new_user') {
       let dAmount = subTotal * 0.5;
       if (dAmount > 50000) dAmount = 50000;
       setDiscountAmount(dAmount);
+    } else if (discountType === 'loyalty_points') {
+      // Re-validate points discount if subtotal changes
+      const currentDiscount = pointsToUseInput * 100;
+      if (currentDiscount > subTotal) {
+        setDiscountAmount(subTotal);
+      } else {
+        setDiscountAmount(currentDiscount);
+      }
     }
-  }, [subTotal, discountType, user]);
+  }, [subTotal, discountType, user, pointsToUseInput]);
 
   const handleApplyVoucher = async () => {
     if (!voucherCodeInput.trim()) return;
@@ -159,26 +264,12 @@ function CheckoutPageContent() {
       alert("Bạn chưa có điểm thưởng nào.");
       return;
     }
-    if (subTotal < 50000) {
-      alert("Đơn hàng phải tối thiểu 50,000đ để áp dụng tiêu điểm.");
-      return;
-    }
-
-    let maxPointsByBill = Math.floor(subTotal / 2 / 1000); 
-    let maxPointsAllowed = 50; 
-    let pointsWillUse = Math.min(user.loyaltyPoints, maxPointsByBill, maxPointsAllowed);
-
-    if (pointsWillUse <= 0) {
-      alert("Không thể áp dụng điểm thưởng cho đơn hàng này.");
-      return;
-    }
-
-    let dAmount = pointsWillUse * 1000;
-
-    setPointsToUseInput(pointsWillUse);
-    setDiscountAmount(dAmount);
+    
     setDiscountType('loyalty_points');
-    setVoucherError(`Đã dùng ${pointsWillUse} điểm thưởng`);
+    setVoucherError("");
+    // Đặt mặc định điểm dùng là 0 để người dùng tự nhập
+    setPointsToUseInput(0);
+    setDiscountAmount(0);
   };
 
   const clearDiscount = () => {
@@ -299,30 +390,149 @@ function CheckoutPageContent() {
           <div className="lg:col-span-7 space-y-gutter">
             {/* Thông tin giao hàng */}
             <section className="bg-surface-container/60 backdrop-blur-md border border-outline-variant p-8 rounded-lg">
-              <div className="flex items-center gap-3 mb-8">
-                <span className="material-symbols-outlined text-primary">local_shipping</span>
-                <h2 className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide">Thông tin giao hàng</h2>
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary">local_shipping</span>
+                  <h2 className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide">Thông tin giao hàng</h2>
+                </div>
+                {!isEditingInfo && (
+                  <button onClick={() => setIsEditingInfo(true)} className="text-primary hover:underline font-label-md">
+                    Thay đổi
+                  </button>
+                )}
               </div>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="font-label-md text-label-md text-on-surface-variant block">HỌ VÀ TÊN</label>
-                    <input name="customerName" value={formData.customerName} onChange={handleInputChange} className="w-full bg-surface-container-lowest border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Nhập họ và tên của bạn" type="text" />
+
+              {!isEditingInfo ? (
+                <div className="space-y-4 bg-surface-container-lowest p-6 rounded-lg border border-outline-variant">
+                  <p className="font-body-md"><strong className="text-on-surface-variant w-24 inline-block">Họ và tên:</strong> {formData.customerName || "Chưa có thông tin"}</p>
+                  <p className="font-body-md"><strong className="text-on-surface-variant w-24 inline-block">SĐT:</strong> {formData.phone || "Chưa có thông tin"}</p>
+                  <p className="font-body-md"><strong className="text-on-surface-variant w-24 inline-block">Email:</strong> {formData.email || "Chưa có thông tin"}</p>
+                  <p className="font-body-md"><strong className="text-on-surface-variant w-24 inline-block">Địa chỉ:</strong> {formData.address || "Chưa có thông tin"}</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="font-label-md text-label-md text-on-surface-variant block">HỌ VÀ TÊN</label>
+                      <input name="customerName" value={formData.customerName} onChange={handleInputChange} className="w-full bg-surface-container-lowest border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Nhập họ và tên của bạn" type="text" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="font-label-md text-label-md text-on-surface-variant block">SỐ ĐIỆN THOẠI</label>
+                      <input name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-surface-container-lowest border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary" placeholder="090 123 4567" type="tel" />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="font-label-md text-label-md text-on-surface-variant block">SỐ ĐIỆN THOẠI</label>
-                    <input name="phone" value={formData.phone} onChange={handleInputChange} className="w-full bg-surface-container-lowest border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary" placeholder="090 123 4567" type="tel" />
+                    <label className="font-label-md text-label-md text-on-surface-variant block">EMAIL</label>
+                    <input name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-surface-container-lowest border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary" placeholder="example@email.com" type="email" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="font-label-md text-label-md text-on-surface-variant block">ĐỊA CHỈ NHẬN HÀNG</label>
+                      {!isAddingNewAddress && (
+                        <button type="button" onClick={() => setIsAddingNewAddress(true)} className="text-primary hover:underline text-sm font-medium flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[18px]">add</span>
+                          Thêm địa chỉ mới
+                        </button>
+                      )}
+                    </div>
+                    
+                    {!isAddingNewAddress && (
+                      <select 
+                        name="addressSelect" 
+                        value={userAddresses.includes(formData.address) ? formData.address : ''} 
+                        onChange={(e) => {
+                          setFormData({ ...formData, address: e.target.value });
+                        }} 
+                        className="w-full bg-surface-container-lowest border border-outline-variant px-4 py-3 rounded text-on-surface focus:border-primary focus:ring-1 focus:ring-primary mb-3"
+                      >
+                        <option value="" disabled className="text-black bg-white">
+                          {userAddresses.length === 0 ? "-- Vui lòng thêm địa chỉ mới --" : "-- Chọn địa chỉ có sẵn --"}
+                        </option>
+                        {userAddresses.map((addr, idx) => (
+                          <option key={idx} value={addr} className="text-black bg-white">{addr}</option>
+                        ))}
+                      </select>
+                    )}
+                    
+                    {isAddingNewAddress && (
+                      <div className="space-y-3 p-4 bg-surface-container-lowest border border-outline-variant rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <select 
+                            value={selectedProvince} 
+                            onChange={(e) => setSelectedProvince(e.target.value)}
+                            className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="" className="text-black bg-white">Tỉnh/Thành phố</option>
+                            {provinces.map(p => <option key={p.code} value={p.name} className="text-black bg-white">{p.name}</option>)}
+                          </select>
+                          <select 
+                            value={selectedDistrict} 
+                            onChange={(e) => setSelectedDistrict(e.target.value)}
+                            disabled={!selectedProvince}
+                            className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+                          >
+                            <option value="" className="text-black bg-white">Quận/Huyện</option>
+                            {districts.map(d => <option key={d.code} value={d.name} className="text-black bg-white">{d.name}</option>)}
+                          </select>
+                          <select 
+                            value={selectedWard} 
+                            onChange={(e) => setSelectedWard(e.target.value)}
+                            disabled={!selectedDistrict}
+                            className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+                          >
+                            <option value="" className="text-black bg-white">Phường/Xã</option>
+                            {wards.map(w => <option key={w.code} value={w.name} className="text-black bg-white">{w.name}</option>)}
+                          </select>
+                        </div>
+                        <input 
+                          type="text" 
+                          placeholder="Số nhà, tên đường, tòa nhà..." 
+                          value={streetAddress} 
+                          onChange={(e) => setStreetAddress(e.target.value)}
+                          className="w-full bg-transparent border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary" 
+                        />
+                        <div className="flex justify-end gap-3 mt-4">
+                          <button type="button" onClick={() => setIsAddingNewAddress(false)} className="px-4 py-2 border border-outline-variant rounded hover:bg-surface-container-highest transition-all text-sm font-medium">
+                            Hủy
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={async () => {
+                              if (!customAddress) return;
+                              if (user && !userAddresses.includes(customAddress)) {
+                                try {
+                                  const res = await axios.put("http://localhost:5000/api/auth/profile", { newAddress: customAddress }, { withCredentials: true });
+                                  if (res.data.success) {
+                                    setUserAddresses(res.data.data.user.addresses);
+                                    setFormData({ ...formData, address: customAddress });
+                                    setIsAddingNewAddress(false);
+                                  }
+                                } catch (error) {
+                                  console.error("Lỗi khi lưu địa chỉ mới:", error);
+                                }
+                              } else {
+                                setFormData({ ...formData, address: customAddress });
+                                setIsAddingNewAddress(false);
+                              }
+                            }} 
+                            className="bg-primary text-on-primary px-4 py-2 rounded hover:bg-primary-fixed-dim transition-all text-sm font-medium"
+                          >
+                            Lưu địa chỉ
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button 
+                      onClick={() => setIsEditingInfo(false)} 
+                      className="bg-primary text-on-primary px-6 py-2 rounded font-label-md hover:bg-primary-fixed-dim transition-all"
+                    >
+                      Xong
+                    </button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="font-label-md text-label-md text-on-surface-variant block">EMAIL</label>
-                  <input name="email" value={formData.email} onChange={handleInputChange} className="w-full bg-surface-container-lowest border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary" placeholder="example@email.com" type="email" />
-                </div>
-                <div className="space-y-2">
-                  <label className="font-label-md text-label-md text-on-surface-variant block">ĐỊA CHỈ NHẬN HÀNG</label>
-                  <textarea name="address" value={formData.address} onChange={handleInputChange} className="w-full bg-surface-container-lowest border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all resize-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Số nhà, tên đường, phường/xã, quận/huyện..." rows="3"></textarea>
-                </div>
-              </div>
+              )}
             </section>
 
             {/* Phương thức thanh toán */}
@@ -363,8 +573,7 @@ function CheckoutPageContent() {
             </section>
           </div>
 
-          {/* Right Column: Order Summary */}
-          <div className="lg:col-span-5 sticky top-32">
+          <div className="lg:col-span-5 mb-12">
             <div className="bg-surface-container/60 backdrop-blur-md border border-outline-variant p-8 rounded-lg flex flex-col gap-8">
               <div className="border-b border-outline-variant pb-4">
                 <h2 className="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide">Đơn hàng của bạn</h2>
@@ -409,10 +618,12 @@ function CheckoutPageContent() {
                         <span className="text-sm">Khách mới (Giảm 50% tối đa 50k) {!user && <span className="text-error text-[10px] ml-1">(Chỉ dành cho tài khoản mới)</span>}</span>
                       </label>
                     )}
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="discount" checked={discountType === 'loyalty_points'} onChange={handleApplyLoyaltyPoints} className="text-primary focus:ring-primary" disabled={!user || user.loyaltyPoints <= 0} />
-                      <span className="text-sm">Dùng điểm thưởng (Hiện đang có {user?.loyaltyPoints || 0} điểm) {!user && <span className="text-error text-[10px] ml-1">(Chỉ dành cho thành viên)</span>}</span>
-                    </label>
+                    {user && user.loyaltyPoints > 0 && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="discount" checked={discountType === 'loyalty_points'} onChange={handleApplyLoyaltyPoints} className="text-primary focus:ring-primary" />
+                        <span className="text-sm">Dùng điểm thưởng (Hiện đang có {user.loyaltyPoints} điểm)</span>
+                      </label>
+                    )}
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" name="discount" checked={discountType === 'voucher'} onChange={() => setDiscountType('voucher')} className="text-primary focus:ring-primary" />
                       <span className="text-sm">Mã giảm giá</span>
@@ -436,7 +647,44 @@ function CheckoutPageContent() {
                       )}
                     </div>
                   )}
-                  {voucherError && <p className={`text-xs mt-1 ${voucherError.includes('Đã') ? 'text-success' : 'text-error'}`}>{voucherError}</p>}
+
+                  {discountType === 'loyalty_points' && (
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="number"
+                        placeholder="Số điểm muốn tiêu (1 điểm = 100đ)"
+                        value={pointsToUseInput || ''}
+                        onChange={(e) => {
+                           let val = parseInt(e.target.value);
+                           if (isNaN(val)) val = 0;
+                           if (val < 0) val = 0;
+                           if (val > user?.loyaltyPoints) val = user.loyaltyPoints;
+                           setPointsToUseInput(val);
+                        }}
+                        className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm focus:border-primary outline-none"
+                        min="0"
+                        max={user?.loyaltyPoints || 0}
+                      />
+                      <button 
+                        onClick={() => {
+                          const discount = pointsToUseInput * 100;
+                          if (discount > subTotal) {
+                            setDiscountAmount(subTotal);
+                            setVoucherError(`Bạn đã dùng ${pointsToUseInput} điểm (giảm tối đa ${formatPrice(subTotal)})`);
+                          } else {
+                            setDiscountAmount(discount);
+                            setVoucherError(`Bạn đã dùng ${pointsToUseInput} điểm (giảm ${formatPrice(discount)})`);
+                          }
+                        }} 
+                        disabled={!pointsToUseInput || pointsToUseInput <= 0}
+                        className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary disabled:opacity-50"
+                      >
+                        Áp dụng
+                      </button>
+                    </div>
+                  )}
+
+                  {voucherError && <p className={`text-xs mt-1 ${voucherError.includes('Đã') || voucherError.includes('Bạn đã') ? 'text-success' : 'text-error'}`}>{voucherError}</p>}
                   {appliedVoucher && discountType === 'voucher' && <p className="text-success text-xs mt-1">Đã áp dụng mã {appliedVoucher}</p>}
                 </div>
 

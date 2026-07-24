@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { voucherService } from "@/services/voucher.service";
+import { bookingService } from "@/services/booking.service";
 
 export default function BookingSummarySidebar({
   selectedServices = [], selectedBarber, selectedDate, selectedTime,
@@ -7,8 +8,10 @@ export default function BookingSummarySidebar({
   user, discountType, setDiscountType, pointsToUseInput, setPointsToUseInput,
   voucherCodeInput, setVoucherCodeInput, appliedVoucher, setAppliedVoucher,
   discountAmount, setDiscountAmount, voucherError, setVoucherError,
-  applyingVoucher, setApplyingVoucher
+  applyingVoucher, setApplyingVoucher, setVerifiedPhone
 }) {
+  const [newUserPhone, setNewUserPhone] = useState("");
+  const [isNewUserVerified, setIsNewUserVerified] = useState(false);
   const isReady = selectedServices.length > 0 && selectedBarber && selectedDate && selectedTime;
 
   const subTotal = selectedServices.reduce((total, s) => total + (s.price || 0), 0);
@@ -124,6 +127,8 @@ export default function BookingSummarySidebar({
     setDiscountAmount(0);
     setPointsToUseInput(0);
     removeVoucher();
+    setIsNewUserVerified(false);
+    if (setVerifiedPhone) setVerifiedPhone("");
   };
 
   return (
@@ -239,16 +244,102 @@ export default function BookingSummarySidebar({
                   <input type="radio" name="discount" checked={discountType === 'none'} onChange={clearDiscount} className="text-primary focus:ring-primary" disabled={!isReady} />
                   <span className="text-sm">Không dùng ưu đãi</span>
                 </label>
+                
+                {/* NEW USER DISCOUNT (Guest or Logged in but 0 points) */}
                 {(!user || user.loyaltyPoints === 0) && (
+                  <>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="discount" 
+                        checked={discountType === 'new_user'} 
+                        onChange={() => {
+                          setDiscountType('new_user');
+                          setDiscountAmount(0);
+                          setVoucherError("");
+                          setIsNewUserVerified(false);
+                          if (setVerifiedPhone) setVerifiedPhone("");
+                        }} 
+                        className="text-primary focus:ring-primary" 
+                        disabled={!isReady} 
+                      />
+                      <span className="text-sm">Khách mới (Giảm 50% tối đa 50k)</span>
+                    </label>
+                    {discountType === 'new_user' && (
+                      <div className="flex flex-col gap-2 mt-1 ml-6">
+                        <div className="flex gap-2">
+                          <input
+                            type="tel"
+                            placeholder="Nhập SĐT của bạn"
+                            value={newUserPhone}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9+\s]/g, "");
+                              setNewUserPhone(val);
+                            }}
+                            disabled={!isReady || applyingVoucher || isNewUserVerified}
+                            className="flex-1 bg-surface-container-lowest border border-outline-variant rounded px-3 py-2 text-sm focus:border-primary outline-none disabled:opacity-50"
+                          />
+                          {!isNewUserVerified ? (
+                            <button 
+                              onClick={async () => {
+                                if (!newUserPhone || newUserPhone.length < 10) {
+                                  setVoucherError("SĐT không hợp lệ");
+                                  return;
+                                }
+                                setApplyingVoucher(true);
+                                setVoucherError("");
+                                try {
+                                  const res = await bookingService.preCheckBooking(newUserPhone.replace(/\s/g, ""));
+                                  if (res.customerInfo) {
+                                    setVoucherError("SĐT đã từng đặt lịch hoặc có tài khoản. Vui lòng đăng nhập hoặc dùng SĐT khác.");
+                                    setIsNewUserVerified(false);
+                                    setDiscountAmount(0);
+                                  } else {
+                                    setIsNewUserVerified(true);
+                                    let dAmount = subTotal * 0.5;
+                                    if (dAmount > 50000) dAmount = 50000;
+                                    setDiscountAmount(dAmount);
+                                    setVoucherError("SĐT hợp lệ! Đã áp dụng ưu đãi Khách mới.");
+                                    if (setVerifiedPhone) setVerifiedPhone(newUserPhone.replace(/\s/g, ""));
+                                  }
+                                } catch (err) {
+                                  setVoucherError(err.message || "Lỗi kiểm tra SĐT");
+                                } finally {
+                                  setApplyingVoucher(false);
+                                }
+                              }} 
+                              disabled={!isReady || applyingVoucher || !newUserPhone} 
+                              className="px-4 bg-surface-container-highest border border-outline-variant rounded font-bold text-sm hover:text-primary transition-colors disabled:opacity-50"
+                            >
+                              Kiểm tra
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => {
+                                setIsNewUserVerified(false);
+                                setDiscountAmount(0);
+                                setVoucherError("");
+                                if (setVerifiedPhone) setVerifiedPhone("");
+                              }} 
+                              className="px-4 bg-error/90 text-white rounded font-bold text-sm hover:bg-error transition-colors"
+                            >
+                              Hủy
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* LOYALTY POINTS (Logged in only) */}
+                {user && user.loyaltyPoints > 0 && (
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="discount" checked={discountType === 'new_user'} onChange={handleApplyNewUserDiscount} className="text-primary focus:ring-primary" disabled={!isReady || !user} />
-                    <span className="text-sm">Khách mới (Giảm 50% tối đa 50k) {!user && <span className="text-error text-[10px] ml-1">(Chỉ dành cho tài khoản mới)</span>}</span>
+                    <input type="radio" name="discount" checked={discountType === 'loyalty_points'} onChange={handleApplyLoyaltyPoints} className="text-primary focus:ring-primary" disabled={!isReady} />
+                    <span className="text-sm">Dùng điểm thưởng (Đang có {user.loyaltyPoints} điểm)</span>
                   </label>
                 )}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="discount" checked={discountType === 'loyalty_points'} onChange={handleApplyLoyaltyPoints} className="text-primary focus:ring-primary" disabled={!isReady || !user || user.loyaltyPoints <= 0} />
-                  <span className="text-sm">Dùng điểm thưởng (Hiện đang có {user?.loyaltyPoints || 0} điểm) {!user && <span className="text-error text-[10px] ml-1">(Chỉ dành cho thành viên)</span>}</span>
-                </label>
+
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="discount" checked={discountType === 'voucher'} onChange={() => setDiscountType('voucher')} className="text-primary focus:ring-primary" disabled={!isReady} />
                   <span className="text-sm">Mã giảm giá</span>

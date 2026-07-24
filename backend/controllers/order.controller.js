@@ -482,10 +482,10 @@ exports.updateOrderStatus = async (req, res, next) => {
         const DiscountService = require('../services/discount.service');
         try {
           if (status === 'completed' && oldStatus !== 'completed') {
-            await DiscountService.addPointsForCompletion(order.userId);
+            await DiscountService.addPointsForCompletion(order.userId, order.totalAmount);
           } else if (status === 'cancelled' && oldStatus !== 'cancelled') {
             const wasCompleted = (oldStatus === 'completed');
-            await DiscountService.revertPoints(order.userId, order.pointsUsed || 0, wasCompleted);
+            await DiscountService.revertPoints(order.userId, order.pointsUsed || 0, wasCompleted, order.totalAmount);
           }
         } catch (pointError) {
           console.error("Error updating points for order:", pointError);
@@ -504,7 +504,7 @@ exports.updateOrderStatus = async (req, res, next) => {
 exports.updateInternalNote = async (req, res, next) => {
   try {
     const { internalNote } = req.body;
-    const order = await Order.findByIdAndUpdate(req.params.id, { internalNote }, { new: true });
+    const order = await Order.findByIdAndUpdate(req.params.id, { internalNote }, { returnDocument: "after" });
     if (!order) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     res.json({ success: true, message: 'Cập nhật ghi chú thành công', data: order });
   } catch (error) {

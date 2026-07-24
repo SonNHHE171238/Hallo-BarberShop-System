@@ -76,7 +76,7 @@ exports.updateRosterStatus = async (req, res) => {
     const roster = await WeeklyRoster.findByIdAndUpdate(
       req.params.id, 
       { status }, 
-      { new: true }
+      { returnDocument: "after" }
     );
     res.json({ success: true, roster });
   } catch (err) {
@@ -194,7 +194,7 @@ exports.adminAdjustShift = async (req, res) => {
     const registration = await ShiftRegistration.findOneAndUpdate(
       { rosterId: req.params.id, userId: req.params.userId },
       { registeredShifts, adminAdjusted: true, adjustmentNote, status: 'adjusted', totalShifts, role: 'staff' },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
     res.json({ success: true, registration });
   } catch (err) {

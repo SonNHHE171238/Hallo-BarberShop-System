@@ -2,41 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { staffDashboardService } from '@/services/staffDashboard.service';
+import { barberService } from '@/services/barber.service';
 import toast from 'react-hot-toast';
 
-export default function AdminBookingDetailPage() {
+export default function BarberBookingDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
   
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isConfirming, setIsConfirming] = useState(false);
-
-  const handleConfirmCompletion = async () => {
-    if (!window.confirm('Xác nhận khách đã chuyển khoản và hoàn thành đơn?')) return;
-    setIsConfirming(true);
-    try {
-      await staffDashboardService.updateStatus(id, {
-        status: 'completed',
-        amountPaid: booking.totalPrice || 0,
-        paymentMethod: 'bank_transfer'
-      });
-      toast.success('Xác nhận thanh toán và hoàn thành thành công!');
-      setBooking(prev => ({
-        ...prev,
-        status: 'completed',
-        paymentStatus: 'paid',
-        amountPaid: prev.totalPrice || 0
-      }));
-    } catch (error) {
-      console.error(error);
-      toast.error('Có lỗi xảy ra khi xác nhận thanh toán');
-    } finally {
-      setIsConfirming(false);
-    }
-  };
 
   useEffect(() => {
     if (!id || id === 'undefined') {
@@ -45,7 +20,7 @@ export default function AdminBookingDetailPage() {
     }
     const fetchBooking = async () => {
       try {
-        const res = await staffDashboardService.getBookingById(id);
+        const res = await barberService.getBookingDetail(id);
         if (res && res._id) {
           setBooking(res);
         }
@@ -95,7 +70,7 @@ export default function AdminBookingDetailPage() {
       case 'completed': return { text: 'Hoàn thành', icon: 'check_circle', color: 'text-success border-success/30 bg-success/10' };
       case 'cancelled': return { text: 'Đã hủy', icon: 'cancel', color: 'text-error border-error/30 bg-error/10' };
       case 'confirmed': return { text: 'Đã cọc/Giữ chỗ', icon: 'event_available', color: 'text-info border-info/30 bg-info/10' };
-      case 'pending': return { text: 'Đang chờ', icon: 'pending', color: 'text-warning border-warning/30 bg-warning/10' };
+      case 'pending': return { text: 'Chưa checkin', icon: 'pending', color: 'text-warning border-warning/30 bg-warning/10' };
       default: return { text: 'Đang phục vụ', icon: 'sync', color: 'text-primary border-primary/30 bg-primary/10' };
     }
   };
@@ -103,7 +78,7 @@ export default function AdminBookingDetailPage() {
   const statusInfo = getStatusDisplay(booking.status);
 
   return (
-    <div className="flex-1 w-full max-w-[1200px] mx-auto flex flex-col min-h-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex-1 w-full max-w-[1200px] mx-auto flex flex-col min-h-0 p-4 md:p-8 lg:p-12 pb-24 md:pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header Section */}
       <header className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-6">
         <div>
@@ -136,7 +111,7 @@ export default function AdminBookingDetailPage() {
           <div className="flex flex-col">
             <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Giờ hẹn</span>
             <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">
-              {booking.time || (booking.rawDate ? new Date(booking.rawDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'N/A')}
+              {booking.time || booking.timeSlot || (booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'N/A')}
             </span>
           </div>
         </div>
@@ -156,36 +131,17 @@ export default function AdminBookingDetailPage() {
             </h2>
             <div className="flex items-center gap-4 relative z-10">
               <div className="w-14 h-14 rounded-2xl bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-display-sm text-xl text-primary shadow-inner">
-                {(booking.customerName || 'K').charAt(0).toUpperCase()}
+                {((booking.customerId?.name || booking.customerName) || 'K').charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 className="font-headline-sm text-on-surface text-lg mb-1">{booking.customerName || 'Khách Vãng Lai'}</h3>
+                <h3 className="font-headline-sm text-on-surface text-lg mb-1">{booking.customerId?.name || booking.customerName || 'Khách Vãng Lai'}</h3>
                 <p className="font-body-md text-sm text-on-surface-variant mb-2 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[14px]">call</span>
-                  {booking.customerPhone || 'Không có SĐT'}
+                  {booking.customerId?.phone || booking.customerPhone || 'Không có SĐT'}
                 </p>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-surface-variant border border-outline-variant/50 text-on-surface text-[10px] font-bold uppercase tracking-wider">
-                  {booking.customerType || 'Khách mới'}
+                  {booking.customerId ? 'Thành viên' : 'Khách vãng lai'}
                 </span>
-              </div>
-            </div>
-          </div>
-          {/* Barber Card */}
-          <div className="glass-panel relative overflow-hidden bg-surface-container-low/60 border border-outline-variant/40 hover:border-outline-gold/50 rounded-2xl p-6 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(212,175,55,0.05)] group">
-            <h2 className="font-label-md text-xs font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2 mb-5 pb-3 border-b border-outline-variant/30">
-              <span className="material-symbols-outlined text-[18px]">content_cut</span>
-              Barber Phụ Trách
-            </h2>
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="w-14 h-14 rounded-2xl bg-surface-container-high border border-outline-gold/30 flex items-center justify-center font-display-sm text-xl text-primary shadow-inner overflow-hidden">
-                {(booking.barberName && booking.barberName !== 'Auto') ? booking.barberName.charAt(0) : 'A'}
-              </div>
-              <div>
-                <h3 className="font-headline-sm text-on-surface text-lg mb-1">{booking.barberName || 'Sắp xếp tự động'}</h3>
-                <p className="font-label-md text-[10px] text-primary uppercase tracking-widest flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[14px]">stars</span>
-                  {(booking.barberName === 'Auto' || !booking.barberName) ? 'Hệ thống sắp xếp' : 'Chuyên gia Barber'}
-                </p>
               </div>
             </div>
           </div>
@@ -221,12 +177,6 @@ export default function AdminBookingDetailPage() {
                   <span className="material-symbols-outlined text-[20px] text-primary">receipt_long</span>
                   Chi Tiết Dịch Vụ
                 </h2>
-                {booking.status === 'in_progress' && (
-                  <button className="text-[11px] font-bold text-primary hover:text-primary-container uppercase tracking-wider flex items-center gap-1 bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant/50 transition-colors">
-                    <span className="material-symbols-outlined text-[14px]">add</span>
-                    Thêm dịch vụ
-                  </button>
-                )}
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-6 pr-2">
@@ -267,39 +217,6 @@ export default function AdminBookingDetailPage() {
                     {(booking.totalPrice || 0).toLocaleString('vi-VN')} <span className="text-xl text-primary/70 font-normal">đ</span>
                   </span>
                 </div>
-
-                {!isCancelledOrNoShow && (
-                  <div className="bg-surface-container-low p-6 rounded-xl border border-outline-variant/30 flex flex-col gap-4 shadow-sm">
-                    <div className="flex justify-between text-sm text-on-surface-variant">
-                      <span>Đã đặt cọc / Thanh toán</span>
-                      <span className="font-mono text-error">- {(amountPaid || 0).toLocaleString('vi-VN')} đ</span>
-                    </div>
-                    <div className="flex justify-between items-end pt-4 border-t border-outline-variant/30">
-                      <span className="font-label-md text-xs font-bold text-on-surface uppercase tracking-wider">Cần thanh toán thêm</span>
-                      <span className="text-2xl font-extrabold text-primary font-mono tracking-tight">{(remaining || 0).toLocaleString('vi-VN')} đ</span>
-                    </div>
-
-                    {!isCompleted && (
-                      <button 
-                        onClick={handleConfirmCompletion}
-                        disabled={isConfirming}
-                        className="w-full mt-2 flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-on-primary font-bold uppercase tracking-widest text-sm shadow-lg hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                      >
-                        {isConfirming ? (
-                          <>
-                            <span className="material-symbols-outlined animate-spin text-[20px]">autorenew</span>
-                            Đang xử lý...
-                          </>
-                        ) : (
-                          <>
-                            <span className="material-symbols-outlined text-[20px]">task_alt</span>
-                            Xác nhận thanh toán & Hoàn thành
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>

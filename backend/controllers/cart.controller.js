@@ -70,7 +70,7 @@ exports.updateCartItem = async (req, res, next) => {
     const cartItem = await Cart.findOneAndUpdate(
       { userId, productId },
       { quantity },
-      { new: true }
+      { returnDocument: "after" }
     ).populate('productId');
 
     if (!cartItem) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm trong giỏ' });

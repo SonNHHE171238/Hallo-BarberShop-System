@@ -53,15 +53,11 @@ class DiscountService {
         throw new Error('Không đủ điểm trong tài khoản.');
       }
 
-      // 1 point = 1,000 VND
-      const maxDiscountValue = totalAmount * 0.5;
-      const pointValue = pointsToUse * 1000;
+      // 1 point = 100 VND (tức là 100 điểm = 10k VND)
+      const pointValue = pointsToUse * 100;
 
-      if (pointValue > maxDiscountValue) {
-        throw new Error('Chỉ được thanh toán bằng điểm tối đa 50% tổng hóa đơn.');
-      }
+      const discountAmount = pointValue > totalAmount ? totalAmount : pointValue;
 
-      const discountAmount = pointValue;
       const finalAmount = Math.max(0, totalAmount - discountAmount);
 
       return { finalAmount, discountAmount, pointsUsed: pointsToUse, discountType };
@@ -85,14 +81,16 @@ class DiscountService {
   }
 
   /**
-   * Add flat points for completing a service.
+   * Add points based on order/booking total amount (10,000 VND = 1 point)
    */
-  static async addPointsForCompletion(userId, session = null) {
-    if (!userId) return;
-    const POINTS_EARNED = 5; // Flat 5 points
+  static async addPointsForCompletion(userId, totalAmount, session = null) {
+    if (!userId || !totalAmount) return;
+    const pointsEarned = Math.floor(totalAmount / 10000);
+    if (pointsEarned <= 0) return;
+    
     const user = await User.findById(userId);
     if (user) {
-      user.loyaltyPoints = (user.loyaltyPoints || 0) + POINTS_EARNED;
+      user.loyaltyPoints = (user.loyaltyPoints || 0) + pointsEarned;
       await user.save({ session });
     }
   }
@@ -100,7 +98,7 @@ class DiscountService {
   /**
    * Revert points (add back points used, remove points earned).
    */
-  static async revertPoints(userId, pointsUsed, wasCompleted, session = null) {
+  static async revertPoints(userId, pointsUsed, wasCompleted, totalAmount = 0, session = null) {
     if (!userId) return;
     const user = await User.findById(userId);
     if (user) {
@@ -109,9 +107,9 @@ class DiscountService {
         user.loyaltyPoints += pointsUsed;
       }
       // Remove points they earned if it was already completed
-      if (wasCompleted) {
-        const POINTS_EARNED = 5;
-        user.loyaltyPoints = Math.max(0, user.loyaltyPoints - POINTS_EARNED);
+      if (wasCompleted && totalAmount > 0) {
+        const pointsEarned = Math.floor(totalAmount / 10000);
+        user.loyaltyPoints = Math.max(0, user.loyaltyPoints - pointsEarned);
       }
       await user.save({ session });
     }

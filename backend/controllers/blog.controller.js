@@ -156,7 +156,7 @@ exports.getBlogBySlug = async (req, res) => {
     const blog = await Blog.findOneAndUpdate(
       { slug, status: 'approved' },
       { $inc: { views: 1 } },
-      { new: true }
+      { returnDocument: "after" }
     ).populate('author', 'name');
     
     if (!blog) {

@@ -478,9 +478,6 @@ export default function StaffBookingDetail() {
                     <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
                       Cần thanh toán thêm
                     </span>
-                    <span className="font-body-md text-xs text-on-surface-variant opacity-70">
-                      Đã bao gồm VAT
-                    </span>
                   </div>
                   <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
                     {remaining.toLocaleString("vi-VN")}{" "}

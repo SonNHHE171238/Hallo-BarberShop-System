@@ -444,7 +444,7 @@ export default function GuestBookingDetailPage() {
                     <div className="flex justify-between items-end border-t border-outline-variant/30 pt-4 mt-2">
                       <div className="flex flex-col gap-1">
                         <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Cộng</span>
-                        <span className="font-body-md text-xs text-on-surface-variant opacity-70">Đã bao gồm VAT</span>
+                        <span className="font-body-md text-xs text-on-surface-variant opacity-70">Tổng thanh toán</span>
                       </div>
                       <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
                         {(booking.totalPrice || 0).toLocaleString("vi-VN")} <span className="text-xl text-primary/70 font-normal">đ</span>

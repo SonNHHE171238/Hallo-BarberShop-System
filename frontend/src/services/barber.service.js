@@ -21,5 +21,9 @@ export const barberService = {
       method: 'PUT',
       body: JSON.stringify({ isAvailable })
     });
+  },
+
+  getBookingDetail: async (id) => {
+    return await fetchWithAuth(`/bookings/barber/detail/${id}`);
   }
 };

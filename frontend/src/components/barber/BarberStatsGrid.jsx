@@ -18,7 +18,7 @@ export default function BarberStatsGrid({ profile, bookings }) {
   const ratingCount = profile?.ratingCount || 0;
 
   return (
-    <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+    <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       <MetricCard
         title="Lịch Hẹn Hôm Nay"
         icon="calendar_today"

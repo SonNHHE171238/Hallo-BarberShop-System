@@ -230,7 +230,7 @@ exports.createFeedback = async (req, res) => {
       const user = await User.findByIdAndUpdate(
         booking.customerId,
         { $inc: { loyaltyPoints: pointsEarned } },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (user) {
         totalPoints = user.loyaltyPoints;

@@ -133,7 +133,6 @@ function OrderDetailContent({ orderCode }) {
   const discountAmount = order.discountAmount || 0;
   const totalAmount = order.totalAmount;
   const subTotal = order.items.reduce((sum, item) => sum + (item.priceAtPurchase * item.quantity), 0);
-  const shippingFee = Math.max(0, totalAmount + discountAmount - subTotal);
 
   // Status mapping
   const statusMap = {
@@ -328,10 +327,6 @@ function OrderDetailContent({ orderCode }) {
                       <span className="font-label-md text-label-md">-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center text-on-surface-variant">
-                    <span>Phí giao hàng</span>
-                    <span className="font-label-md text-label-md">{formatPrice(shippingFee)}</span>
-                  </div>
                   <div className="flex justify-between items-center mt-4 pt-4 border-t border-outline-variant">
                     <span className="font-headline-md text-headline-md text-primary">Tổng cộng</span>
                     <span className="font-headline-md text-headline-md text-primary">{formatPrice(totalAmount)}</span>

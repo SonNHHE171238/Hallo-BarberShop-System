@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user.model');
+const Address = require('../models/address.model');
 const { generateOtp, getOtpTtlMs } = require('../utils/otp');
 const { notifyRegistrationOtp } = require('../services/registration-notify.service');
 const { sendPasswordResetEmail } = require('../services/email.service');
@@ -395,6 +396,14 @@ exports.updateUserProfile = async (userId, updateData) => {
   
   if (updateData.avatarUrl !== undefined) {
     user.avatarUrl = String(updateData.avatarUrl).trim();
+  }
+
+  if (updateData.newAddress !== undefined && String(updateData.newAddress).trim() !== '') {
+    const addr = String(updateData.newAddress).trim();
+    const existing = await Address.findOne({ userId, address: addr });
+    if (!existing) {
+      await Address.create({ userId, address: addr });
+    }
   }
 
   await user.save();

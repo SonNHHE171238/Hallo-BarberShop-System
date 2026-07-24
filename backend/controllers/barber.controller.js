@@ -77,7 +77,7 @@ exports.updateMyAvailability = async (req, res, next) => {
     const barber = await Barber.findOneAndUpdate(
       { userId: req.userId },
       { $set: { isAvailable: Boolean(isAvailable) } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!barber) {

@@ -117,9 +117,8 @@ export default function CartPage() {
   };
 
   const subTotal = cartItems.reduce((total, item) => total + ((item.productId?.price || 0) * item.quantity), 0);
-  const shippingFee = subTotal > 2000000 ? 0 : 35000;
   const discount = 0; // Tương lai có thể áp mã giảm giá
-  const total = subTotal + shippingFee - discount;
+  const total = subTotal - discount;
 
   const hasInvalidItems = cartItems.some(item => !item.productId?.isActive || item.productId?.stock === 0 || item.productId?.isDeleted);
 
@@ -245,10 +244,6 @@ export default function CartPage() {
                     <span className="font-body-md">Tạm tính</span>
                     <span className="font-label-md">{formatPrice(subTotal)}</span>
                   </div>
-                  <div className="flex justify-between text-on-surface-variant">
-                    <span className="font-body-md">Phí vận chuyển</span>
-                    <span className="font-label-md">{cartItems.length > 0 ? formatPrice(shippingFee) : '0 ₫'}</span>
-                  </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-primary">
                       <span className="font-body-md">Giảm giá</span>
@@ -280,9 +275,7 @@ export default function CartPage() {
               </Link>
               
               <div className="text-center">
-                <p className="font-body-md text-xs text-outline leading-relaxed italic mt-4">
-                  Giá đã bao gồm VAT. Miễn phí vận chuyển cho đơn hàng trên 2.000.000đ.
-                </p>
+
               </div>
             </div>
           </aside>
