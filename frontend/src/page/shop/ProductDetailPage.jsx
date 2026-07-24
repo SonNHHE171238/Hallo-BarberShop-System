@@ -101,6 +101,30 @@ export default function ProductDetailPage({ id }) {
     }
   };
 
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn gỡ đánh giá này không?")) return;
+    try {
+      const res = await axios.delete(`http://localhost:5000/api/product-feedbacks/${feedbackId}`, {
+        withCredentials: true
+      });
+      if (res.data.success) {
+        toast.success("Đã gỡ đánh giá!");
+        
+        // Cập nhật lại danh sách đánh giá
+        fetchFeedbacks(1);
+        
+        // Cập nhật lại số lượng đánh giá của sản phẩm trên giao diện
+        setProduct(prev => prev ? {
+          ...prev,
+          totalReviews: Math.max(0, prev.totalReviews - 1)
+        } : null);
+      }
+    } catch (error) {
+      console.error("Lỗi khi gỡ đánh giá:", error);
+      toast.error(error.response?.data?.message || "Không thể gỡ đánh giá.");
+    }
+  };
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
@@ -272,10 +296,21 @@ export default function ProductDetailPage({ id }) {
                       <p className="font-headline-sm text-on-surface">{fb.userName}</p>
                       <p className="text-xs text-on-surface-variant">{new Date(fb.createdAt).toLocaleDateString('vi-VN')}</p>
                     </div>
-                    <div className="ml-auto flex text-primary">
-                      {[1,2,3,4,5].map(star => (
-                        <span key={star} className="material-symbols-outlined text-lg" style={{ fontVariationSettings: star <= fb.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
-                      ))}
+                    <div className="ml-auto flex items-center gap-4">
+                      <div className="flex text-primary">
+                        {[1,2,3,4,5].map(star => (
+                          <span key={star} className="material-symbols-outlined text-lg" style={{ fontVariationSettings: star <= fb.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+                        ))}
+                      </div>
+                      {user && user.role === 'customer' && fb.userId && fb.userId === (user.id || user._id) && (
+                        <button 
+                          onClick={() => handleDeleteFeedback(fb._id)}
+                          className="text-error hover:text-error/85 transition-colors p-1.5 flex items-center justify-center rounded hover:bg-error/10 border border-transparent hover:border-error/20"
+                          title="Gỡ đánh giá"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                   <p className="text-on-surface-variant whitespace-pre-line leading-relaxed pl-16">
