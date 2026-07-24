@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useRef } from "react";
 import axios from "axios";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -15,9 +15,14 @@ export default function BlogDetailPage({ slug }) {
   const [mounted, setMounted] = useState(false);
   const [blog, setBlog] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
     setMounted(true);
+
+    // Guard against React Strict Mode double-invocation (which would double the view count)
+    if (hasFetched.current) return;
+    hasFetched.current = true;
 
     const fetchBlogDetail = async () => {
       const targetSlug = typeof resolvedSlug === "object" ? resolvedSlug?.slug : resolvedSlug;
