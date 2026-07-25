@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { staffDashboardService } from '@/services/staffDashboard.service';
 import toast from 'react-hot-toast';
+import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
 
 export default function AdminBookingDetailPage() {
   const router = useRouter();
@@ -13,9 +14,10 @@ export default function AdminBookingDetailPage() {
   const [booking, setBooking] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const handleConfirmCompletion = async () => {
-    if (!window.confirm('Xác nhận khách đã chuyển khoản và hoàn thành đơn?')) return;
+    setIsConfirmModalOpen(false);
     setIsConfirming(true);
     try {
       await staffDashboardService.updateStatus(id, {
@@ -282,7 +284,7 @@ export default function AdminBookingDetailPage() {
 
                     {!isCompleted && (
                       <button 
-                        onClick={handleConfirmCompletion}
+                        onClick={() => setIsConfirmModalOpen(true)}
                         disabled={isConfirming}
                         className="w-full mt-2 flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-on-primary font-bold uppercase tracking-widest text-sm shadow-lg hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                       >
@@ -306,6 +308,16 @@ export default function AdminBookingDetailPage() {
           </div>
         </div>
       </div>
+
+      <GenericConfirmModal 
+        isOpen={isConfirmModalOpen}
+        title="Xác nhận thanh toán"
+        message="Xác nhận khách đã chuyển khoản và hoàn thành đơn?"
+        onCancel={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmCompletion}
+        confirmText="Hoàn thành"
+        isDanger={false}
+      />
     </div>
   );
 }
