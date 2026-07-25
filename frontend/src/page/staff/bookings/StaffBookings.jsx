@@ -713,12 +713,6 @@ export default function StaffBookings() {
                         Khách Đã Đến
                       </button>
                       <button
-                        onClick={() => handleStatusUpdate("in_progress")}
-                        className="w-full py-3 bg-secondary text-on-secondary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md"
-                      >
-                        Đang Phục Vụ (Lên ghế)
-                      </button>
-                      <button
                         onClick={() => {
                           setStatusConfirmModal({
                             isOpen: true,
@@ -733,7 +727,7 @@ export default function StaffBookings() {
                         }}
                         className="w-full py-3 bg-error text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
                       >
-                        Khách Không Tới (No Show)
+                        Khách Không Tới
                       </button>
                       <button
                         onClick={() => {
@@ -756,9 +750,12 @@ export default function StaffBookings() {
                     <>
                       <button
                         onClick={() => handleStatusUpdate("in_progress")}
-                        className="w-full py-3 bg-secondary text-on-secondary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md"
+                        className="w-full py-3 bg-secondary text-on-secondary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-secondary/20 flex items-center justify-center gap-2"
                       >
-                        Đang Phục Vụ (Lên ghế)
+                        <span className="material-symbols-outlined">
+                          content_cut
+                        </span>
+                        Đang Phục Vụ
                       </button>
                       <button
                         onClick={() => {
