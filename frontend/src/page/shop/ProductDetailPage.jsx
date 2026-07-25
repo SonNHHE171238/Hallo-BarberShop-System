@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+import GenericConfirmModal from "@/components/ui/GenericConfirmModal";
 
 export default function ProductDetailPage({ id }) {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ export default function ProductDetailPage({ id }) {
   const [feedbacks, setFeedbacks] = useState([]);
   const [feedbackPagination, setFeedbackPagination] = useState({ page: 1, totalPages: 1 });
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, feedbackId: null });
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -102,8 +104,15 @@ export default function ProductDetailPage({ id }) {
     }
   };
 
-  const handleDeleteFeedback = async (feedbackId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn gỡ đánh giá này không?")) return;
+  const handleDeleteFeedbackInit = (feedbackId) => {
+    setDeleteModalState({ isOpen: true, feedbackId });
+  };
+
+  const handleDeleteFeedbackConfirm = async () => {
+    const { feedbackId } = deleteModalState;
+    if (!feedbackId) return;
+    setDeleteModalState({ isOpen: false, feedbackId: null });
+    
     try {
       const res = await axios.delete(`http://localhost:5000/api/product-feedbacks/${feedbackId}`, {
         withCredentials: true
@@ -305,7 +314,7 @@ export default function ProductDetailPage({ id }) {
                       </div>
                       {user && user.role === 'customer' && fb.userId && fb.userId === (user.id || user._id) && (
                         <button 
-                          onClick={() => handleDeleteFeedback(fb._id)}
+                          onClick={() => handleDeleteFeedbackInit(fb._id)}
                           className="text-error hover:text-error/85 transition-colors p-1.5 flex items-center justify-center rounded hover:bg-error/10 border border-transparent hover:border-error/20"
                           title="Gỡ đánh giá"
                         >
@@ -343,6 +352,15 @@ export default function ProductDetailPage({ id }) {
       </main>
 
       <Footer />
+      <GenericConfirmModal 
+        isOpen={deleteModalState.isOpen}
+        title="Gỡ đánh giá"
+        message="Bạn có chắc chắn muốn gỡ đánh giá này không?"
+        onCancel={() => setDeleteModalState({ isOpen: false, feedbackId: null })}
+        onConfirm={handleDeleteFeedbackConfirm}
+        confirmText="Gỡ bỏ"
+        isDanger={true}
+      />
     </div>
   );
 }

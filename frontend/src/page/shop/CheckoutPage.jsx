@@ -182,8 +182,13 @@ function CheckoutPageContent() {
         .join(", ");
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustomAddress(fullAddr);
+      
+      // Guest không có nút lưu địa chỉ, nên update thẳng vào formData
+      if (!user) {
+        setFormData(prev => ({ ...prev, address: fullAddr }));
+      }
     }
-  }, [streetAddress, selectedWard, selectedDistrict, selectedProvince]);
+  }, [streetAddress, selectedWard, selectedDistrict, selectedProvince, user]);
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -558,7 +563,7 @@ function CheckoutPageContent() {
                       <label className="font-label-md text-label-md text-on-surface-variant block">
                         ĐỊA CHỈ NHẬN HÀNG
                       </label>
-                      {!isAddingNewAddress && (
+                      {user && !isAddingNewAddress && (
                         <button
                           type="button"
                           onClick={() => setIsAddingNewAddress(true)}
@@ -572,7 +577,7 @@ function CheckoutPageContent() {
                       )}
                     </div>
 
-                    {!isAddingNewAddress && (
+                    {user && !isAddingNewAddress && (
                       <select
                         name="addressSelect"
                         value={
@@ -606,7 +611,7 @@ function CheckoutPageContent() {
                       </select>
                     )}
 
-                    {isAddingNewAddress && (
+                    {(!user || isAddingNewAddress) && (
                       <div className="space-y-3 p-4 bg-surface-container-lowest border border-outline-variant rounded-lg">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <select
@@ -677,57 +682,59 @@ function CheckoutPageContent() {
                           onChange={(e) => setStreetAddress(e.target.value)}
                           className="w-full bg-transparent border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary"
                         />
-                        <div className="flex justify-end gap-3 mt-4">
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingNewAddress(false)}
-                            className="px-4 py-2 border border-outline-variant rounded hover:bg-surface-container-highest transition-all text-sm font-medium"
-                          >
-                            Hủy
-                          </button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!customAddress) return;
-                              if (
-                                user &&
-                                !userAddresses.includes(customAddress)
-                              ) {
-                                try {
-                                  const res = await axios.put(
-                                    "http://localhost:5000/api/auth/profile",
-                                    { newAddress: customAddress },
-                                    { withCredentials: true },
-                                  );
-                                  if (res.data.success) {
-                                    setUserAddresses(
-                                      res.data.data.user.addresses,
+                        {user && (
+                          <div className="flex justify-end gap-3 mt-4">
+                            <button
+                              type="button"
+                              onClick={() => setIsAddingNewAddress(false)}
+                              className="px-4 py-2 border border-outline-variant rounded hover:bg-surface-container-highest transition-all text-sm font-medium"
+                            >
+                              Hủy
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!customAddress) return;
+                                if (
+                                  user &&
+                                  !userAddresses.includes(customAddress)
+                                ) {
+                                  try {
+                                    const res = await axios.put(
+                                      "http://localhost:5000/api/auth/profile",
+                                      { newAddress: customAddress },
+                                      { withCredentials: true },
                                     );
-                                    setFormData({
-                                      ...formData,
-                                      address: customAddress,
-                                    });
-                                    setIsAddingNewAddress(false);
+                                    if (res.data.success) {
+                                      setUserAddresses(
+                                        res.data.data.user.addresses,
+                                      );
+                                      setFormData({
+                                        ...formData,
+                                        address: customAddress,
+                                      });
+                                      setIsAddingNewAddress(false);
+                                    }
+                                  } catch (error) {
+                                    console.error(
+                                      "Lỗi khi lưu địa chỉ mới:",
+                                      error,
+                                    );
                                   }
-                                } catch (error) {
-                                  console.error(
-                                    "Lỗi khi lưu địa chỉ mới:",
-                                    error,
-                                  );
+                                } else {
+                                  setFormData({
+                                    ...formData,
+                                    address: customAddress,
+                                  });
+                                  setIsAddingNewAddress(false);
                                 }
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  address: customAddress,
-                                });
-                                setIsAddingNewAddress(false);
-                              }
-                            }}
-                            className="bg-primary text-on-primary px-4 py-2 rounded hover:bg-primary-fixed-dim transition-all text-sm font-medium"
-                          >
-                            Lưu địa chỉ
-                          </button>
-                        </div>
+                              }}
+                              className="bg-primary text-on-primary px-4 py-2 rounded hover:bg-primary-fixed-dim transition-all text-sm font-medium"
+                            >
+                              Lưu địa chỉ
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

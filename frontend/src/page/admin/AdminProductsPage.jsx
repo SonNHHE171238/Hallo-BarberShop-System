@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import AdminProductModal from '@/components/admin/AdminProductModal';
 import AdminConfigModal from '@/components/admin/AdminConfigModal';
 import { useRef } from 'react';
+import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
 
 const CustomDropdown = ({ options, value, onChange, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -78,6 +79,8 @@ export default function AdminProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
+  
+  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, productId: null, productName: '' });
 
   // Search State
   const [showSearch, setShowSearch] = useState(false);
@@ -207,8 +210,14 @@ export default function AdminProductsPage() {
     fetchProducts(1, selectedCategory, sortOption, searchQuery);
   };
 
-  const handleDelete = async (productId, productName) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${productName}"?`)) return;
+  const handleDeleteInit = (productId, productName) => {
+    setDeleteModalState({ isOpen: true, productId, productName });
+  };
+
+  const handleDeleteConfirm = async () => {
+    const { productId } = deleteModalState;
+    if (!productId) return;
+    setDeleteModalState({ isOpen: false, productId: null, productName: '' });
     
     try {
       const res = await axios.delete(`http://localhost:5000/api/products/${productId}`, { withCredentials: true });
@@ -403,7 +412,7 @@ export default function AdminProductsPage() {
                           <span className="material-symbols-outlined">edit</span>
                         </button>
                         <button 
-                          onClick={() => handleDelete(product._id, product.name)}
+                          onClick={() => handleDeleteInit(product._id, product.name)}
                           className="p-2 rounded hover:bg-error/20 text-on-surface-variant hover:text-error transition-all"
                         >
                           <span className="material-symbols-outlined">delete</span>
@@ -469,6 +478,16 @@ export default function AdminProductsPage() {
         isOpen={isConfigModalOpen}
         onClose={() => setIsConfigModalOpen(false)}
         onSuccess={loadData}
+      />
+
+      <GenericConfirmModal 
+        isOpen={deleteModalState.isOpen}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa sản phẩm "${deleteModalState.productName}"?`}
+        onCancel={() => setDeleteModalState({ isOpen: false, productId: null, productName: '' })}
+        onConfirm={handleDeleteConfirm}
+        confirmText="Xóa"
+        isDanger={true}
       />
     </div>
   );
