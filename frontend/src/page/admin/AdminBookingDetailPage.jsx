@@ -209,14 +209,14 @@ export default function AdminBookingDetailPage() {
 
 
         {/* Right Column - Services & Total */}
-        <div className="lg:col-span-8 flex flex-col min-h-0">
-          <div className="glass-panel bg-surface-container-low/60 border border-outline-gold/30 hover:border-outline-gold/60 rounded-2xl p-6 md:p-8 flex flex-col h-full transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_32px_rgba(212,175,55,0.08)] relative overflow-hidden group">
+        <div className="lg:col-span-8 flex flex-col">
+          <div className="glass-panel bg-surface-container-low/60 border border-outline-gold/30 hover:border-outline-gold/60 rounded-2xl p-6 md:p-8 flex flex-col transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_32px_rgba(212,175,55,0.08)] relative overflow-hidden group">
             
             {/* Decorative background elements */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-all duration-700 group-hover:bg-primary/10"></div>
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-surface-variant/20 rounded-full blur-[50px] -ml-10 -mb-10 pointer-events-none"></div>
 
-            <div className="relative z-10 flex flex-col h-full min-h-0">
+            <div className="relative z-10 flex flex-col">
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-outline-variant/30">
                 <h2 className="font-label-md text-sm font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2">
                   <span className="material-symbols-outlined text-[20px] text-primary">receipt_long</span>
@@ -230,7 +230,7 @@ export default function AdminBookingDetailPage() {
                 )}
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-6 pr-2">
+              <div className="flex-1 space-y-4 mb-6 pr-2">
                 {booking.services?.map((service, index) => (
                   <div 
                     key={service._id} 

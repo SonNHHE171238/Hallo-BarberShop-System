@@ -17,7 +17,7 @@ export default function FeaturedPost({ post }) {
   return (
     <section className="px-margin-mobile md:px-margin-desktop py-base max-w-container-max mx-auto">
       <div className="glass-card group grayscale-hover overflow-hidden rounded-xl flex flex-col md:flex-row shadow-2xl">
-        <div className="md:w-3/5 h-[300px] md:h-[500px] overflow-hidden">
+        <div className="md:w-3/5 h-[300px] md:h-[500px] overflow-hidden bg-black flex items-center justify-center">
           <img
             alt={post.title}
             className="w-full h-full object-cover"

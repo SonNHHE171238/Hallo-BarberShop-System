@@ -238,8 +238,8 @@ export default function AdminVouchersPage() {
                     <td className="p-3">{v.discountType === 'percentage' ? 'Phần trăm (%)' : 'Giảm thẳng (VNĐ)'}</td>
                     <td className="p-3">{v.discountType === 'percentage' ? `${v.discountValue}%` : `${v.discountValue.toLocaleString()}đ`}</td>
                     <td className="p-3 text-[12px] text-on-surface-variant">
-                      Từ: {new Date(v.validFrom).toLocaleDateString()}<br/>
-                      Đến: {new Date(v.validUntil).toLocaleDateString()}
+                      Từ: {new Date(v.validFrom).toLocaleDateString('en-GB')}<br/>
+                      Đến: {new Date(v.validUntil).toLocaleDateString('en-GB')}
                     </td>
                     <td className="p-3">{v.usedCount} / {v.usageLimit}</td>
                     <td className="p-3">

@@ -334,3 +334,31 @@ exports.deleteBookingFeedback = async (req, res) => {
     return res.status(500).json({ success: false, message: "Lỗi server." });
   }
 };
+
+// GET /api/bookingfeedbacks/barber/:barberId
+// Lấy đánh giá của barber có bình luận
+exports.getBarberFeedbacks = async (req, res) => {
+  try {
+    const { barberId } = req.params;
+    const limit = req.query.limit !== undefined ? parseInt(req.query.limit) : 3;
+
+    let query = FeedbackBarber.find({ 
+      barberId,
+      comment: { $exists: true, $ne: "" }
+    }).sort({ createdAt: -1 }).populate("userId", "name avatarUrl"); // Tên khách hàng (nếu có)
+
+    if (limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const feedbacks = await query;
+
+    return res.status(200).json({
+      success: true,
+      data: feedbacks
+    });
+  } catch (error) {
+    console.error("Lỗi getBarberFeedbacks:", error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
