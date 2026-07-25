@@ -8,6 +8,7 @@ export default function POSServiceList({
   displayedItems,
   selectedItems,
   selectItem,
+  children,
 }) {
   const [activeCategory, setActiveCategory] = useState("all");
 
@@ -77,14 +78,15 @@ export default function POSServiceList({
 
       {/* List Container */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pb-12 pr-2">
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredByCategory.map((item) => {
-            const isSelected = selectedItems.some((i) => i._id === item._id);
+            const itemId = item._id || item.id;
+            const isSelected = selectedItems.some((i) => (i._id || i.id) === itemId);
             const isProduct = item.itemType === "product";
 
             return (
               <div
-                key={item._id || item.id}
+                key={itemId}
                 onClick={() => selectItem(item)}
                 className={`bg-surface-container-lowest p-3 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-4 relative overflow-hidden group shadow-sm hover:shadow-md ${
                   isSelected
@@ -165,6 +167,8 @@ export default function POSServiceList({
             <p className="font-body-md text-lg">Không tìm thấy kết quả nào phù hợp.</p>
           </div>
         )}
+
+        {children}
       </div>
     </div>
   );

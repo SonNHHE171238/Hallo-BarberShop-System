@@ -176,6 +176,7 @@ exports.createBookingSinglePage = async (req, res, next) => {
       bookingType,
       discountType,
       pointsToUse,
+      status,
     } = req.body;
 
     const services = reqServices && reqServices.length > 0 ? reqServices : (serviceId ? [serviceId] : []);
@@ -235,6 +236,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
       voucherCode: req.body.voucherCode,
       discountType,
       pointsToUse,
+      skipTimeValidation: ["staff", "admin", "manager"].includes(req.role),
+      status,
     });
 
     let paymentLinkData = null;
@@ -267,6 +270,7 @@ exports.createBookingSinglePage = async (req, res, next) => {
       paymentLinkData
     });
   } catch (err) {
+    console.error("DEBUG ERROR IN createBookingSinglePage:", err);
     if (err.code === 11000) {
       err.message = "Tiếc quá! Khung giờ này vừa có người nhanh tay đặt mất rồi. Vui lòng chọn giờ khác nhé!";
       err.errorCode = "RACE_CONDITION_CONFLICT";

@@ -100,16 +100,16 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block font-label-md text-xs text-on-surface-variant mb-2 uppercase tracking-wider" htmlFor="email">Địa Chỉ Email</label>
+              <label className="block font-label-md text-xs text-on-surface-variant mb-2 uppercase tracking-wider" htmlFor="email">Email hoặc Số điện thoại</label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-gold-dim/60 px-2">mail</span>
+                <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-gold-dim/60 px-2">person</span>
                 <input
                   className="w-full bg-transparent border-0 border-b border-outline-gold text-on-surface font-body-md pl-10 py-3 focus:ring-0 focus:border-primary transition-colors placeholder-outline"
                   id="email"
                   name="email"
-                  placeholder="khachhang@example.com"
+                  placeholder="khachhang@example.com hoặc 0912345678"
                   required
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
