@@ -1,0 +1,228 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { barberService } from '@/services/barber.service';
+import toast from 'react-hot-toast';
+
+export default function BarberBookingDetailPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id');
+  
+  const [booking, setBooking] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id || id === 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false);
+      return;
+    }
+    const fetchBooking = async () => {
+      try {
+        const res = await barberService.getBookingDetail(id);
+        if (res && res._id) {
+          setBooking(res);
+        }
+      } catch (error) {
+        toast.error("Không thể lấy thông tin lịch hẹn");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchBooking();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-[calc(100vh-80px)] flex justify-center items-center">
+        <div className="flex flex-col items-center gap-4">
+          <span className="material-symbols-outlined animate-spin text-4xl text-primary drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]">autorenew</span>
+          <span className="font-label-md text-on-surface-variant uppercase tracking-widest text-sm animate-pulse">Đang tải dữ liệu...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <div className="w-full min-h-[calc(100vh-80px)] flex justify-center items-center">
+        <div className="glass-panel p-8 text-center max-w-md w-full border border-outline-variant/30 rounded-2xl flex flex-col items-center gap-4">
+          <span className="material-symbols-outlined text-6xl text-on-surface-variant opacity-50">search_off</span>
+          <h3 className="font-headline-sm text-on-surface">Không tìm thấy lịch hẹn</h3>
+          <p className="font-body-md text-on-surface-variant mb-4">Lịch hẹn này có thể đã bị xóa hoặc không tồn tại.</p>
+          <button onClick={() => router.back()} className="px-6 py-2.5 rounded-lg bg-surface-container hover:bg-surface-variant text-primary font-label-md tracking-wider uppercase transition-all duration-300 active:scale-95 border border-outline-variant/50">
+            Quay lại danh sách
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isCompleted = booking.status === 'completed';
+  const isCancelledOrNoShow = booking.status === 'cancelled' || booking.status === 'no_show';
+  const amountPaid = booking.amountPaid || 0;
+  const remaining = Math.max(0, booking.totalPrice - amountPaid);
+
+
+  const getStatusDisplay = (status) => {
+    switch(status) {
+      case 'completed': return { text: 'Hoàn thành', icon: 'check_circle', color: 'text-success border-success/30 bg-success/10' };
+      case 'cancelled': return { text: 'Đã hủy', icon: 'cancel', color: 'text-error border-error/30 bg-error/10' };
+      case 'confirmed': return { text: 'Đã cọc/Giữ chỗ', icon: 'event_available', color: 'text-info border-info/30 bg-info/10' };
+      case 'pending': return { text: 'Chưa checkin', icon: 'pending', color: 'text-warning border-warning/30 bg-warning/10' };
+      default: return { text: 'Đang phục vụ', icon: 'sync', color: 'text-primary border-primary/30 bg-primary/10' };
+    }
+  };
+
+  const statusInfo = getStatusDisplay(booking.status);
+
+  return (
+    <div className="flex-1 w-full max-w-[1200px] mx-auto flex flex-col min-h-0 p-4 md:p-8 lg:p-12 pb-24 md:pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header Section */}
+      <header className="shrink-0 flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-6">
+        <div>
+          <button 
+            onClick={() => router.back()} 
+            className="group flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors mb-4 font-label-md text-xs uppercase tracking-widest"
+          >
+            <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+            Quay lại quản lý lịch hẹn
+          </button>
+          
+          <div className="flex items-center gap-3 mb-3">
+            <span className={`px-3 py-1.5 rounded-full border ${statusInfo.color} font-label-md text-xs uppercase tracking-widest flex items-center gap-1.5 backdrop-blur-sm shadow-sm`}>
+              <span className="material-symbols-outlined text-[14px]">{statusInfo.icon}</span>
+              {statusInfo.text}
+            </span>
+            <span className="text-on-surface-variant font-mono text-sm tracking-wider">#{booking._id.slice(-6).toUpperCase()}</span>
+          </div>
+          <h1 className="font-headline-lg text-headline-md md:text-headline-lg text-on-surface tracking-tight uppercase group">
+            Chi tiết phiên dịch vụ
+            <span className="block h-1 w-24 bg-gradient-to-r from-primary to-transparent mt-2 rounded-full opacity-70 group-hover:w-48 transition-all duration-500"></span>
+          </h1>
+        </div>
+
+        <div className="glass-panel relative overflow-hidden bg-surface-container-low/40 border border-outline-gold/30 rounded-2xl p-4 md:px-6 md:py-4 flex items-center gap-5 min-w-[220px] shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+          <div className="absolute -right-6 -top-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div className="w-12 h-12 rounded-xl bg-surface-container border border-outline-variant/30 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-2xl text-primary">schedule</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Giờ hẹn</span>
+            <span className="font-display-md text-2xl font-bold text-primary tracking-tighter drop-shadow-sm">
+              {booking.time || booking.timeSlot || (booking.bookingDate ? new Date(booking.bookingDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'N/A')}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* Content Grid */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 min-h-0">
+        
+        {/* Left Column - Info Cards */}
+        <div className="lg:col-span-4 flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-1">
+          {/* Customer Card */}
+          <div className="glass-panel relative overflow-hidden bg-surface-container-low/60 border border-outline-variant/40 hover:border-outline-gold/50 rounded-2xl p-6 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(212,175,55,0.05)] group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-all duration-500 group-hover:bg-primary/10"></div>
+            <h2 className="font-label-md text-xs font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2 mb-5 pb-3 border-b border-outline-variant/30">
+              <span className="material-symbols-outlined text-[18px]">person</span>
+              Thông Tin Khách Hàng
+            </h2>
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-14 h-14 rounded-2xl bg-surface-container-high border border-outline-variant/50 flex items-center justify-center font-display-sm text-xl text-primary shadow-inner">
+                {((booking.customerId?.name || booking.customerName) || 'K').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="font-headline-sm text-on-surface text-lg mb-1">{booking.customerId?.name || booking.customerName || 'Khách Vãng Lai'}</h3>
+                <p className="font-body-md text-sm text-on-surface-variant mb-2 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[14px]">call</span>
+                  {booking.customerId?.phone || booking.customerPhone || 'Không có SĐT'}
+                </p>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-surface-variant border border-outline-variant/50 text-on-surface text-[10px] font-bold uppercase tracking-wider">
+                  {booking.customerId ? 'Thành viên' : 'Khách vãng lai'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Note Card */}
+          {booking.note && (
+            <div className="glass-panel relative overflow-hidden bg-surface-container-low/60 border border-outline-variant/40 hover:border-primary/30 rounded-2xl p-6 transition-all duration-300 group">
+              <h2 className="font-label-md text-xs font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2 mb-4 pb-3 border-b border-outline-variant/30">
+                <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                Ghi chú của khách
+              </h2>
+              <div className="relative z-10 bg-surface-container/50 rounded-xl p-4 border border-outline-variant/30">
+                <p className="font-body-md text-sm text-on-surface leading-relaxed italic">
+                  &quot;{booking.note}&quot;
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+
+        {/* Right Column - Services & Total */}
+        <div className="lg:col-span-8 flex flex-col min-h-0">
+          <div className="glass-panel bg-surface-container-low/60 border border-outline-gold/30 hover:border-outline-gold/60 rounded-2xl p-6 md:p-8 flex flex-col h-full transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:shadow-[0_8px_32px_rgba(212,175,55,0.08)] relative overflow-hidden group">
+            
+            {/* Decorative background elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-all duration-700 group-hover:bg-primary/10"></div>
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-surface-variant/20 rounded-full blur-[50px] -ml-10 -mb-10 pointer-events-none"></div>
+
+            <div className="relative z-10 flex flex-col h-full min-h-0">
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-outline-variant/30">
+                <h2 className="font-label-md text-sm font-bold tracking-widest text-on-surface-variant uppercase flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px] text-primary">receipt_long</span>
+                  Chi Tiết Dịch Vụ
+                </h2>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-6 pr-2">
+                {booking.services?.map((service, index) => (
+                  <div 
+                    key={service._id} 
+                    className="group/item relative bg-surface-container/50 hover:bg-surface-container border border-outline-variant/20 hover:border-outline-gold/40 rounded-xl p-4 md:p-5 flex justify-between items-center gap-4 transition-all duration-300 hover:shadow-lg"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
+                    <div>
+                      <h4 className="font-headline-sm text-on-surface text-base md:text-lg mb-1">{service.name}</h4>
+                      <p className="font-body-md text-xs text-on-surface-variant flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[14px]">timer</span>
+                        {service.durationMinutes} phút
+                      </p>
+                    </div>
+                    <span className="font-display-md text-lg md:text-xl font-bold text-on-surface tracking-tight whitespace-nowrap">
+                      {(service.price || 0).toLocaleString('vi-VN')} <span className="text-sm font-normal text-on-surface-variant">đ</span>
+                    </span>
+                  </div>
+                ))}
+                {!booking.services?.length && (
+                  <div className="flex flex-col items-center justify-center py-12 text-on-surface-variant/50 border border-dashed border-outline-variant/30 rounded-xl">
+                    <span className="material-symbols-outlined text-4xl mb-2">inventory_2</span>
+                    <p className="font-body-md text-sm">Chưa có dịch vụ nào được chọn</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="shrink-0 border-t border-outline-variant/50 pt-6 mt-auto flex flex-col gap-4">
+                <div className="flex justify-between items-end bg-surface-container p-6 rounded-xl border border-outline-gold/20 shadow-inner">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Tổng Dịch Vụ</span>
+                    <span className="font-body-md text-xs text-on-surface-variant opacity-70">Tổng thanh toán</span>
+                  </div>
+                  <span className="font-display-lg text-3xl md:text-4xl font-extrabold text-primary tracking-tighter drop-shadow-md">
+                    {(booking.totalPrice || 0).toLocaleString('vi-VN')} <span className="text-xl text-primary/70 font-normal">đ</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

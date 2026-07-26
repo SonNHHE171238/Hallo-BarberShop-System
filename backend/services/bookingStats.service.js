@@ -50,37 +50,59 @@ class BookingStatsService {
   }
 
   async getAdminTopBarbers() {
-    const bookings = await Booking.find({ status: 'completed' }).populate({
-      path: 'barberId',
-      populate: { path: 'userId' }
-    }).populate('services');
+    const User = require('../models/user.model');
+    const Barber = require('../models/barber.model');
+    
+    // 1. Fetch all users who are barbers
+    const barberUsers = await User.find({ role: 'barber', isDeleted: false });
+    
+    // 2. Fetch barber profiles to map Barber._id and extra info
+    const barberProfiles = await Barber.find().populate('userId');
+    
+    const userToBarberProfile = {};
+    const barberIdToUserId = {};
+    
+    barberProfiles.forEach(bp => {
+      if (bp.userId) {
+        const uid = bp.userId._id.toString();
+        userToBarberProfile[uid] = bp;
+        barberIdToUserId[bp._id.toString()] = uid;
+      }
+    });
 
+    // 3. Initialize stats with all barber users
     const barberStats = {};
+    for (const u of barberUsers) {
+      const uid = u._id.toString();
+      const bp = userToBarberProfile[uid];
+      barberStats[uid] = {
+        id: uid, 
+        name: u.name || 'Thợ chưa đặt tên',
+        revenue: 0,
+        rating: bp ? (bp.averageRating || 0) : 0,
+        completedBookings: 0,
+        avatarUrl: (bp && bp.profileImageUrl) ? bp.profileImageUrl : (u.avatarUrl || '')
+      };
+    }
+
+    // 4. Fetch completed bookings
+    const bookings = await Booking.find({ status: 'completed' }).populate('services');
 
     for (const b of bookings) {
       if (!b.barberId) continue;
-      const id = b.barberId._id.toString();
-      if (!barberStats[id]) {
-        barberStats[id] = {
-          id,
-          name: b.barberId.userId?.name || 'Thợ chưa đặt tên',
-          revenue: 0,
-          rating: b.barberId.averageRating || 0,
-          completedBookings: 0,
-          avatarUrl: b.barberId.profileImageUrl || b.barberId.userId?.avatarUrl || ''
-        };
-      }
-      barberStats[id].completedBookings++;
-      if (b.services && b.services.length > 0) {
-        barberStats[id].revenue += b.services.reduce((sum, s) => sum + (s.price || 0), 0);
-      } else if (b.totalPrice) {
-        barberStats[id].revenue += b.totalPrice;
+      const bId = b.barberId.toString();
+      const uid = barberIdToUserId[bId];
+      if (uid && barberStats[uid]) {
+        barberStats[uid].completedBookings++;
+        if (b.services && b.services.length > 0) {
+          barberStats[uid].revenue += b.services.reduce((sum, s) => sum + (s.price || 0), 0);
+        } else if (b.totalPrice) {
+          barberStats[uid].revenue += b.totalPrice;
+        }
       }
     }
 
-    return Object.values(barberStats)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+    return Object.values(barberStats).sort((a, b) => b.revenue - a.revenue);
   }
 
   async getBookingStats() {

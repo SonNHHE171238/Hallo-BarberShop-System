@@ -8,14 +8,16 @@ export default function Services() {
   const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  const tabs = ["Tất cả", "Cắt tóc", "Uốn tóc", "Nhuộm tóc", "Combo"];
+  const tabs = ["Tất cả", "Cắt", "Uốn", "Hóa chất", "Combo", "Styling", "Chăm sóc"];
 
   const categoryMapping = {
     "Tất cả": null,
-    "Cắt tóc": "cut",
-    "Uốn tóc": "perm",
-    "Nhuộm tóc": "color",
-    "Combo": "combo"
+    "Cắt": "cut",
+    "Uốn": "perm",
+    "Hóa chất": "color",
+    "Combo": "combo",
+    "Styling": "styling",
+    "Chăm sóc": "treatment"
   };
 
   const scrollContainerRef = useRef(null);

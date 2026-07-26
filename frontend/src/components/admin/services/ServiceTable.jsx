@@ -4,7 +4,15 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
   const formatService = (service) => ({
     id: service._id || service.id || service.name,
     name: service.name || 'Không tên',
-    category: service.category || 'Khác',
+    category: service.category === 'perm'
+      ? 'Uốn'
+      : service.category === 'color'
+        ? 'Hóa chất'
+        : service.category === 'treatment'
+          ? 'Chăm sóc'
+          : service.category === 'cut'
+            ? 'Cắt'
+            : (service.category || 'Khác'),
     price: typeof service.price === 'number' ? `${service.price.toLocaleString('vi-VN')} VNĐ` : (service.price || '0 VNĐ'),
     duration: service.durationMinutes ? `${service.durationMinutes} phút` : (service.duration || '0 phút'),
     status: service.isActive === false ? 'paused' : 'active',
@@ -14,8 +22,8 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
   const renderedServices = services.map((service) => ({ raw: service, formatted: formatService(service) }));
 
   return (
-    <div className="w-full">
-        <table className="w-full text-left border-collapse">
+    <div className="w-full overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left border-collapse min-w-[600px]">
           <thead className="sticky top-0 z-10 shadow-sm">
             <tr className="bg-surface-container-high border-b border-outline-gold">
               <th className="px-4 py-3 font-bold text-primary uppercase tracking-wider text-[11px] bg-surface-container-high">Dịch Vụ</th>
@@ -25,18 +33,31 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/30">
-            {renderedServices.length === 0 && (
+            {loading ? (
               <tr>
-                <td colSpan="5" className="px-4 py-8 text-center text-on-surface-variant font-body-md">
-                  Chưa có dịch vụ nào.
+                <td colSpan="5" className="px-8 py-12 text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-primary animate-spin">progress_activity</span>
+                    <p className="text-body-md font-medium">Đang tải dữ liệu...</p>
+                  </div>
                 </td>
               </tr>
-            )}
-            {renderedServices.map(({ raw, formatted }) => (
-              <tr key={formatted.id} className="hover:bg-surface-bright/5 transition-all duration-300 ease-in-out group hover:-translate-y-[1px]">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 bg-surface-container overflow-hidden border border-outline-variant rounded-md shrink-0">
+            ) : renderedServices.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="px-8 py-12 text-center text-on-surface-variant">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <span className="material-symbols-outlined text-5xl text-outline-variant">search_off</span>
+                    <p className="text-body-md font-medium">Không tìm thấy kết quả phù hợp</p>
+                    <p className="text-body-sm text-on-surface-variant">Vui lòng thử lại với từ khóa khác</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              renderedServices.map(({ raw, formatted }) => (
+                <tr key={formatted.id} className="hover:bg-surface-bright/5 transition-all duration-300 ease-in-out group hover:-translate-y-[2px]">
+                  <td className="px-8 py-6">
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 bg-surface-container overflow-hidden border border-outline-variant rounded-md">
                       <img 
                         src={formatted.image} 
                         alt={formatted.name}
@@ -63,7 +84,8 @@ export default function ServiceTable({ services = [], loading = false, onEdit, o
                   </div>
                 </td>
               </tr>
-            ))}
+              ))
+            )}
           </tbody>
         </table>
     </div>

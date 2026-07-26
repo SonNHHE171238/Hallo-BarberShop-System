@@ -16,10 +16,11 @@ export default function StaffHeader() {
   const navItems = [
     { name: "Tổng quan", href: "/staff/dashboard" },
     { name: "Lịch hẹn", href: "/staff/bookings" },
+    { name: "Lịch làm", href: "/staff/roster" },
     { name: "POS", href: "/staff/pos" },
-    { name: "Nhân sự", href: "/staff/employees" },
+    { name: "Blog", href: "/staff/blogs" },
     { name: "Kho hàng", href: "/staff/inventory" },
-    { name: "Khách hàng", href: "/staff/customers" },
+    { name: "Đơn hàng", href: "/staff/orders" },
   ];
 
   return (

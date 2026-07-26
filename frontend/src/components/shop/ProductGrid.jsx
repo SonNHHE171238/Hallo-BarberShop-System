@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
+
+import { toast } from "react-hot-toast";
 
 export default function ProductGrid({ selectedCategory, selectedBrand }) {
   const { user } = useAuth();
@@ -11,6 +14,7 @@ export default function ProductGrid({ selectedCategory, selectedBrand }) {
 
   // Reset page when filters change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [selectedCategory, selectedBrand]);
 
@@ -37,10 +41,15 @@ export default function ProductGrid({ selectedCategory, selectedBrand }) {
   }, [selectedCategory, selectedBrand, page]);
 
   const handleAddToCart = async (product) => {
+    if (product.stock === 0) {
+      toast.error("Sản phẩm đã hết hàng, không thể thêm vào giỏ");
+      return;
+    }
+
     if (!user) {
       console.log("Guest mode: adding to LocalStorage");
       const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
-      const existingItem = localCart.find(item => item.productId._id === product._id);
+      const existingItem = localCart.find(i => i.productId._id === product._id);
       
       if (existingItem) {
         existingItem.quantity += 1;
@@ -50,9 +59,8 @@ export default function ProductGrid({ selectedCategory, selectedBrand }) {
           quantity: 1
         });
       }
-      
       localStorage.setItem('hallo_cart', JSON.stringify(localCart));
-      alert("Đã thêm vào giỏ hàng tạm (Guest)!");
+      toast.success("Đã thêm vào giỏ hàng tạm (Guest)!");
       return;
     }
 
@@ -63,10 +71,11 @@ export default function ProductGrid({ selectedCategory, selectedBrand }) {
       }, { withCredentials: true });
       
       if (res.data.success) {
-        alert("Đã thêm vào giỏ hàng!");
+        toast.success("Đã thêm vào giỏ hàng!");
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
+      toast.error("Có lỗi xảy ra khi thêm vào giỏ hàng.");
     }
   };
 
@@ -125,22 +134,29 @@ export default function ProductGrid({ selectedCategory, selectedBrand }) {
     <div className="flex-grow flex flex-col">
       <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-8 gap-x-6 content-start">
         {products.map((product) => (
-          <div key={product._id} className="group flex flex-col bg-surface-container-low border border-outline-variant/30 hover:border-outline-variant transition-all duration-500 rounded-lg overflow-hidden">
-            <div className="relative aspect-square overflow-hidden bg-background flex items-center justify-center p-4">
+          <div key={product._id} className={`group flex flex-col bg-surface-container-low border border-outline-variant/30 transition-all duration-500 rounded-lg overflow-hidden ${product.stock === 0 ? 'opacity-70' : 'hover:border-outline-variant'}`}>
+            <Link href={`/shop/${product._id}`} className="block relative aspect-square overflow-hidden bg-background flex items-center justify-center p-4">
               <img 
                 alt={product.name} 
-                className="w-full h-full object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out" 
-                src={product.image} 
+                className={`w-full h-full object-contain opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out ${product.stock === 0 ? 'grayscale' : ''}`} 
+                src={product.image || "/placeholder.png"} 
               />
-              {product.isBestSeller && (
+              {product.stock === 0 && (
+                 <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                   <span className="bg-error text-on-error font-bold uppercase px-3 py-1">Hết hàng</span>
+                 </div>
+              )}
+              {product.isBestSeller && product.stock > 0 && (
                 <span className="absolute top-0 right-0 bg-primary text-on-primary font-label-md text-[9px] px-2 py-1 uppercase tracking-[0.1em]">
                   Bán Chạy
                 </span>
               )}
-            </div>
+            </Link>
             <div className="p-5 flex flex-col flex-grow">
               <span className="font-label-md text-[10px] text-primary uppercase tracking-[0.2em] mb-2">{product.brand}</span>
-              <h4 className="font-body-lg text-base font-bold mb-2 text-white group-hover:text-primary transition-colors line-clamp-2">{product.name}</h4>
+              <Link href={`/shop/${product._id}`}>
+                <h4 className="font-body-lg text-base font-bold mb-2 text-white group-hover:text-primary transition-colors line-clamp-2">{product.name}</h4>
+              </Link>
               <p className="font-label-md text-base font-semibold text-on-surface-variant mb-6">
                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
               </p>

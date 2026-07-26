@@ -1,18 +1,10 @@
-"use client";
+import CustomerProfilePage from '@/page/customer/CustomerProfilePage';
 
-import React from "react";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import SharedProfilePage from '@/components/profile/SharedProfilePage';
+export const metadata = {
+  title: "Hồ sơ của tôi | Customer",
+  description: "Trang hồ sơ cá nhân của khách hàng",
+};
 
-export default function CustomerProfilePage() {
-  return (
-    <div className="bg-background min-h-screen text-on-surface">
-      <Navbar />
-      <main className="pt-20">
-        <SharedProfilePage />
-      </main>
-      <Footer />
-    </div>
-  );
+export default function Page() {
+  return <CustomerProfilePage />;
 }

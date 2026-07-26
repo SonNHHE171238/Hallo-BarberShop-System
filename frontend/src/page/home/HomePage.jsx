@@ -7,11 +7,11 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
 import AboutUs from "@/components/home/AboutUs";
-import Services from "@/components/shared/Services";
 import HotDeals from "@/components/home/HotDeals";
 import BusinessHours from "@/components/home/BusinessHours";
 import Barbers from "@/components/home/Barbers";
 import Testimonials from "@/components/home/Testimonials";
+import Services from "@/components/shared/Services";
 
 export default function HomePage() {
   const router = useRouter();

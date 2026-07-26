@@ -19,6 +19,15 @@ const bookingFeedbackSchema = new Schema(
       type: String,
       trim: true,
     },
+    barberRating: {
+      type: Number,
+      min: 1,
+      max: 5,
+    },
+    barberComment: {
+      type: String,
+      trim: true,
+    }
   },
   {
     timestamps: true,

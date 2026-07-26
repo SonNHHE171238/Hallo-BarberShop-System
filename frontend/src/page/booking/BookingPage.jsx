@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BookingStepper from "@/components/booking/BookingStepper";
@@ -9,12 +9,16 @@ import BarberSelection from "@/components/booking/BarberSelection";
 import DateTimeSelection from "@/components/booking/DateTimeSelection";
 import BookingSummarySidebar from "@/components/booking/BookingSummarySidebar";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { bookingService } from "@/services/booking.service";
+import { voucherService } from "@/services/voucher.service";
 import toast from 'react-hot-toast';
 import GuestBookingModal from "@/components/booking/GuestBookingModal";
+import { QRCodeSVG } from 'qrcode.react';
+import axios from "axios";
+import { Suspense } from "react";
 
-export default function BookingPage() {
+function BookingPageContent() {
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedBarber, setSelectedBarber] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -22,8 +26,56 @@ export default function BookingPage() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [currentBookingId, setCurrentBookingId] = useState(null);
+  const [successQueryString, setSuccessQueryString] = useState("");
+  const [payosData, setPayosData] = useState(null);
+  
+  // Voucher State
+  const [discountType, setDiscountType] = useState('none');
+  const [pointsToUseInput, setPointsToUseInput] = useState(0);
+  const [voucherCodeInput, setVoucherCodeInput] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [voucherError, setVoucherError] = useState("");
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [verifiedPhone, setVerifiedPhone] = useState("");
+
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Auto-fill voucher from URL
+  useEffect(() => {
+    const code = searchParams.get('voucherCode') || localStorage.getItem('auto_voucher');
+    if (code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVoucherCodeInput(code);
+      if (localStorage.getItem('auto_voucher')) {
+        localStorage.removeItem('auto_voucher');
+      }
+    }
+  }, [searchParams]);
+
+  // Polling for Booking Payment Status
+  useEffect(() => {
+    let interval;
+    if (showQR && currentBookingId) {
+      interval = setInterval(async () => {
+        try {
+          const res = await axios.get(`http://localhost:5000/api/bookings/${currentBookingId}/payment-status`);
+          if (res.data.success && (res.data.data.paymentStatus === 'paid' || res.data.data.paymentStatus === 'partial_paid')) {
+            clearInterval(interval);
+            setShowQR(false);
+            router.push(`/booking/success?${successQueryString}&status=PAID`);
+          }
+        } catch (error) {
+          console.error("Polling error", error);
+        }
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [showQR, currentBookingId, router, successQueryString]);
 
     const handleConfirm = async () => {
     if (!user) {
@@ -56,6 +108,10 @@ export default function BookingPage() {
         date: selectedDate, 
         timeSlot: selectedTime, 
         durationMinutes: selectedServices.reduce((total, s) => total + (s.durationMinutes || s.duration || 30), 0),
+        voucherCode: appliedVoucher,
+        discountType: discountType,
+        pointsToUse: pointsToUseInput,
+        discountAmount: discountAmount,
         ...additionalPayload
       };
 
@@ -75,6 +131,23 @@ export default function BookingPage() {
         dateStr: dateStr
       });
 
+      if (additionalPayload?.phone) {
+        queryParams.append("phone", additionalPayload.phone);
+      }
+
+      if (response.paymentLinkData && response.paymentLinkData.checkoutUrl) {
+        if (response.noShowCount && response.noShowCount > 0) {
+          toast.error(`Yêu cầu đặt cọc: Hệ thống ghi nhận bạn đã không đến ${response.noShowCount} lần trước đó! Đang chuyển hướng thanh toán...`, { duration: 4000 });
+        } else {
+          toast.success("Vui lòng thanh toán cọc để giữ chỗ!");
+        }
+        
+        setTimeout(() => {
+          window.location.href = response.paymentLinkData.checkoutUrl;
+        }, 3000);
+        return;
+      }
+
       if (paymentMethod === 'payos' && bookingId !== "NEW") {
         toast.success("Đang tạo link thanh toán...");
         try {
@@ -91,12 +164,26 @@ export default function BookingPage() {
             })
           });
           
-          if (paymentRes && paymentRes.checkoutUrl) {
+          if (paymentRes && paymentRes.qrCode) {
+            setPayosData({
+              qrCode: paymentRes.qrCode,
+              orderCode: paymentRes.orderCode,
+              amount: paymentRes.amount,
+              accountName: paymentRes.accountName,
+              accountNumber: paymentRes.accountNumber,
+              bin: paymentRes.bin
+            });
+            setSuccessQueryString(queryParams.toString());
+            setCurrentBookingId(bookingId);
+            setShowQR(true);
+            setIsGuestModalOpen(false);
+            return;
+          } else if (paymentRes && paymentRes.checkoutUrl) {
             window.location.href = paymentRes.checkoutUrl;
             return;
           }
         } catch (err) {
-          toast.error("Lỗi khi tạo link thanh toán: " + err.message);
+          toast.error("Lỗi khi tạo mã QR thanh toán: " + err.message);
         }
       }
       
@@ -153,6 +240,22 @@ export default function BookingPage() {
                 onConfirm={handleConfirm}
                 isLoading={isLoading}
                 isGuest={!user}
+                user={user}
+                discountType={discountType}
+                setDiscountType={setDiscountType}
+                pointsToUseInput={pointsToUseInput}
+                setPointsToUseInput={setPointsToUseInput}
+                voucherCodeInput={voucherCodeInput}
+                setVoucherCodeInput={setVoucherCodeInput}
+                appliedVoucher={appliedVoucher}
+                setAppliedVoucher={setAppliedVoucher}
+                discountAmount={discountAmount}
+                setDiscountAmount={setDiscountAmount}
+                voucherError={voucherError}
+                setVoucherError={setVoucherError}
+                applyingVoucher={applyingVoucher}
+                setApplyingVoucher={setApplyingVoucher}
+                setVerifiedPhone={setVerifiedPhone}
               />
             )}
           </div>
@@ -161,16 +264,78 @@ export default function BookingPage() {
 
       <Footer />
       
-      <GuestBookingModal 
-        isOpen={isGuestModalOpen}
-        onClose={() => setIsGuestModalOpen(false)}
-        onSubmit={handleGuestSubmit}
-        selectedServices={selectedServices}
-        selectedBarber={selectedBarber}
-        selectedDate={selectedDate}
-        selectedTime={selectedTime}
-        isLoading={isLoading}
-      />
+      {isGuestModalOpen && (
+        <GuestBookingModal
+          isOpen={isGuestModalOpen}
+          onClose={() => setIsGuestModalOpen(false)}
+          onSubmit={handleGuestSubmit}
+          selectedServices={selectedServices}
+          selectedBarber={selectedBarber}
+          selectedDate={selectedDate}
+          selectedTime={selectedTime}
+          isLoading={isLoading}
+          discountAmount={discountAmount}
+          finalTotal={selectedServices.reduce((acc, curr) => acc + (curr.price || 0), 0) - discountAmount}
+          initialPhone={verifiedPhone}
+        />
+      )}
+
+      {/* ================= QR CODE MODAL ================= */}
+      {showQR && payosData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
+          <div className="bg-surface-container border border-outline-variant rounded-xl p-8 max-w-md w-full shadow-2xl relative">
+            {/* Đã xóa nút Close theo yêu cầu để ép khách hàng thanh toán xong mới được thoát (hoặc phải tắt tab) */}
+            
+            <h3 className="font-headline-md text-primary text-center mb-6 uppercase tracking-widest">Thanh Toán Đặt Lịch</h3>
+            
+            <div className="flex justify-center mb-6 bg-white p-4 rounded-xl">
+              <QRCodeSVG value={payosData.qrCode} size={250} />
+            </div>
+
+            <div className="space-y-4 mb-8 bg-surface-container-lowest p-4 rounded-lg border border-outline-variant text-center">
+              <div className="flex justify-between items-center pb-2 border-b border-outline-variant/50">
+                <span className="text-on-surface-variant text-sm">Ngân hàng</span>
+                <span className="text-on-surface font-bold text-lg">{payosData.bin || 'PayOS Bank'}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-outline-variant/50">
+                <span className="text-on-surface-variant text-sm">Chủ tài khoản</span>
+                <span className="text-on-surface font-bold text-lg">{payosData.accountName || 'Hệ Thống'}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-outline-variant/50">
+                <span className="text-on-surface-variant text-sm">Số tài khoản</span>
+                <span className="text-primary font-bold text-lg">{payosData.accountNumber || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-outline-variant/50">
+                <span className="text-on-surface-variant text-sm">Số tiền</span>
+                <span className="text-primary font-bold text-lg">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(payosData.amount)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-on-surface-variant text-sm">Nội dung chuyển khoản</span>
+                <span className="text-on-surface font-bold text-lg">{payosData.orderCode}</span>
+              </div>
+            </div>
+
+            <div className="text-center space-y-4">
+              <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-on-surface-variant text-sm animate-pulse">
+                Hệ thống đang chờ nhận tiền. Vui lòng không tắt hộp thoại này...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="bg-background min-h-screen text-on-surface flex flex-col items-center justify-center">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+      </div>
+    }>
+      <BookingPageContent />
+    </Suspense>
   );
 }

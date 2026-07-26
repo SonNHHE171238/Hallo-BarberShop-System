@@ -12,8 +12,16 @@ if (fs.existsSync(localDbEnvPath)) {
 
 const app = require('./src/app');
 const mongoose = require('mongoose');
+const http = require('http');
+const { initSocket } = require('./src/socket');
 
 const PORT = process.env.PORT || 3000;
+
+// Create HTTP Server
+const server = http.createServer(app);
+
+// Initialize Socket.io
+initSocket(server);
 
 // Resolve DB URI based on toggle
 let dbUri = process.env.MONGO_URI || 'mongodb://localhost:27017/hallobarbershop';
@@ -28,7 +36,13 @@ if (process.env.USE_LOCAL_DB === 'true') {
 mongoose.connect(dbUri)
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    app.listen(PORT, '0.0.0.0', () => {
+    
+    // Start background jobs
+    require('./src/jobs/voucherCleanup.job');
+    require('./src/jobs/bookingCleanup.job');
+    require('./cron/roster.cron.js');
+
+    server.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
     });
   })
@@ -43,7 +57,7 @@ mongoose.connect(dbUri)
         try {
             await mongoose.connect(localUri);
             console.log('✅ Connected to MongoDB LOCAL successfully (Fallback)');
-            app.listen(PORT, '0.0.0.0', () => {
+            server.listen(PORT, '0.0.0.0', () => {
                 console.log(`🚀 Server running on port ${PORT}`);
             });
         } catch (fallbackErr) {

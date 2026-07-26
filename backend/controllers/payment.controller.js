@@ -1,6 +1,7 @@
 const { PayOS } = require("@payos/node");
 const Booking = require("../models/booking.model");
 const { sendSuccess } = require("../utils/response.helper");
+const voucherController = require("./voucher.controller");
 
 const payos = new PayOS({
   clientId: process.env.PAYOS_CLIENT_ID,
@@ -54,10 +55,51 @@ exports.createPaymentLink = async (req, res, next) => {
     return sendSuccess(res, 200, "Tạo link thanh toán thành công", {
       checkoutUrl: paymentLinkRes.checkoutUrl,
       paymentLinkId: paymentLinkRes.paymentLinkId,
-      qrCode: paymentLinkRes.qrCode // Chuỗi text QR để gen ảnh tại client
+      qrCode: paymentLinkRes.qrCode, // Chuỗi text QR để gen ảnh tại client
+      orderCode: orderCode,
+      amount: amountToPay,
+      accountName: paymentLinkRes.accountName,
+      accountNumber: paymentLinkRes.accountNumber,
+      bin: paymentLinkRes.bin
     });
   } catch (error) {
     console.error("Error creating payment link:", error);
+    next(error);
+  }
+};
+
+exports.createPaymentLinkHelper = async ({ bookingId, amount, returnUrl, cancelUrl }) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) throw new Error("Không tìm thấy lịch hẹn");
+
+  const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000));
+  booking.orderCode = orderCode;
+  booking.paymentMethod = "bank_transfer";
+  await booking.save();
+
+  const body = {
+    orderCode: orderCode,
+    amount: Math.round(Number(amount)),
+    description: `Thanh toan #${booking._id.toString().slice(-6).toUpperCase()}`,
+    returnUrl: returnUrl || process.env.PAYOS_RETURN_URL || "http://localhost:3000/booking/success",
+    cancelUrl: cancelUrl || process.env.PAYOS_CANCEL_URL || "http://localhost:3000/booking/success",
+  };
+
+  const paymentLinkRes = await payos.paymentRequests.create(body);
+  return {
+    checkoutUrl: paymentLinkRes.checkoutUrl,
+    paymentLinkId: paymentLinkRes.paymentLinkId,
+    qrCode: paymentLinkRes.qrCode
+  };
+};
+
+exports.getPaymentLinkInfo = async (req, res, next) => {
+  try {
+    const { orderCode } = req.params;
+    const paymentLinkInfo = await payos.getPaymentLinkInformation(Number(orderCode));
+    return sendSuccess(res, 200, "Lấy thông tin thanh toán thành công", paymentLinkInfo);
+  } catch (error) {
+    console.error("Lỗi lấy thông tin link thanh toán:", error);
     next(error);
   }
 };
@@ -89,8 +131,6 @@ exports.payosWebhook = async (req, res, next) => {
           booking.paymentStatus = "partial_paid";
         }
         
-        booking.status = "completed"; 
-        booking.completedAt = new Date();
         await booking.save();
 
 
@@ -105,12 +145,24 @@ exports.payosWebhook = async (req, res, next) => {
           transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
         });
 
+        // Redeem voucher if applies
+        if (booking.voucherLockId) {
+          await voucherController.redeemVoucherLock(booking.voucherLockId);
+        }
+
       } else {
         const Order = require("../models/order.model");
         const order = await Order.findOne({ orderCode: webhookData.orderCode });
         
         if (order) {
+          order.paymentStatus = 'paid';
           order.status = 'processing';
+          
+          order.historyLog.push({
+            action: 'Thanh toán thành công',
+            note: 'Khách hàng đã thanh toán trực tuyến qua PayOS.',
+          });
+          
           await order.save();
 
           const Payment = require("../models/payment.model");
@@ -122,6 +174,11 @@ exports.payosWebhook = async (req, res, next) => {
             status: 'success',
             transactionId: webhookData.reference || webhookData.transactionDateTime || Date.now().toString()
           });
+
+          // Redeem voucher if applies
+          if (order.voucherLockId) {
+            await voucherController.redeemVoucherLock(order.voucherLockId);
+          }
         } else {
           console.warn("Webhook valid but no Booking or Order found for orderCode:", webhookData.orderCode);
         }

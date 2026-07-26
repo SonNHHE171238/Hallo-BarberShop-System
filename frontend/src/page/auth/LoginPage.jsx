@@ -7,6 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useAuth } from "@/context/AuthContext";
 import { useGoogleLogin } from '@react-oauth/google';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -44,7 +45,9 @@ export default function LoginPage() {
       const user = await login(email, password);
       handleRedirect(user);
     } catch (err) {
-      setError(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+      const errMsg = err.message || "Đăng nhập thất bại. Vui lòng thử lại.";
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -59,12 +62,15 @@ export default function LoginPage() {
         const user = await loginWithGoogle(access_token);
         handleRedirect(user);
       } catch (err) {
-        setError(err.message || "Đăng nhập bằng Google thất bại. Vui lòng thử lại.");
+        const errMsg = err.message || "Đăng nhập bằng Google thất bại. Vui lòng thử lại.";
+        setError(errMsg);
+        toast.error(errMsg);
         setIsLoading(false);
       }
     },
     onError: () => {
       setError("Đăng nhập bằng Google bị lỗi.");
+      toast.error("Đăng nhập bằng Google bị lỗi.");
     }
   });
 

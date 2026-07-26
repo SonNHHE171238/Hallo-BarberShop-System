@@ -13,6 +13,79 @@ const maskPhone = (phone) => {
   return `0xxx${middle}xxx`;
 };
 
+// GET /api/bookingfeedbacks/testimonials
+exports.getTestimonials = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 6;
+    // Lấy các đánh giá từ 3 sao trở lên, có comment, mới nhất
+    const feedbacks = await BookingFeedback.find({
+      rating: { $gte: 3 },
+      comment: { $exists: true, $ne: "" }
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate({
+        path: "bookingId",
+        select: "customerName customerType customerId customerPhone bookingDate bookingType",
+        populate: {
+          path: "customerId",
+          select: "name avatarUrl createdAt"
+        }
+      });
+
+    const formattedFeedbacks = feedbacks.map(f => {
+      let cName = "Khách hàng";
+      let cRole = "Khách hàng Hallo";
+      let cAvatar = "https://ui-avatars.com/api/?name=K&background=random";
+
+      if (f.bookingId) {
+        cName = f.bookingId.customerName || "Khách hàng";
+        
+        if (f.bookingId.bookingType === "guest") {
+          const bDate = new Date(f.bookingId.bookingDate);
+          const dateStr = `${bDate.getDate().toString().padStart(2, '0')}/${(bDate.getMonth() + 1).toString().padStart(2, '0')}/${bDate.getFullYear()}`;
+          cRole = `Khách đã sử dụng dịch vụ tại ngày ${dateStr}`;
+        } else if (f.bookingId.customerId) {
+          const createdDate = new Date(f.bookingId.customerId.createdAt);
+          const now = new Date();
+          const diffTime = Math.abs(now - createdDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          cRole = `Thành viên Hallo (${diffDays} ngày)`;
+        }
+
+        if (f.bookingId.customerId) {
+          cName = f.bookingId.customerId.name || cName;
+          if (f.bookingId.customerId.avatarUrl) {
+            cAvatar = f.bookingId.customerId.avatarUrl;
+          } else {
+            cAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=random`;
+          }
+        } else {
+          cAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=random`;
+        }
+      }
+
+      return {
+        _id: f._id,
+        rating: f.rating,
+        comment: f.comment,
+        createdAt: f.createdAt,
+        customerName: cName,
+        customerRole: cRole,
+        customerAvatar: cAvatar
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: formattedFeedbacks
+    });
+  } catch (error) {
+    console.error("Error fetching testimonials:", error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
+
 // GET /api/bookingfeedbacks/lookup/:phone
 exports.lookupByPhone = async (req, res) => {
   try {
@@ -66,7 +139,7 @@ exports.lookupByPhone = async (req, res) => {
     // Lấy thông tin Barber và Service
     const barberUser = await User.findById(targetBooking.barberId.userId);
     const barberName = barberUser ? barberUser.name : "Thợ cắt";
-    const barberImage = barberUser ? barberUser.avatar : "https://via.placeholder.com/150";
+    const barberImage = barberUser ? barberUser.avatarUrl : "https://via.placeholder.com/150";
 
     const serviceName = targetBooking.services && targetBooking.services.length > 0 
       ? targetBooking.services[0].name 
@@ -128,20 +201,63 @@ exports.createFeedback = async (req, res) => {
       rating
     });
 
-    // 3. Xử lý cộng điểm Loyalty nếu là Customer
+    // Cập nhật lại số sao trung bình cho Barber
+    const mongoose = require("mongoose");
+    const stats = await FeedbackBarber.aggregate([
+      { $match: { barberId: new mongoose.Types.ObjectId(booking.barberId) } },
+      { $group: {
+          _id: "$barberId",
+          avgRating: { $avg: "$rating" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    if (stats.length > 0) {
+      await Barber.findByIdAndUpdate(booking.barberId, {
+        averageRating: Math.round(stats[0].avgRating * 10) / 10,
+        ratingCount: stats[0].count
+      });
+    }
+
+    // 3. Xử lý cộng điểm Loyalty và Sinh Voucher nếu là Customer
     let pointsEarned = 0;
     let totalPoints = 0;
+    let rewardVoucherCode = null;
 
     if (booking.bookingType === "user" && booking.customerId) {
       pointsEarned = 50; // Tặng 50 điểm
       const user = await User.findByIdAndUpdate(
         booking.customerId,
         { $inc: { loyaltyPoints: pointsEarned } },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (user) {
         totalPoints = user.loyaltyPoints;
       }
+
+      // Sinh Voucher thưởng
+      const Voucher = require('../models/voucher.model');
+      const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+      rewardVoucherCode = `GIFT-BK-${randomStr}`;
+      
+      const validFrom = new Date();
+      const validUntil = new Date(validFrom.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 ngày
+      
+      await Voucher.create({
+        code: rewardVoucherCode,
+        voucherType: 'booking_only',
+        discountType: 'percentage',
+        discountValue: 10,
+        maxDiscountAmount: 50000,
+        minOrderValue: 0,
+        validFrom,
+        validUntil,
+        usageLimit: 1,
+        usageLimitPerUser: 1,
+        applicableUsers: [booking.customerId],
+        isActive: true
+      });
     }
 
     return res.status(201).json({
@@ -149,12 +265,100 @@ exports.createFeedback = async (req, res) => {
       message: "Gửi đánh giá thành công!",
       data: {
         pointsEarned,
-        totalPoints
+        totalPoints,
+        rewardVoucherCode
       }
     });
 
   } catch (error) {
     console.error(error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
+
+// ADMIN: GET /api/bookingfeedbacks/all
+exports.getAllBookingFeedbacks = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (req.query.rating) {
+      query.rating = parseInt(req.query.rating);
+    }
+
+    const feedbacks = await BookingFeedback.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "bookingId",
+        select: "customerName customerPhone barberId services bookingDate",
+        populate: [
+          { path: "barberId", select: "userId" }, // Need to populate barberId to get the barber name later if needed
+          { path: "services", select: "name" }
+        ]
+      });
+
+    const total = await BookingFeedback.countDocuments(query);
+
+    return res.status(200).json({
+      success: true,
+      data: feedbacks,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
+
+// ADMIN: DELETE /api/bookingfeedbacks/:id
+exports.deleteBookingFeedback = async (req, res) => {
+  try {
+    const feedback = await BookingFeedback.findByIdAndDelete(req.params.id);
+    if (!feedback) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy đánh giá" });
+    }
+
+    // Xóa liên kết hoặc cập nhật lại điểm nếu cần. Ở đây đơn giản chỉ cần xóa bình luận
+    return res.status(200).json({ success: true, message: "Xóa đánh giá thành công." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};
+
+// GET /api/bookingfeedbacks/barber/:barberId
+// Lấy đánh giá của barber có bình luận
+exports.getBarberFeedbacks = async (req, res) => {
+  try {
+    const { barberId } = req.params;
+    const limit = req.query.limit !== undefined ? parseInt(req.query.limit) : 3;
+
+    let query = FeedbackBarber.find({ 
+      barberId,
+      comment: { $exists: true, $ne: "" }
+    }).sort({ createdAt: -1 }).populate("userId", "name avatarUrl"); // Tên khách hàng (nếu có)
+
+    if (limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const feedbacks = await query;
+
+    return res.status(200).json({
+      success: true,
+      data: feedbacks
+    });
+  } catch (error) {
+    console.error("Lỗi getBarberFeedbacks:", error);
     return res.status(500).json({ success: false, message: "Lỗi server." });
   }
 };

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import { adminAccountService } from '@/services/adminAccount.service';
 import toast from 'react-hot-toast';

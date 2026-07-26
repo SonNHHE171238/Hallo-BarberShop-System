@@ -1,10 +1,10 @@
+import BarberProfileConfigPage from "@/page/barber/BarberProfileConfigPage";
+
 export const metadata = {
-  title: 'Hồ Sơ Cá Nhân | HALLO BARBER',
-  description: 'Trang thông tin hồ sơ cá nhân',
+    title: "Cấu hình Hồ sơ | Hallo BarberShop",
+    description: "Cấu hình hồ sơ chuyên môn của Barber",
 };
 
-import SharedProfilePage from '@/components/profile/SharedProfilePage';
-
-export default function ProfilePage() {
-  return <SharedProfilePage />;
+export default function Page() {
+    return <BarberProfileConfigPage />;
 }

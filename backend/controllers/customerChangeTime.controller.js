@@ -29,7 +29,8 @@ exports.rescheduleBooking = async (req, res) => {
     }
 
     // 3. Verify ownership
-    if (booking.customerId.toString() !== userId.toString()) {
+    const isAdminOrStaff = req.role === 'admin' || req.role === 'staff';
+    if (!isAdminOrStaff && (!booking.customerId || booking.customerId.toString() !== userId.toString())) {
       return res.status(403).json({ message: "Bạn chỉ có thể đổi lịch của chính mình." });
     }
 

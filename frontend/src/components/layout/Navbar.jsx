@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import LogoutConfirmModal from "../ui/LogoutConfirmModal";
+import NotificationDropdown from "./NotificationDropdown";
+import axios from "axios";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,14 +14,42 @@ export default function Navbar() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
+    const fetchCartCount = async () => {
+      if (user) {
+        try {
+          const res = await axios.get("http://localhost:5000/api/cart", { withCredentials: true });
+          if (res.data.success && Array.isArray(res.data.data)) {
+            const items = res.data.data;
+            const count = items.reduce((acc, item) => acc + (item.quantity || 1), 0);
+            setCartCount(count);
+          }
+        } catch (error) {
+          // Ignore error silently to not spam console
+        }
+      } else {
+        const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
+        const count = localCart.reduce((acc, item) => acc + (item.quantity || 1), 0);
+        setCartCount(count);
+      }
+    };
+
+    fetchCartCount();
+    const interval = setInterval(fetchCartCount, 2000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveHash(window.location.hash);
     const handleHashChange = () => {
       setActiveHash(window.location.hash);
@@ -74,10 +104,21 @@ export default function Navbar() {
             <div className="absolute top-full left-0 w-48 bg-surface-container-high border border-outline-variant rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden flex flex-col mt-2">
               <Link href="/#about" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Về chúng tôi</Link>
               <Link href="/#services" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Dịch vụ</Link>
-              <Link href="/#deals" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors border-b border-outline-variant/50">Khuyến mãi</Link>
               <Link href="/#team" className="px-4 py-3 text-body-md text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors">Đội ngũ</Link>
             </div>
           </div>
+
+          <Link 
+            href="/vouchers" 
+            onClick={() => setActiveHash("")}
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname === "/vouchers" 
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
+          >
+            Khuyến mãi
+          </Link>
 
           <Link 
             href="/shop" 
@@ -91,10 +132,9 @@ export default function Navbar() {
             Cửa hàng
           </Link>
           <Link 
-            href={(mounted && user) ? "/customer/history" : "/review"} 
-            onClick={() => setActiveHash("")}
+            href={(mounted && user) ? "/customer/history" : "/lookup/bookings"} 
             className={`text-body-md font-body-md whitespace-nowrap transition-all ${
-              pathname === "/customer/history" || pathname === "/review"
+              pathname === "/customer/history" || pathname === "/lookup/bookings"
                 ? "text-primary font-bold border-b-2 border-primary pb-1" 
                 : "text-on-surface-variant hover:text-primary transition-colors duration-200"
             }`}
@@ -111,16 +151,33 @@ export default function Navbar() {
           >
             Blog & Tin tức
           </Link>
+          <Link 
+            href={(mounted && user) ? "/customer/orders" : "/lookup/orders"} 
+            className={`text-body-md font-body-md whitespace-nowrap transition-all ${
+              pathname.startsWith("/lookup/orders") || pathname.startsWith("/customer/orders")
+                ? "text-primary font-bold border-b-2 border-primary pb-1" 
+                : "text-on-surface-variant hover:text-primary transition-colors duration-200"
+            }`}
+          >
+            Đơn hàng
+          </Link>
         </div>
 
         {/* Trailing Action */}
         <div className="flex items-center space-x-2 md:space-x-4">
           <Link href="/shop/cart" className="relative text-on-surface hover:text-primary transition-colors p-2 hidden md:flex items-center">
             <span className="material-symbols-outlined">shopping_bag</span>
+            {mounted && cartCount > 0 && (
+              <span className="absolute top-0 right-0 bg-error text-on-error text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center translate-x-1 -translate-y-1">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
           </Link>
           
           {(mounted && user) ? (
-            <div className="relative group hidden md:flex items-center space-x-2 mr-4 cursor-pointer py-2">
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <NotificationDropdown />
+              <div className="relative group hidden md:flex items-center space-x-2 mr-4 cursor-pointer py-2">
               <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center border border-outline-variant">
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
@@ -148,6 +205,7 @@ export default function Navbar() {
                 </button>
               </div>
             </div>
+            </div>
           ) : (
             <Link
               href="/login"
@@ -158,14 +216,19 @@ export default function Navbar() {
           )}
           <Link 
             href="/booking" 
-            className="bg-primary text-on-primary px-6 py-2 rounded-lg font-headline-sm text-headline-sm transition-all active:scale-95 duration-150 hover:bg-primary-container whitespace-nowrap"
+            className="hidden md:inline-flex bg-primary text-on-primary px-6 py-2 rounded-lg font-headline-sm text-headline-sm transition-all active:scale-95 duration-150 hover:bg-primary-container whitespace-nowrap"
           >
             Đặt Lịch Hẹn
           </Link>
           
           {/* Mobile Cart Icon */}
-          <Link href="/shop/cart" className="md:hidden text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors mr-1">
+          <Link href="/shop/cart" className="relative md:hidden text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors mr-1">
             <span className="material-symbols-outlined">shopping_bag</span>
+            {mounted && cartCount > 0 && (
+              <span className="absolute top-0 right-0 bg-error text-on-error text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center translate-x-1 -translate-y-1">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
           </Link>
           
           {/* Mobile Menu Toggle */}
@@ -189,12 +252,12 @@ export default function Navbar() {
           <div className="flex flex-col space-y-4 pl-4 border-l-2 border-outline-variant/30">
             <Link href="/#about" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Về chúng tôi</Link>
             <Link href="/#services" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Dịch vụ</Link>
-            <Link href="/#deals" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Khuyến mãi</Link>
             <Link href="/#team" onClick={() => setIsMobileMenuOpen(false)} className="text-body-md font-body-md text-on-surface-variant hover:text-primary">Đội ngũ</Link>
           </div>
           <Link href="/shop" onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/shop" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Cửa hàng</Link>
-          <Link href={(mounted && user) ? "/customer/history" : "/review"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/review" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
+          <Link href={(mounted && user) ? "/customer/history" : "/lookup/bookings"} onClick={() => { setIsMobileMenuOpen(false); setActiveHash(""); }} className={`text-body-md font-body-md ${pathname === "/customer/history" || pathname === "/lookup/bookings" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Lịch hẹn</Link>
           <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname === "/blog" ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Blog & Tin tức</Link>
+          <Link href={(mounted && user) ? "/customer/orders" : "/lookup/orders"} onClick={() => setIsMobileMenuOpen(false)} className={`text-body-md font-body-md ${pathname.startsWith("/lookup/orders") || pathname.startsWith("/customer/orders") ? "text-primary font-bold" : "text-on-surface-variant hover:text-primary"}`}>Đơn hàng</Link>
           <div className="pt-4 border-t border-outline-variant flex flex-col space-y-4">
             {(mounted && user) ? (
               <>

@@ -30,6 +30,32 @@ const bookingSchema = new Schema(
         required: true,
       },
     ],
+    products: [
+      {
+        productId: {
+          type: Schema.Types.ObjectId,
+          ref: 'Product',
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        priceAtPurchase: {
+          type: Number,
+          required: true,
+          min: 0,
+        }
+      }
+    ],
+    cancelledAt: {
+      type: Date,
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+    },
     bookingDate: {
       type: Date,
       required: true,
@@ -66,11 +92,35 @@ const bookingSchema = new Schema(
       type: String,
       trim: true,
     },
+    voucherCode: {
+      type: String,
+      default: null,
+    },
+    discountType: {
+      type: String,
+      enum: ['new_user', 'loyalty_points', 'voucher', 'none'],
+      default: 'none'
+    },
+    pointsUsed: {
+      type: Number,
+      default: 0,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    voucherLockId: {
+      type: Schema.Types.ObjectId,
+      ref: 'VoucherLock',
+      default: null,
+    },
     status: {
       type: String,
       enum: [
         "pending",
         "confirmed",
+        "in_progress",
         "cancelled",
         "completed",
         "no_show",
@@ -154,7 +204,7 @@ bookingSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      status: { $in: ["pending", "confirmed", "completed"] },
+      status: { $in: ["pending", "confirmed", "in_progress", "completed"] },
     },
   }
 );

@@ -4,6 +4,7 @@ const Service = require("../models/service.model");
 const NoShow = require("../models/no-show.model");
 const BarberAbsence = require("../models/barber-absence.model");
 const BarberSchedule = require("../models/barber-schedule.model");
+const voucherController = require("../controllers/voucher.controller");
 
 /**
  * Handle business logic for creating a new booking
@@ -21,6 +22,9 @@ exports.processCreateBooking = async ({
   customerName,
   customerEmail,
   customerPhone,
+  voucherCode,
+  discountType = 'none',
+  pointsToUse = 0,
 }) => {
   // Normalize Date to prevent race conditions
   const requestedDateTime = new Date(bookingDate);
@@ -69,11 +73,18 @@ exports.processCreateBooking = async ({
     throw error;
   }
 
-  // No-show validation for User
-  if (bookingType === "user" && customerId) {
-    const isBlocked = await NoShow.isCustomerBlocked(customerId, 3);
-    if (isBlocked) {
-      const noShowCount = await NoShow.getCustomerNoShowCount(customerId);
+  // No-show validation for User/Guest by Phone
+  let phoneToCheck = customerPhone;
+  if (!phoneToCheck && customerId) {
+    const User = require("../models/user.model");
+    const user = await User.findById(customerId);
+    if (user) phoneToCheck = user.phone;
+  }
+
+  let noShowCount = 0;
+  if (phoneToCheck) {
+    noShowCount = await NoShow.getNoShowCountByPhone(phoneToCheck);
+    if (noShowCount >= 3) {
       const error = new Error(
         `Chức năng đặt lịch bị khóa do bạn đã hủy/không đến ${noShowCount} lần.`,
       );
@@ -156,12 +167,17 @@ exports.processCreateBooking = async ({
     }
   }
 
-  // Barber Daily Limit
+  // Fetch Barber Info, VIP Pricing & Daily Limit
   const barber = await Barber.findById(barberId);
   if (!barber) {
     const error = new Error("Không tìm thấy thợ cắt tóc");
     error.statusCode = 404;
     throw error;
+  }
+
+  // Apply VIP Multiplier if Barber is VIP
+  if (barber.level === 'vip' && barber.vipMultiplier > 0) {
+    totalPrice += Math.round(totalPrice * barber.vipMultiplier);
   }
 
   if (barberBookings.length >= barber.maxDailyBookings) {
@@ -173,6 +189,62 @@ exports.processCreateBooking = async ({
     throw error;
   }
 
+  // Voucher & Discount Validation
+  let discountAmount = 0;
+  let voucherLockId = null;
+  let appliedVoucherCode = null;
+  let pointsUsed = 0;
+  let appliedDiscountType = 'none';
+
+  if (voucherCode && discountType === 'none') {
+    discountType = 'voucher'; // fallback for backward compatibility
+  }
+
+  if (discountType === 'voucher' && voucherCode) {
+    try {
+      const lockInfo = await voucherController.validateAndLockVoucher(
+        voucherCode,
+        totalPrice,
+        customerId,
+        customerPhone,
+        [], // no productIds for bookings
+        services // passed as serviceIds
+      );
+      if (lockInfo) {
+        discountAmount = lockInfo.discountAmount;
+        voucherLockId = lockInfo.lockId;
+        appliedVoucherCode = voucherCode.toUpperCase();
+        appliedDiscountType = 'voucher';
+      }
+    } catch (err) {
+      const error = new Error('Lỗi mã giảm giá: ' + err.message);
+      error.statusCode = 400;
+      throw error;
+    }
+  } else if (['new_user', 'loyalty_points'].includes(discountType)) {
+    const DiscountService = require('./discount.service');
+    try {
+      const discountResult = await DiscountService.calculateDiscount({
+        userId: customerId,
+        totalAmount: totalPrice,
+        discountType,
+        pointsToUse,
+      });
+      discountAmount = discountResult.discountAmount;
+      pointsUsed = discountResult.pointsUsed;
+      appliedDiscountType = discountResult.discountType;
+
+      // Deduct points immediately
+      if (appliedDiscountType === 'loyalty_points' && pointsUsed > 0) {
+        await DiscountService.deductPoints(customerId, pointsUsed);
+      }
+    } catch (err) {
+      const error = new Error(err.message);
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   // Save Booking
   const bookingData = {
     bookingType,
@@ -181,21 +253,22 @@ exports.processCreateBooking = async ({
     services,
     bookingDate: requestedDateTime,
     durationMinutes,
-    totalPrice,
+    totalPrice: Math.max(0, totalPrice - discountAmount),
     note,
     notificationMethods,
     autoAssignedBarber,
     customerName,
     customerEmail,
     customerPhone,
+    voucherCode: appliedVoucherCode,
+    discountAmount,
+    voucherLockId,
+    discountType: appliedDiscountType,
+    pointsUsed,
   };
 
-  // If created via POS or auto-assigned by staff, it might be auto-confirmed
-  // We will let the controller decide, but if autoAssignedBarber is true, we confirm it
-  if (autoAssignedBarber) {
-    bookingData.status = "confirmed";
-    bookingData.confirmedAt = new Date();
-  }
+  // The default status from the schema is "pending".
+  // Walk-in bookings will override this directly when calling new Booking().
 
   const booking = new Booking(bookingData);
 
@@ -238,7 +311,7 @@ exports.processCreateBooking = async ({
       populate: { path: "userId", select: "name email" },
     });
 
-  return populatedBooking;
+  return { populatedBooking, noShowCount };
 };
 
 /**
@@ -249,98 +322,94 @@ exports.processCreateBooking = async ({
  * @returns {Array} Mảng các khung giờ { time, available, reason }
  */
 exports.generateDynamicSlots = async (barberId, date, durationMinutes = 30) => {
-  const BarberAbsence = require("../models/barber-absence.model");
-  const Booking = require("../models/booking.model");
+  let resultSlots = [];
 
-  // Check if barber is absent all day
-  const requestedDateTime = new Date(`${date}T12:00:00`);
-  const isAbsent = await BarberAbsence.isBarberAbsent(
-    barberId,
-    requestedDateTime,
-  );
-  if (isAbsent) {
-    return []; // Trả về mảng rỗng nếu nghỉ cả ngày
-  }
-
-  // Lấy các booking trong ngày (chuyển sang UTC để match database)
-  const startDate = new Date(`${date}T00:00:00+07:00`); // Vietnam Time
-  const endDate = new Date(`${date}T23:59:59+07:00`);
-
-  const conflictingBookings = await Booking.find({
-    barberId,
-    bookingDate: { $gte: startDate, $lt: endDate },
-    status: { $in: ["pending", "confirmed"] },
-  });
-
-  conflictingBookings.sort(
-    (a, b) => new Date(a.bookingDate) - new Date(b.bookingDate),
-  );
-
-  // Hàm check đụng lịch
-  const checkOverlap = (start, end) => {
-    return conflictingBookings.some((booking) => {
-      const bStart = new Date(booking.bookingDate).getTime();
-      const bEnd = bStart + booking.durationMinutes * 60000;
-      return start.getTime() < bEnd && end.getTime() > bStart;
-    });
-  };
-
-  const baseSlots = [
-    "09:00",
-    "10:00",
-    "11:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-    "19:00",
-  ];
-  const resultSlots = [];
-
-  // Bước 1: Quét các base slots
-  for (const time of baseSlots) {
-    const slotStart = new Date(`${date}T${time}:00+07:00`);
-    const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-
-    let isAvailable = true;
-    let reason = null;
-
-    if (checkOverlap(slotStart, slotEnd)) {
-      isAvailable = false;
-      reason = "Khung giờ đã có khách đặt";
+  if (barberId === "auto" || barberId === "random") {
+    // Tạm thời nếu chọn thợ tự động, coi như thợ luôn trống lịch (hệ thống sẽ auto-assign sau)
+    resultSlots = [
+      "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"
+    ].map(time => ({ time, available: true, reason: null }));
+  } else {
+    // Check if barber is absent all day
+    const requestedDateTime = new Date(`${date}T12:00:00`);
+    const isAbsent = await BarberAbsence.isBarberAbsent(
+      barberId,
+      requestedDateTime,
+    );
+    if (isAbsent) {
+      return []; // Trả về mảng rỗng nếu nghỉ cả ngày
     }
 
-    resultSlots.push({ time, available: isAvailable, reason });
-  }
+    // Lấy các booking trong ngày (chuyển sang UTC để match database)
+    const startDate = new Date(`${date}T00:00:00+07:00`); // Vietnam Time
+    const endDate = new Date(`${date}T23:59:59+07:00`);
 
-  // Bước 2: Quét các khoảng hở (Gap Packing)
-  for (const booking of conflictingBookings) {
-    const bEnd = new Date(
-      new Date(booking.bookingDate).getTime() + booking.durationMinutes * 60000,
+    const conflictingBookings = await Booking.find({
+      barberId,
+      bookingDate: { $gte: startDate, $lt: endDate },
+      status: { $in: ["pending", "confirmed"] },
+    });
+
+    conflictingBookings.sort(
+      (a, b) => new Date(a.bookingDate) - new Date(b.bookingDate),
     );
 
-    // Chuyển bEnd sang giờ Việt Nam để tính toán
-    const localTime = new Date(
-      bEnd.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }),
-    );
-    const hours = localTime.getHours();
-    const mins = localTime.getMinutes();
-    const timeStr = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+    // Hàm check đụng lịch
+    const checkOverlap = (start, end) => {
+      return conflictingBookings.some((booking) => {
+        const bStart = new Date(booking.bookingDate).getTime();
+        const bEnd = bStart + booking.durationMinutes * 60000;
+        return start.getTime() < bEnd && end.getTime() > bStart;
+      });
+    };
 
-    // Chỉ tính nếu nằm trong giờ làm việc và không phải giờ nghỉ trưa
-    if (hours >= 9 && hours < 20 && hours !== 12) {
-      // Ràng buộc nếu endtime vượt quá 19:00 (ca cuối) thì bỏ
-      if (hours === 19 && mins > 0) continue;
+    const baseSlots = [
+      "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
+    ];
 
-      const slotStart = bEnd;
+    // Bước 1: Quét các base slots
+    for (const time of baseSlots) {
+      const slotStart = new Date(`${date}T${time}:00+07:00`);
       const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
 
-      if (!checkOverlap(slotStart, slotEnd)) {
-        // Kiểm tra xem đã có trong resultSlots chưa
-        if (!resultSlots.some((s) => s.time === timeStr)) {
-          resultSlots.push({ time: timeStr, available: true, reason: null });
+      let isAvailable = true;
+      let reason = null;
+
+      if (checkOverlap(slotStart, slotEnd)) {
+        isAvailable = false;
+        reason = "Khung giờ đã có khách đặt";
+      }
+
+      resultSlots.push({ time, available: isAvailable, reason });
+    }
+
+    // Bước 2: Quét các khoảng hở (Gap Packing)
+    for (const booking of conflictingBookings) {
+      const bEnd = new Date(
+        new Date(booking.bookingDate).getTime() + booking.durationMinutes * 60000,
+      );
+
+      // Chuyển bEnd sang giờ Việt Nam để tính toán
+      const localTime = new Date(
+        bEnd.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }),
+      );
+      const hours = localTime.getHours();
+      const mins = localTime.getMinutes();
+      const timeStr = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+
+      // Chỉ tính nếu nằm trong giờ làm việc và không phải giờ nghỉ trưa
+      if (hours >= 9 && hours < 20 && hours !== 12) {
+        // Ràng buộc nếu endtime vượt quá 19:00 (ca cuối) thì bỏ
+        if (hours === 19 && mins > 0) continue;
+
+        const slotStart = bEnd;
+        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+
+        if (!checkOverlap(slotStart, slotEnd)) {
+          // Kiểm tra xem đã có trong resultSlots chưa
+          if (!resultSlots.some((s) => s.time === timeStr)) {
+            resultSlots.push({ time: timeStr, available: true, reason: null });
+          }
         }
       }
     }
@@ -408,6 +477,9 @@ exports.processCreateSinglePageBooking = async (data) => {
     bookingType,
     customerId,
     autoAssignBarber,
+    voucherCode,
+    discountType,
+    pointsToUse,
   } = data;
 
   const foundServices = await Service.find({ _id: { $in: services } });
@@ -432,7 +504,7 @@ exports.processCreateSinglePageBooking = async (data) => {
   }
 
   // Delegate to processCreateBooking
-  const populatedBooking = await exports.processCreateBooking({
+  const { populatedBooking, noShowCount } = await exports.processCreateBooking({
     bookingType,
     customerId,
     barberId,
@@ -445,7 +517,10 @@ exports.processCreateSinglePageBooking = async (data) => {
     customerName,
     customerEmail,
     customerPhone,
+    voucherCode,
+    discountType,
+    pointsToUse,
   });
 
-  return { populatedBooking, shouldAutoAssign };
+  return { populatedBooking, shouldAutoAssign, noShowCount };
 };

@@ -8,7 +8,6 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import DashboardHero from "@/components/customer/DashboardHero";
 import NextBooking from "@/components/customer/NextBooking";
-import LoyaltyStats from "@/components/customer/LoyaltyStats";
 import RewardsSection from "@/components/customer/RewardsSection";
 import CuratedProducts from "@/components/customer/CuratedProducts";
 
@@ -37,8 +36,8 @@ export default function CustomerDashboardPage() {
       <Navbar />
 
       {/* Main Content Canvas */}
-      <main className="flex-grow max-w-7xl mx-auto w-full px-gutter py-12 flex flex-col gap-16">
-        <DashboardHero userName={user?.name || ''} />
+      <main className="flex-grow max-w-5xl mx-auto w-full px-gutter py-12 flex flex-col gap-16">
+        <DashboardHero userName={user?.name || ''} loyaltyPoints={user?.loyaltyPoints || 0} />
         
         {/* Bento Grid Dashboard */}
         <section className="bento-grid">
@@ -49,7 +48,6 @@ export default function CustomerDashboardPage() {
           ) : (
             <>
               <NextBooking appointment={dashboardData?.nextAppointment} />
-              <LoyaltyStats stats={dashboardData?.loyaltyStats} />
             </>
           )}
         </section>

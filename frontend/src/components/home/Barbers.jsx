@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { customerService } from "@/services/customer.service";
 
 export default function Barbers() {
+  const router = useRouter();
   const [barbers, setBarbers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const scrollContainerRef = useRef(null);
@@ -26,7 +28,11 @@ export default function Barbers() {
         setIsLoading(true);
         const data = await customerService.getAllBarbers();
         if (data && data.barbers) {
-          setBarbers(data.barbers);
+          // Chỉ lấy những barber đã cấu hình hồ sơ
+          const configuredBarbers = data.barbers.filter(barber => 
+            barber.bio || barber.workingSince || (barber.experienceYears && barber.experienceYears > 0) || (barber.gallery && barber.gallery.length > 0) || (barber.specialties && barber.specialties.length > 0)
+          );
+          setBarbers(configuredBarbers);
         }
       } catch (error) {
         console.error("Lỗi tải danh sách thợ cắt tóc:", error);
@@ -39,10 +45,15 @@ export default function Barbers() {
   }, []);
 
   const getRoleLabel = (years) => {
-    if (years >= 10) return "Master Barber";
-    if (years >= 5) return "Senior Barber";
-    if (years >= 3) return "Top Stylist";
-    return "Junior Barber";
+    if (years >= 3) return "Senior Barber";
+    if (years > 1) return "Junior Barber";
+    return "Barber";
+  };
+
+  const getComputedExp = (barber) => {
+    return barber.workingSince 
+      ? Math.max(0, new Date().getFullYear() - new Date(barber.workingSince).getFullYear()) 
+      : (barber.experienceYears || 0);
   };
 
   const getImageUrl = (barber) => {
@@ -76,15 +87,22 @@ export default function Barbers() {
 
           <div ref={scrollContainerRef} className="flex overflow-x-auto gap-6 pb-8 pt-4 px-4 -mx-4 scroll-hide snap-x snap-mandatory">
             {barbers.map((barber) => (
-              <div key={barber._id} className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-outline-variant w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)] shrink-0 snap-center">
+              <div 
+                key={barber._id} 
+                onClick={() => router.push(`/barber-profile/${barber._id}`)}
+                className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-outline-variant w-full md:w-[calc(50%-0.75rem)] lg:w-[calc(25%-1.125rem)] shrink-0 snap-center cursor-pointer"
+              >
                 <img
                   className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100"
                   alt={barber.userId?.name || "Barber"}
                   src={getImageUrl(barber)}
                 />
                 <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-                  <p className="text-primary font-label-md text-label-md uppercase mb-1">
-                    {getRoleLabel(barber.experienceYears || 0)}
+                  <p className="text-primary font-label-md text-label-md uppercase mb-1 flex items-center gap-2">
+                    {getRoleLabel(getComputedExp(barber))}
+                    {barber.level === 'vip' && (
+                      <span className="material-symbols-outlined text-[16px] text-yellow-500 drop-shadow-sm" style={{ fontVariationSettings: "'FILL' 1" }} title="Barber VIP">workspace_premium</span>
+                    )}
                   </p>
                   <h3 className="text-white font-headline-md text-headline-md">{barber.userId?.name || "Thợ cắt tóc"}</h3>
                 </div>

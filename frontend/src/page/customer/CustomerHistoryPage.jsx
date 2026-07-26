@@ -10,6 +10,8 @@ import Footer from "@/components/layout/Footer";
 import { bookingService } from "@/services/booking.service";
 import toast from "react-hot-toast";
 import BookingHistoryFilter from "@/components/customer/BookingHistoryFilter";
+import BookingHistoryCard from "@/components/customer/BookingHistoryCard";
+import CancelBookingModal from "@/components/customer/CancelBookingModal";
 
 export default function CustomerHistoryPage() {
   const router = useRouter();
@@ -24,6 +26,9 @@ export default function CustomerHistoryPage() {
   const [activeFilters, setActiveFilters] = useState(initialFilters);
   const [tempFilters, setTempFilters] = useState(initialFilters);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [cancelModal, setCancelModal] = useState({ isOpen: false, bookingId: null });
+  const [successModal, setSuccessModal] = useState({ isOpen: false });
+  const [isCanceling, setIsCanceling] = useState(false);
 
   const fetcher = async () => {
     const response = await bookingService.getMyBookings();
@@ -38,15 +43,32 @@ export default function CustomerHistoryPage() {
     toast.error("Không thể tải lịch sử đặt lịch.");
   }
 
-  const handleCancelBooking = async (bookingId) => {
-    if (window.confirm("Bạn có chắc chắn muốn huỷ lịch hẹn này không?")) {
-      try {
-        await bookingService.cancelBooking(bookingId);
-        toast.success("Đã huỷ lịch hẹn thành công!");
-        fetchBookings(); // Tải lại danh sách
-      } catch (error) {
-        toast.error(error.message || "Không thể huỷ lịch hẹn.");
+  const handleCancelClick = (bookingId) => {
+    const booking = bookings.find(b => b._id === bookingId);
+    if (booking) {
+      const now = new Date();
+      const bookingTime = new Date(booking.bookingDate);
+      const hoursDifference = (bookingTime - now) / (1000 * 60 * 60);
+      if (hoursDifference < 2) {
+        toast.error("Bạn chỉ có thể huỷ lịch trước giờ hẹn tối thiểu 2 tiếng.");
+        return;
       }
+    }
+    setCancelModal({ isOpen: true, bookingId });
+  };
+
+  const handleConfirmCancel = async (reason) => {
+    if (!cancelModal.bookingId) return;
+    setIsCanceling(true);
+    try {
+      await bookingService.cancelBooking(cancelModal.bookingId, reason);
+      setCancelModal({ isOpen: false, bookingId: null });
+      setSuccessModal({ isOpen: true });
+      fetchBookings(); // Tải lại danh sách
+    } catch (error) {
+      toast.error(error.message || "Không thể huỷ lịch hẹn.");
+    } finally {
+      setIsCanceling(false);
     }
   };
 
@@ -191,88 +213,15 @@ export default function CustomerHistoryPage() {
               <p className="text-on-surface-variant font-body-lg">Không tìm thấy lịch hẹn nào phù hợp.</p>
             </div>
           ) : (
-            filteredBookings.map((booking) => {
-              const isPending = booking.status === "pending" || booking.status === "confirmed";
-              const isCompleted = booking.status === "completed";
-              const isCancelled = booking.status === "cancelled" || booking.status === "no_show" || booking.status === "rejected";
-
-              // Services
-              const serviceName = booking.serviceId?.name || (booking.services && booking.services.length > 0 ? booking.services.map(s => s.name).join(", ") : "N/A");
-              const price = booking.serviceId?.price || booking.totalPrice || 0;
-              const barberName = booking.barberId?.userId?.name || "Khách Vãng Lai";
-
-              // Format Date & Time
-              const dateObj = new Date(booking.bookingDate);
-              const dateStr = dateObj.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric' });
-              const timeStr = booking.timeSlot;
-
-              return (
-                <div
-                  key={booking._id}
-                  className={`bg-surface-container border border-outline-gold hover:border-primary hover:-translate-y-1 p-6 md:p-8 rounded-2xl flex flex-col md:flex-row items-center gap-8 relative overflow-hidden transition-all duration-300 ease-out ${isCancelled ? 'opacity-75 grayscale' : ''}`}
-                >
-                  <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 w-full">
-                    <div>
-                      <p className="font-label-md text-label-md text-outline uppercase mb-1">Dịch vụ</p>
-                      <h3 className="font-headline-sm text-headline-sm text-primary">{serviceName}</h3>
-                    </div>
-                    <div>
-                      <p className="font-label-md text-label-md text-outline uppercase mb-1">Barber</p>
-                      <p className="font-body-lg text-body-lg text-on-surface">{barberName}</p>
-                    </div>
-                    <div>
-                      <p className="font-label-md text-label-md text-outline uppercase mb-1">Thời gian</p>
-                      <p className="font-body-lg text-body-lg text-on-surface">{timeStr}<br />{dateStr}</p>
-                    </div>
-                    <div>
-                      <p className="font-label-md text-label-md text-outline uppercase mb-1">Giá tiền</p>
-                      <p className="font-headline-sm text-headline-sm text-on-surface">{price.toLocaleString()}đ</p>
-                      <div className="mt-2">
-                        <StatusBadge status={booking.status} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3 w-full md:w-auto shrink-0">
-                    {isPending && (
-                      <>
-                        <button className="w-full md:w-32 py-3 rounded-lg border border-primary text-primary font-bold text-label-md hover:bg-primary/10 transition-colors uppercase tracking-widest">Chi tiết</button>
-                        <button
-                          onClick={() => handleCancelBooking(booking._id)}
-                          className="w-full md:w-32 py-3 rounded-lg border border-error/50 text-error font-bold text-label-md hover:bg-error/10 transition-colors uppercase tracking-widest"
-                        >
-                          Huỷ Lịch
-                        </button>
-                      </>
-                    )}
-                    {isCompleted && (
-                      <>
-                        <button
-                          onClick={handleRebook}
-                          className="w-full md:w-32 py-3 rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 active:scale-95 transition-all uppercase tracking-widest"
-                        >
-                          Đặt Lại
-                        </button>
-                        <button
-                          onClick={handleReview}
-                          className="w-full md:w-32 py-3 rounded-lg border border-outline-gold text-on-surface-variant font-bold text-label-md hover:bg-surface-container-high transition-colors uppercase tracking-widest"
-                        >
-                          Review
-                        </button>
-                      </>
-                    )}
-                    {isCancelled && (
-                      <button
-                        onClick={handleRebook}
-                        className="w-full md:w-32 py-3 rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 active:scale-95 transition-all uppercase tracking-widest"
-                      >
-                        Đặt Lại
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+            filteredBookings.map((booking) => (
+              <BookingHistoryCard 
+                key={booking._id} 
+                booking={booking}
+                onCancel={() => handleCancelClick(booking._id)}
+                onRebook={handleRebook}
+                onReview={handleReview}
+              />
+            ))
           )}
         </div>
 
@@ -296,6 +245,34 @@ export default function CustomerHistoryPage() {
           setIsFilterOpen(false);
         }}
       />
+
+      <CancelBookingModal
+        isOpen={cancelModal.isOpen}
+        onClose={() => setCancelModal({ isOpen: false, bookingId: null })}
+        onConfirm={handleConfirmCancel}
+        isCanceling={isCanceling}
+      />
+
+      {/* Success Modal */}
+      {successModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSuccessModal({ isOpen: false })}>
+          <div className="bg-surface-container-low border border-outline-variant w-full max-w-sm rounded-2xl shadow-2xl p-6 flex flex-col items-center text-center" onClick={e => e.stopPropagation()}>
+            <div className="w-16 h-16 rounded-full bg-success/20 text-success flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-[32px]">check_circle</span>
+            </div>
+            <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mb-2">Huỷ lịch thành công</h3>
+            <p className="text-body-md text-on-surface-variant mb-6">
+              Lịch hẹn của bạn đã được huỷ. Hệ thống sẽ sớm xử lý yêu cầu hoàn tiền (nếu bạn đã thanh toán).
+            </p>
+            <button 
+              onClick={() => setSuccessModal({ isOpen: false })}
+              className="w-full py-3 rounded-lg bg-primary text-on-primary font-bold text-label-md hover:opacity-90 transition-all uppercase tracking-widest"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer />

@@ -13,7 +13,8 @@ router.post('/:id/publish', authenticate, authorizeRoles('admin'), rosterControl
 
 // --- Staff/Barber Endpoints ---
 router.get('/current/active', authenticate, authorizeRoles('admin', 'staff', 'barber'), rosterController.getCurrentRoster);
+router.get('/current/published', authenticate, authorizeRoles('admin', 'staff', 'barber'), rosterController.getCurrentPublishedRoster);
 router.get('/:id/my-registration', authenticate, authorizeRoles('admin', 'staff', 'barber'), rosterController.getMyRegistration);
-router.post('/:id/register', authenticate, authorizeRoles('admin', 'staff', 'barber'), rosterController.registerShifts);
+router.post('/:id/register', authenticate, authorizeRoles('staff'), rosterController.registerShifts);
 
 module.exports = router;

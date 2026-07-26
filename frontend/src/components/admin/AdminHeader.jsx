@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal';
+import Link from 'next/link';
 
 export default function AdminHeader({ onMenuClick }) {
   const pathname = usePathname();
@@ -12,10 +13,12 @@ export default function AdminHeader({ onMenuClick }) {
   const getPageTitle = () => {
     if (pathname.includes('/pos')) return 'POS & Thu Ngân';
     if (pathname.includes('/admin/employee')) return 'Quản Lý Nhân Viên';
+    if (pathname.includes('/admin/accounts')) return 'Tài Khoản & Nhân Sự';
     if (pathname.includes('/admin/bookings')) return 'Quản Lý Lịch Hẹn';
     if (pathname.includes('/admin/services')) return 'Dịch Vụ';
     if (pathname.includes('/admin/inventory')) return 'Kho Hàng';
     if (pathname.includes('/admin/products')) return 'Quản Lý Sản Phẩm';
+    if (pathname.includes('/admin/orders')) return 'Quản Lý Đơn Hàng';
     if (pathname.includes('/admin/analytics')) return 'Phân Tích Kinh Doanh';
     if (pathname === '/admin' || pathname === '/admin/') return 'Bảng Điều Khiển - Admin';
     return '';
@@ -28,7 +31,7 @@ export default function AdminHeader({ onMenuClick }) {
         <button className="md:hidden text-on-surface-variant hover:text-primary" onClick={onMenuClick}>
           <span className="material-symbols-outlined">menu</span>
         </button>
-        <h1 className="font-headline-md text-headline-sm md:text-headline-md text-on-surface uppercase tracking-[0.05em] truncate">
+        <h1 className="font-headline-md text-[18px] md:text-[22px] text-on-surface uppercase tracking-[0.05em] truncate">
           {getPageTitle()}
         </h1>
       </div>
@@ -50,6 +53,14 @@ export default function AdminHeader({ onMenuClick }) {
 
           {/* Profile Menu Popup */}
           <div className={`absolute top-full right-0 mt-2 w-48 bg-surface-container-high border border-outline-gold rounded-lg shadow-xl overflow-hidden transition-all duration-200 origin-top-right ${isProfileMenuOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
+            <Link 
+              href="/admin/profile"
+              onClick={() => setIsProfileMenuOpen(false)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-on-surface hover:bg-surface-container-highest hover:text-primary transition-colors border-b border-outline-variant/30"
+            >
+              <span className="material-symbols-outlined text-[20px]">person</span>
+              <span className="font-label-md text-sm uppercase tracking-widest">Hồ Sơ</span>
+            </Link>
             <button 
               onClick={() => { setIsProfileMenuOpen(false); setIsLogoutModalOpen(true); }}
               className="w-full flex items-center gap-3 px-4 py-3 text-error hover:bg-error/10 transition-colors"

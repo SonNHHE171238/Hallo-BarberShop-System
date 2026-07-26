@@ -30,6 +30,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
             break;
         }
       } else {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsAuthorized(true);
       }
     }

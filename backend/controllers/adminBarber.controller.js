@@ -72,6 +72,8 @@ exports.createAdminBarber = async (req, res) => {
             languages,
             avatarUrl,
             avatarBase64,
+            level,
+            vipMultiplier,
         } = req.body;
 
         if (!isString(name) || !isString(email) || !isString(bio) || !experienceYears) {
@@ -122,6 +124,8 @@ exports.createAdminBarber = async (req, res) => {
             certifications: Array.isArray(certifications) ? certifications : certifications ? [certifications] : [],
             languages: Array.isArray(languages) ? languages : languages ? [languages] : ['Vietnamese'],
             isAvailable: true,
+            level: level || 'standard',
+            vipMultiplier: vipMultiplier !== undefined ? Number(vipMultiplier) : 0.2,
         });
 
         const savedBarber = await newBarber.save();
@@ -151,7 +155,7 @@ exports.getAllAdminBarbers = async (req, res) => {
         nextWeek.setDate(new Date().getDate() + 7);
         const nextWeekStr = normalizeDateString(nextWeek);
 
-        const barberUsers = await User.find({ role: 'barber' }).select('name email phone avatarUrl status');
+        const barberUsers = await User.find({ role: 'barber' }).select('name email phone avatarUrl status isDeleted');
         const barbers = await Barber.find();
         
         const barberIds = barbers.map((barber) => barber._id);
@@ -196,11 +200,13 @@ exports.getAllAdminBarbers = async (req, res) => {
                     preferredWorkingHours: { start: '08:00', end: '20:00' }
                 },
                 user: {
+                    _id: user._id,
                     name: user.name || 'Thợ chưa có tên',
                     phone: user.phone || '',
                     avatarUrl: user.avatarUrl || '',
                     email: user.email || '',
                     status: user.status || 'active',
+                    isDeleted: user.isDeleted || false,
                 },
                 scheduleSummary: summarySchedules,
             };
@@ -273,6 +279,8 @@ exports.updateAdminBarber = async (req, res) => {
             preferredWorkingHours,
             maxDailyBookings,
             autoAssignmentEligible,
+            level,
+            vipMultiplier,
         } = req.body;
 
         const barber = await Barber.findById(barberId);
@@ -294,6 +302,10 @@ exports.updateAdminBarber = async (req, res) => {
         }
         if (typeof autoAssignmentEligible === 'boolean') {
             barber.autoAssignmentEligible = autoAssignmentEligible;
+        }
+        if (level) barber.level = level;
+        if (vipMultiplier !== undefined && vipMultiplier !== null && vipMultiplier !== "") {
+            barber.vipMultiplier = Number(vipMultiplier);
         }
 
         const updatedBarber = await barber.save();
