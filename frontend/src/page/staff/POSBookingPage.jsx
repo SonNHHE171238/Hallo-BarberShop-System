@@ -4,9 +4,14 @@ import React, { useState, useEffect } from "react";
 import toast from 'react-hot-toast';
 import { bookingService } from "@/services/booking.service";
 import { staffDashboardService } from "@/services/staffDashboard.service";
+import { voucherService } from "@/services/voucher.service";
 import DateTimeSelection from "@/components/booking/DateTimeSelection";
 import POSServiceList from "@/components/staff/pos/POSServiceList";
 import POSSummaryCard from "@/components/staff/pos/POSSummaryCard";
+import POSNewCustomerModal from "@/components/staff/pos/POSNewCustomerModal";
+import POSTimeSelectionModal from "@/components/staff/pos/POSTimeSelectionModal";
+import POSStaffSelectionModal from "@/components/staff/pos/POSStaffSelectionModal";
+import POSPaymentModal from "@/components/staff/pos/POSPaymentModal";
 import axios from "axios";
 
 export default function POSBookingPage() {
@@ -29,6 +34,15 @@ export default function POSBookingPage() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showStaffModal, setShowStaffModal] = useState(false);
+
+  // State: Voucher
+  const [discountCodeInput, setDiscountCodeInput] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+
+  // State: Payment Modal
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Determine if cart has services
   const hasServices = selectedItems.some(item => item.itemType === 'service');
@@ -96,7 +110,7 @@ export default function POSBookingPage() {
           _id: customerData._id,
           name: customerData.name, 
           phone: customerData.phone, 
-          role: "customer", 
+          role: customerData.role || "customer", 
           points: customerData.loyaltyPoints || 0 
         });
         setShowNewCustomerForm(false);
@@ -112,7 +126,7 @@ export default function POSBookingPage() {
     }
   };
 
-  const handleSaveNewCustomer = () => {
+  const handleSaveNewCustomer = async () => {
     if (!newCustomerInfo.name || !newCustomerInfo.phone) {
       toast.error("Vui lòng nhập tên và số điện thoại.");
       return;
@@ -138,22 +152,36 @@ export default function POSBookingPage() {
       }
     }
 
-    setCustomer({ 
-      name: newCustomerInfo.name, 
-      phone: newCustomerInfo.phone, 
-      role: "guest", 
-      points: null,
-      email,
-      note,
-    });
-    setShowNewCustomerForm(false);
+    try {
+      const customerData = await staffDashboardService.quickRegisterCustomer({
+        name: newCustomerInfo.name,
+        phone: newCustomerInfo.phone,
+        email,
+        note
+      });
+
+      if (customerData) {
+        setCustomer({ 
+          _id: customerData._id,
+          name: customerData.name, 
+          phone: customerData.phone, 
+          role: customerData.role, 
+          note,
+        });
+        toast.success("Đã ghi nhận thông tin khách vãng lai.");
+        setShowNewCustomerForm(false);
+      }
+    } catch (error) {
+      toast.error(error.message || "Lỗi khi kết nối đến máy chủ.");
+    }
   };
 
   const selectItem = (item) => {
     setSelectedItems(prev => {
-      const isSelected = prev.some(i => i._id === item._id);
+      const itemId = item._id || item.id;
+      const isSelected = prev.some(i => (i._id || i.id) === itemId);
       if (isSelected) {
-        return prev.filter(i => i._id !== item._id);
+        return prev.filter(i => (i._id || i.id) !== itemId);
       } else {
         return [...prev, item];
       }
@@ -162,7 +190,7 @@ export default function POSBookingPage() {
 
   const increaseQuantity = (itemId) => {
     setSelectedItems(prev => prev.map(item => {
-      if (item._id === itemId && item.itemType === 'product') {
+      if ((item._id || item.id) === itemId && item.itemType === 'product') {
         if (item.stock && item.quantity >= item.stock) {
           toast.error(`Sản phẩm này chỉ còn ${item.stock} trong kho!`);
           return item;
@@ -175,7 +203,7 @@ export default function POSBookingPage() {
 
   const decreaseQuantity = (itemId) => {
     setSelectedItems(prev => prev.map(item => {
-      if (item._id === itemId && item.itemType === 'product') {
+      if ((item._id || item.id) === itemId && item.itemType === 'product') {
         if (item.quantity > 1) {
           return { ...item, quantity: item.quantity - 1 };
         }
@@ -202,13 +230,13 @@ export default function POSBookingPage() {
       }
       setShowTimeModal(true);
     } else {
-      // Only products -> Direct Checkout
-      await handleProcessBoth(true); 
+      // Only products -> Open Payment Modal
+      setShowPaymentModal(true);
     }
   };
 
   // Hàm xử lý chung: Sinh ra Booking (nếu có service) và Order (nếu có product)
-  const handleProcessBoth = async (onlyProducts = false) => {
+  const handleProcessBoth = async (onlyProducts = false, paymentMethod = 'cash') => {
     if (!onlyProducts) {
       if (!selectedDate || !selectedTime) {
         toast.error("Vui lòng chọn ngày và giờ cắt.");
@@ -221,29 +249,42 @@ export default function POSBookingPage() {
       const servicesOnly = selectedItems.filter(i => i.itemType === 'service');
       const productsOnly = selectedItems.filter(i => i.itemType === 'product');
 
-      let orderRes = null;
-      let bookingRes = null;
-
       // 1. Nếu có sản phẩm -> Tạo Order
       if (productsOnly.length > 0) {
         const orderPayload = {
           items: productsOnly.map(p => ({
-            productId: p._id,
+            productId: p._id || p.id,
             quantity: p.quantity || 1
           })),
           customerName: customer ? customer.name : "Khách vãng lai",
-          customerPhone: customer ? customer.phone : "",
+          customerPhone: customer ? customer.phone : "0000000000",
           shippingAddress: "Mua tại cửa hàng",
-          paymentMethod: "cash",
+          paymentMethod: paymentMethod,
+          voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
+          discountAmount: discountAmount || 0,
         };
-        // Gửi bằng axios với credentials
-        orderRes = await axios.post("http://localhost:5000/api/orders", orderPayload, { withCredentials: true });
+        const orderRes = await axios.post("http://localhost:5000/api/orders", orderPayload, { withCredentials: true });
+        
+        if (paymentMethod === 'payos') {
+          return orderRes.data;
+        }
+
+        // Nếu là tiền mặt (cash), tự động chuyển status = paid và completed
+        if (paymentMethod === 'cash' && orderRes.data && orderRes.data.data) {
+          const orderId = orderRes.data.data._id;
+          try {
+            await axios.put(`http://localhost:5000/api/orders/${orderId}/pay-cod`, {}, { withCredentials: true });
+            await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, { status: 'completed' }, { withCredentials: true });
+          } catch (e) {
+            console.error("Lỗi khi tự động hoàn thành đơn tại quầy", e);
+          }
+        }
       }
 
       // 2. Nếu có dịch vụ -> Tạo Booking
       if (servicesOnly.length > 0) {
         const bookingPayload = {
-          services: servicesOnly.map(s => s._id),
+          services: servicesOnly.map(s => s._id || s.id),
           barberId: selectedStaff._id || selectedStaff.id,
           bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
           date: selectedDate,
@@ -255,12 +296,16 @@ export default function POSBookingPage() {
           customerPhone: customer ? customer.phone : "",
           note: customer?.note || "",
           customerEmail: customer?.email || undefined,
+          status: "confirmed",
+          voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
+          discountAmount: discountAmount || 0,
         };
-        bookingRes = await bookingService.createBookingSinglePage(bookingPayload);
+        await bookingService.createBookingSinglePage(bookingPayload);
       }
 
       toast.success("Thanh toán / Lên lịch thành công!");
       setShowTimeModal(false);
+      setShowPaymentModal(false);
       
       // Reset form
       setPhoneInput("");
@@ -271,8 +316,12 @@ export default function POSBookingPage() {
       setSelectedTime("");
       setSearchTerm("");
       setNewCustomerInfo({ name: "", phone: "", emailOrNote: "" });
+      setAppliedVoucher(null);
+      setDiscountCodeInput("");
+      return { success: true };
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Có lỗi xảy ra khi tạo đơn.");
+      return { success: false };
     } finally {
       setIsSubmitting(false);
     }
@@ -287,7 +336,65 @@ export default function POSBookingPage() {
     const qty = curr.itemType === 'product' ? (curr.quantity || 1) : 1;
     return acc + ((curr.price || 0) * qty);
   }, 0);
-  const total = subTotal;
+  
+  let discountAmount = 0;
+  if (appliedVoucher) {
+    if (appliedVoucher.discountType === 'percentage' || appliedVoucher.type === 'percentage') {
+      const discountValue = appliedVoucher.discountValue || appliedVoucher.value || 0;
+      discountAmount = (subTotal * discountValue) / 100;
+      const maxAmount = appliedVoucher.maxDiscountAmount;
+      if (maxAmount && discountAmount > maxAmount) {
+        discountAmount = maxAmount;
+      }
+    } else {
+      discountAmount = appliedVoucher.discountValue || appliedVoucher.value || 0;
+    }
+  }
+  
+  const total = Math.max(0, subTotal - discountAmount);
+
+  // Voucher Actions
+  const handleApplyVoucher = async () => {
+    if (!discountCodeInput.trim()) {
+      toast.error("Vui lòng nhập mã giảm giá");
+      return;
+    }
+    if (selectedItems.length === 0) {
+      toast.error("Vui lòng chọn sản phẩm/dịch vụ trước khi áp dụng mã");
+      return;
+    }
+    setIsApplyingVoucher(true);
+    try {
+      const productIds = selectedItems.filter(i => i.itemType === 'product').map(i => i._id);
+      const serviceIds = selectedItems.filter(i => i.itemType === 'service').map(i => i._id);
+      
+      const res = await voucherService.applyVoucher(
+        discountCodeInput.trim(), 
+        subTotal, 
+        customer?.phone || null, 
+        productIds, 
+        serviceIds
+      );
+      
+      if (res && res.success) {
+        toast.success("Áp dụng mã giảm giá thành công");
+        setAppliedVoucher(res.data || res.voucher);
+      } else {
+        toast.error(res.message || "Mã giảm giá không hợp lệ");
+      }
+    } catch (error) {
+      toast.error(error.message || "Lỗi khi áp dụng mã giảm giá");
+      setAppliedVoucher(null);
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    setDiscountCodeInput("");
+    toast.success("Đã gỡ mã giảm giá");
+  };
 
   // Filtered + Sorted items for display
   const displayedItems = allItems
@@ -307,10 +414,6 @@ export default function POSBookingPage() {
     <div className="w-full h-[calc(100vh-80px)] flex flex-col lg:flex-row max-w-[1600px] mx-auto overflow-hidden bg-surface-container-lowest">
       {/* Left Side: Selection */}
       <section className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col overflow-hidden">
-
-
-
-
         {/* Services & Products Section */}
         <POSServiceList 
           searchTerm={searchTerm}
@@ -320,66 +423,66 @@ export default function POSBookingPage() {
           displayedItems={displayedItems}
           selectedItems={selectedItems}
           selectItem={selectItem}
-        />
+        >
+          {/* Staff Selection (Only show if there's at least one service selected) */}
+          {hasServices && (
+            <div className="mt-8 pt-6 border-t border-outline-variant/30 animate-in fade-in slide-in-from-bottom-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
+                <div>
+                  <h2 className="font-headline-sm text-lg text-on-surface mb-1">Chỉ Định Barber</h2>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 bg-surface-container-low border border-outline-variant/20 rounded-xl p-6">
+                {staffList.map(staff => {
+                  const isSelected = selectedStaff && (selectedStaff._id === staff._id);
+                  const name = staff.userId?.name || "Unknown Barber";
+                  const title = staff.specialties?.join(", ") || "Stylist";
+                  const imageUrl = staff.profileImageUrl;
+                  const firstChar = name.charAt(0).toUpperCase();
 
-        {/* Staff Selection (Only show if there's at least one service selected) */}
-        {hasServices && (
-          <div className="mt-4 pt-4 border-t border-outline-variant/30 shrink-0 animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
-              <div>
-                <h2 className="font-headline-sm text-lg text-on-surface mb-1">Chỉ Định Barber</h2>
+                  return (
+                    <div
+                      key={staff._id || staff.id}
+                      onClick={() => setSelectedStaff(staff)}
+                      className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all group ${
+                        isSelected ? 'border-primary bg-primary/10' : 'border-outline-variant/20 hover:bg-primary/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-full overflow-hidden border transition-colors flex items-center justify-center bg-surface-container ${
+                          isSelected ? 'border-primary' : 'border-outline-variant group-hover:border-primary/50'
+                        }`}>
+                          {imageUrl ? (
+                            <img alt={name} className="w-full h-full object-cover" src={imageUrl} />
+                          ) : (
+                            <span className="text-primary font-bold">{firstChar}</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className={`font-label-md block font-semibold transition-colors ${
+                            isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'
+                          }`}>
+                            {name}
+                          </span>
+                          <span className={`text-[10px] uppercase tracking-widest line-clamp-1 ${
+                            isSelected ? 'text-primary/70' : 'text-on-surface-variant'
+                          }`}>
+                            {title}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`material-symbols-outlined transition-colors ${
+                        isSelected ? 'text-primary' : 'text-outline-variant group-hover:text-primary'
+                      }`}>
+                        {isSelected ? 'check_circle' : 'radio_button_unchecked'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 bg-surface-container-low border border-outline-variant/20 rounded-xl p-6">
-              {staffList.map(staff => {
-                const isSelected = selectedStaff && (selectedStaff._id === staff._id);
-                const name = staff.userId?.name || "Unknown Barber";
-                const title = staff.specialties?.join(", ") || "Stylist";
-                const imageUrl = staff.profileImageUrl;
-                const firstChar = name.charAt(0).toUpperCase();
-
-                return (
-                  <div
-                    key={staff._id || staff.id}
-                    onClick={() => setSelectedStaff(staff)}
-                    className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all group ${
-                      isSelected ? 'border-primary bg-primary/10' : 'border-outline-variant/20 hover:bg-primary/5'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full overflow-hidden border transition-colors flex items-center justify-center bg-surface-container ${
-                        isSelected ? 'border-primary' : 'border-outline-variant group-hover:border-primary/50'
-                      }`}>
-                        {imageUrl ? (
-                          <img alt={name} className="w-full h-full object-cover" src={imageUrl} />
-                        ) : (
-                          <span className="text-primary font-bold">{firstChar}</span>
-                        )}
-                      </div>
-                      <div>
-                        <span className={`font-label-md block font-semibold transition-colors ${
-                          isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'
-                        }`}>
-                          {name}
-                        </span>
-                        <span className={`text-[10px] uppercase tracking-widest line-clamp-1 ${
-                          isSelected ? 'text-primary/70' : 'text-on-surface-variant'
-                        }`}>
-                          {title}
-                        </span>
-                      </div>
-                    </div>
-                    <span className={`material-symbols-outlined transition-colors ${
-                      isSelected ? 'text-primary' : 'text-outline-variant group-hover:text-primary'
-                    }`}>
-                      {isSelected ? 'check_circle' : 'radio_button_unchecked'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+          )}
+        </POSServiceList>
       </section>
 
       {/* Right Side: Booking Summary & Checkout */}
@@ -394,6 +497,14 @@ export default function POSBookingPage() {
         selectItem={selectItem}
         handlePrint={handlePrint}
         openTimeModalOrCheckout={openTimeModalOrCheckout}
+        // Voucher passdown
+        discountCodeInput={discountCodeInput}
+        setDiscountCodeInput={setDiscountCodeInput}
+        appliedVoucher={appliedVoucher}
+        isApplyingVoucher={isApplyingVoucher}
+        handleApplyVoucher={handleApplyVoucher}
+        handleRemoveVoucher={handleRemoveVoucher}
+        discountAmount={discountAmount}
         // Customer passdown
         phoneInput={phoneInput}
         setPhoneInput={setPhoneInput}
@@ -403,134 +514,67 @@ export default function POSBookingPage() {
         setCustomer={setCustomer}
         setShowNewCustomerForm={setShowNewCustomerForm}
         normalizePhone={normalizePhone}
+        // Staff Modal
+        setShowStaffModal={setShowStaffModal}
       />
 
       {/* Modal: New Customer */}
-      {showNewCustomerForm && !customer && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-surface-obsidian/60 backdrop-blur-sm" onClick={() => setShowNewCustomerForm(false)}></div>
-          <div className="relative bg-surface border border-outline-variant rounded-2xl w-full max-w-lg shadow-2xl p-6 md:p-8 animate-fade-in slide-in-from-bottom-4">
-            <button 
-              onClick={() => setShowNewCustomerForm(false)}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-            
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                <span className="material-symbols-outlined text-primary">person_add</span>
-              </div>
-              <h2 className="font-headline-sm text-xl text-on-surface">Thêm Khách Mới</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-outline-variant">Tên khách hàng <span className="text-error">*</span></label>
-                <input 
-                  type="text" 
-                  className="bg-surface-container border border-outline-variant/50 rounded-lg p-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all"
-                  value={newCustomerInfo.name}
-                  onChange={(e) => setNewCustomerInfo({...newCustomerInfo, name: e.target.value})}
-                  placeholder="Nguyễn Văn A..."
-                  autoFocus
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-outline-variant">Số điện thoại <span className="text-error">*</span></label>
-                <input 
-                  type="tel" 
-                  className="bg-surface-container border border-outline-variant/50 rounded-lg p-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all"
-                  value={newCustomerInfo.phone}
-                  onChange={(e) => setNewCustomerInfo({...newCustomerInfo, phone: normalizePhone(e.target.value)})}
-                  onPaste={(e) => handlePhonePaste(e, (val) => setNewCustomerInfo(prev => ({ ...prev, phone: val })))}
-                  placeholder="0912345678"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-outline-variant">Email / Ghi chú</label>
-                <input 
-                  type="text" 
-                  className="bg-surface-container border border-outline-variant/50 rounded-lg p-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all"
-                  value={newCustomerInfo.emailOrNote}
-                  onChange={(e) => setNewCustomerInfo({...newCustomerInfo, emailOrNote: e.target.value})}
-                  onBlur={(e) => {
-                    const v = e.target.value.trim();
-                    if (v && v.includes('@') && !isValidEmail(v)) {
-                      toast.error('Email không hợp lệ.');
-                    }
-                  }}
-                  placeholder="email@example.com hoặc ghi chú đặc biệt"
-                />
-              </div>
-            </div>
-            
-            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-outline-variant/30">
-              <button 
-                onClick={() => setShowNewCustomerForm(false)}
-                className="px-5 py-2.5 border border-outline-variant text-on-surface-variant font-bold rounded-lg hover:bg-surface-variant transition-colors"
-              >
-                Hủy bỏ
-              </button>
-              <button 
-                onClick={handleSaveNewCustomer}
-                className="px-6 py-2.5 bg-primary text-on-primary font-bold rounded-lg hover:brightness-110 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
-              >
-                Lưu Khách Hàng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <POSNewCustomerModal
+        show={showNewCustomerForm && !customer}
+        onClose={() => setShowNewCustomerForm(false)}
+        newCustomerInfo={newCustomerInfo}
+        setNewCustomerInfo={setNewCustomerInfo}
+        handleSaveNewCustomer={handleSaveNewCustomer}
+        normalizePhone={normalizePhone}
+        handlePhonePaste={handlePhonePaste}
+        isValidEmail={isValidEmail}
+      />
 
       {/* Time Selection Modal */}
-      {showTimeModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowTimeModal(false)}></div>
-          <div className="relative bg-surface border border-outline-variant/30 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 md:p-8 animate-fade-in custom-scrollbar">
-            <button 
-              onClick={() => setShowTimeModal(false)}
-              className="absolute top-6 right-6 text-on-surface-variant hover:text-primary transition-colors"
-            >
-              <span className="material-symbols-outlined text-3xl">close</span>
-            </button>
-            
-            <h2 className="font-headline-md text-2xl text-primary mb-6">Chọn Giờ Cắt</h2>
-            
-            <div className="mb-8">
-              <DateTimeSelection 
-                selectedBarber={selectedStaff}
-                selectedServices={selectedItems.filter(i => i.itemType === 'service')}
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-                selectedTime={selectedTime}
-                setSelectedTime={setSelectedTime}
-              />
-            </div>
+      <POSTimeSelectionModal
+        show={showTimeModal}
+        onClose={() => setShowTimeModal(false)}
+        selectedStaff={selectedStaff}
+        selectedServices={selectedItems.filter(i => i.itemType === 'service')}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        selectedTime={selectedTime}
+        setSelectedTime={setSelectedTime}
+        isSubmitting={isSubmitting}
+        handleConfirm={() => handleProcessBoth(false)}
+      />
 
-            <div className="flex justify-end gap-4 border-t border-outline-variant/20 pt-6 mt-8">
-              <button 
-                onClick={() => setShowTimeModal(false)}
-                className="px-6 py-3 border border-outline-variant text-on-surface-variant rounded-lg font-label-md hover:bg-surface-variant transition-colors"
-              >
-                Hủy
-              </button>
-              <button 
-                onClick={() => handleProcessBoth(false)}
-                disabled={isSubmitting || !selectedDate || !selectedTime}
-                className="px-8 py-3 bg-primary text-on-primary rounded-lg font-label-md font-bold hover:brightness-110 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isSubmitting ? (
-                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                ) : (
-                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                )}
-                CHỐT ĐƠN KHÁCH HÀNG
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Payment Modal */}
+      <POSPaymentModal
+        isOpen={showPaymentModal}
+        onClose={(success) => {
+          setShowPaymentModal(false);
+          if (success) {
+            // Reset form if payment success
+            setPhoneInput("");
+            setCustomer(null);
+            setSelectedItems([]);
+            setSelectedStaff(null);
+            setSelectedDate("");
+            setSelectedTime("");
+            setSearchTerm("");
+            setNewCustomerInfo({ name: "", phone: "", emailOrNote: "" });
+            setAppliedVoucher(null);
+            setDiscountCodeInput("");
+          }
+        }}
+        onConfirm={(method) => handleProcessBoth(true, method)}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* Staff Selection Modal */}
+      <POSStaffSelectionModal
+        show={showStaffModal}
+        onClose={() => setShowStaffModal(false)}
+        staffList={staffList}
+        selectedStaff={selectedStaff}
+        setSelectedStaff={setSelectedStaff}
+      />
     </div>
   );
 }

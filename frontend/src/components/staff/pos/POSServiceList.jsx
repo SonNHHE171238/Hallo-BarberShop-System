@@ -8,6 +8,7 @@ export default function POSServiceList({
   displayedItems,
   selectedItems,
   selectItem,
+  children,
 }) {
   const [activeCategory, setActiveCategory] = useState("all");
 
@@ -77,94 +78,110 @@ export default function POSServiceList({
 
       {/* List Container */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pb-12 pr-2">
-        <div className="flex flex-col gap-3">
-          {filteredByCategory.map((item) => {
-            const isSelected = selectedItems.some((i) => i._id === item._id);
-            const isProduct = item.itemType === "product";
-
-            return (
-              <div
-                key={item._id || item.id}
-                onClick={() => selectItem(item)}
-                className={`bg-surface-container-lowest p-3 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-4 relative overflow-hidden group shadow-sm hover:shadow-md ${
-                  isSelected
-                    ? "border-2 border-primary bg-primary/5 scale-[0.99]"
-                    : "border border-outline-variant/50 hover:border-primary/50"
-                }`}
-              >
-                {/* Image */}
-                <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 overflow-hidden rounded-lg bg-surface-variant/30 relative">
-                  {(item.images && item.images[0]) || item.image ? (
-                    <img
-                      src={(item.images && item.images[0]) || item.image}
-                      alt={item.name}
-                      className={`w-full h-full object-cover transition-transform duration-500 ${isSelected ? '' : 'group-hover:scale-110'}`}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="material-symbols-outlined text-outline-variant text-2xl md:text-3xl opacity-50">
-                        {isProduct ? 'inventory_2' : 'spa'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
-                      isProduct ? "bg-surface-variant text-on-surface border border-outline-variant" : "bg-primary/10 text-primary"
-                    }`}>
-                      {isProduct ? "Sản phẩm" : "Dịch vụ"}
-                    </span>
-                  </div>
-                  <h3
-                    className={`font-headline-sm text-sm md:text-base truncate transition-colors ${isSelected ? "text-primary font-bold" : "text-on-surface group-hover:text-primary"}`}
-                  >
-                    {item.name}
-                  </h3>
-                  
-                  <div className="mt-1 flex items-center opacity-80">
-                    {!isProduct && (
-                      <span className="font-label-md text-on-surface-variant text-xs flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">schedule</span>
-                        {item.durationMinutes || item.duration || 30} phút
-                      </span>
-                    )}
-                    {isProduct && (
-                      <span className="font-label-md text-on-surface-variant text-xs flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">inventory</span>
-                        Kho: {item.stock}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Price & Action */}
-                <div className="flex flex-col items-end justify-center shrink-0 pl-2">
-                  <span className="font-label-md font-bold text-primary text-base">
-                    {item.price ? item.price.toLocaleString("vi-VN") : 0}đ
-                  </span>
-                  
-                  <div className={`mt-2 w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
-                    isSelected ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant group-hover:bg-primary group-hover:text-on-primary"
-                  }`}>
-                    <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: isSelected ? "'FILL' 1" : "'FILL' 0" }}>
-                      {isSelected ? "check" : "add"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        {filteredByCategory.length === 0 && (
-          <div className="w-full text-center py-20 text-on-surface-variant flex flex-col items-center gap-4">
-            <span className="material-symbols-outlined text-6xl opacity-30">search_off</span>
-            <p className="font-body-md text-lg">Không tìm thấy kết quả nào phù hợp.</p>
+        {searchTerm.trim() === "" ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-on-surface-variant opacity-50 gap-4 mt-20">
+            <span className="material-symbols-outlined text-[80px] opacity-30">
+              search
+            </span>
+            <p className="font-body-md text-lg font-medium text-center px-4">
+              Vui lòng nhập tên dịch vụ hoặc sản phẩm vào thanh tìm kiếm<br/>để bắt đầu chọn.
+            </p>
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredByCategory.map((item) => {
+                const itemId = item._id || item.id;
+                const isSelected = selectedItems.some((i) => (i._id || i.id) === itemId);
+                const isProduct = item.itemType === "product";
+
+                return (
+                  <div
+                    key={itemId}
+                    onClick={() => selectItem(item)}
+                    className={`bg-surface-container-lowest p-3 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-4 relative overflow-hidden group shadow-sm hover:shadow-md ${
+                      isSelected
+                        ? "border-2 border-primary bg-primary/5 scale-[0.99]"
+                        : "border border-outline-variant/50 hover:border-primary/50"
+                    }`}
+                  >
+                    {/* Image */}
+                    <div className="w-16 h-16 md:w-20 md:h-20 shrink-0 overflow-hidden rounded-lg bg-surface-variant/30 relative">
+                      {(item.images && item.images[0]) || item.image ? (
+                        <img
+                          src={(item.images && item.images[0]) || item.image}
+                          alt={item.name}
+                          className={`w-full h-full object-cover transition-transform duration-500 ${isSelected ? '' : 'group-hover:scale-110'}`}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="material-symbols-outlined text-outline-variant text-2xl md:text-3xl opacity-50">
+                            {isProduct ? 'inventory_2' : 'spa'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                          isProduct ? "bg-surface-variant text-on-surface border border-outline-variant" : "bg-primary/10 text-primary"
+                        }`}>
+                          {isProduct ? "Sản phẩm" : "Dịch vụ"}
+                        </span>
+                      </div>
+                      <h3
+                        className={`font-headline-sm text-sm md:text-base truncate transition-colors ${isSelected ? "text-primary font-bold" : "text-on-surface group-hover:text-primary"}`}
+                      >
+                        {item.name}
+                      </h3>
+                      
+                      <div className="mt-1 flex items-center opacity-80">
+                        {!isProduct && (
+                          <span className="font-label-md text-on-surface-variant text-xs flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">schedule</span>
+                            {item.durationMinutes || item.duration || 30} phút
+                          </span>
+                        )}
+                        {isProduct && (
+                          <span className="font-label-md text-on-surface-variant text-xs flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">inventory</span>
+                            Kho: {item.stock}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Price & Action */}
+                    <div className="flex flex-col items-end justify-center shrink-0 pl-2">
+                      <span className="font-label-md font-bold text-primary text-base">
+                        {item.price ? item.price.toLocaleString("vi-VN") : 0}đ
+                      </span>
+                      
+                      <div className={`mt-2 w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
+                        isSelected ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant group-hover:bg-primary group-hover:text-on-primary"
+                      }`}>
+                        <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: isSelected ? "'FILL' 1" : "'FILL' 0" }}>
+                          {isSelected ? "check" : "add"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {filteredByCategory.length === 0 && (
+              <div className="w-full text-center py-20 text-on-surface-variant flex flex-col items-center gap-4">
+                <span className="material-symbols-outlined text-6xl opacity-30">search_off</span>
+                <p className="font-body-md text-lg">Không tìm thấy kết quả nào phù hợp.</p>
+              </div>
+            )}
+          </>
         )}
+
+        {children}
       </div>
     </div>
   );

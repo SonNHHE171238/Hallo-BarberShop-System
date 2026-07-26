@@ -146,12 +146,23 @@ exports.resendUserOtp = async (email) => {
   }
 
   const plainOtp = generateOtp();
-  await setUserOtp(user, plainOtp);
+  const notify = await setUserOtp(user, plainOtp);
+  if (!notify.sent) {
+    const error = new Error('Could not send OTP email');
+    error.statusCode = 502;
+    throw error;
+  }
   return true;
 };
 
-exports.loginUser = async (email, password) => {
-  const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
+exports.loginUser = async (emailOrPhone, password) => {
+  const identifier = emailOrPhone.toLowerCase().trim();
+  const user = await User.findOne({ 
+    $or: [
+      { email: identifier },
+      { phone: identifier }
+    ]
+  }).select('+passwordHash');
 
   if (!user || user.status !== 'active') {
     const error = new Error('Email hoặc mật khẩu không chính xác.');

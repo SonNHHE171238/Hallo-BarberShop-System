@@ -7,6 +7,7 @@ const { authenticate, authorizeRoles } = require("../middlewares/auth.middleware
 // Route API
 router.get("/testimonials", feedbackController.getTestimonials);
 router.get("/lookup/:phone", feedbackController.lookupByPhone);
+router.get("/barber/:barberId", feedbackController.getBarberFeedbacks);
 router.post("/", feedbackController.createFeedback);
 
 // Admin routes

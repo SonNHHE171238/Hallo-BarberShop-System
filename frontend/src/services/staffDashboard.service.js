@@ -48,5 +48,12 @@ export const staffDashboardService = {
 
   searchCustomerByPhone: async (phone) => {
     return await fetchWithAuth(`/staff/customers/search?phone=${encodeURIComponent(phone)}`);
+  },
+
+  quickRegisterCustomer: async (payload) => {
+    return await fetchWithAuth('/staff/customers/quick-register', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   }
 };

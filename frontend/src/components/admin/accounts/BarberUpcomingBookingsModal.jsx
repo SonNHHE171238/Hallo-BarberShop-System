@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { adminBarberService } from '@/services/admin.service';
 import { fetchWithAuth } from '@/services/api';

@@ -87,7 +87,12 @@ noShowSchema.statics.getCustomerNoShowCount = async function(customerId) {
     if (!customerId) return 0;
     return await this.countDocuments({
         customerId,
-        isExcused: false // Only count non-excused no-shows
+        isExcused: false,
+        $or: [
+            { reason: 'no_show' },
+            { reason: 'late_cancellation' },
+            { isWithinPolicy: false }
+        ]
     });
 };
 
@@ -96,7 +101,12 @@ noShowSchema.statics.getNoShowCountByPhone = async function(customerPhone) {
     if (!customerPhone) return 0;
     return await this.countDocuments({
         customerPhone,
-        isExcused: false // Only count non-excused no-shows
+        isExcused: false,
+        $or: [
+            { reason: 'no_show' },
+            { reason: 'late_cancellation' },
+            { isWithinPolicy: false }
+        ]
     });
 };
 

@@ -171,7 +171,7 @@ function CheckoutPageContent() {
 
   // Update customAddress and formData when address parts change
   useEffect(() => {
-    if (streetAddress || selectedWard || selectedDistrict || selectedProvince) {
+    if (user && (streetAddress || selectedWard || selectedDistrict || selectedProvince)) {
       const fullAddr = [
         streetAddress,
         selectedWard,
@@ -183,7 +183,7 @@ function CheckoutPageContent() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustomAddress(fullAddr);
     }
-  }, [streetAddress, selectedWard, selectedDistrict, selectedProvince]);
+  }, [streetAddress, selectedWard, selectedDistrict, selectedProvince, user]);
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -558,7 +558,7 @@ function CheckoutPageContent() {
                       <label className="font-label-md text-label-md text-on-surface-variant block">
                         ĐỊA CHỈ NHẬN HÀNG
                       </label>
-                      {!isAddingNewAddress && (
+                      {user && !isAddingNewAddress && (
                         <button
                           type="button"
                           onClick={() => setIsAddingNewAddress(true)}
@@ -572,7 +572,7 @@ function CheckoutPageContent() {
                       )}
                     </div>
 
-                    {!isAddingNewAddress && (
+                    {user && !isAddingNewAddress && (
                       <select
                         name="addressSelect"
                         value={
@@ -606,128 +606,141 @@ function CheckoutPageContent() {
                       </select>
                     )}
 
-                    {isAddingNewAddress && (
+                    {(!user || isAddingNewAddress) && (
                       <div className="space-y-3 p-4 bg-surface-container-lowest border border-outline-variant rounded-lg">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <select
-                            value={selectedProvince}
-                            onChange={(e) =>
-                              setSelectedProvince(e.target.value)
-                            }
-                            className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary"
-                          >
-                            <option value="" className="text-black bg-white">
-                              Tỉnh/Thành phố
-                            </option>
-                            {provinces.map((p) => (
-                              <option
-                                key={p.code}
-                                value={p.name}
-                                className="text-black bg-white"
+                        {user ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <select
+                                value={selectedProvince}
+                                onChange={(e) =>
+                                  setSelectedProvince(e.target.value)
+                                }
+                                className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary"
                               >
-                                {p.name}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            value={selectedDistrict}
-                            onChange={(e) =>
-                              setSelectedDistrict(e.target.value)
-                            }
-                            disabled={!selectedProvince}
-                            className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
-                          >
-                            <option value="" className="text-black bg-white">
-                              Quận/Huyện
-                            </option>
-                            {districts.map((d) => (
-                              <option
-                                key={d.code}
-                                value={d.name}
-                                className="text-black bg-white"
+                                <option value="" className="text-black bg-white">
+                                  Tỉnh/Thành phố
+                                </option>
+                                {provinces.map((p) => (
+                                  <option
+                                    key={p.code}
+                                    value={p.name}
+                                    className="text-black bg-white"
+                                  >
+                                    {p.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                value={selectedDistrict}
+                                onChange={(e) =>
+                                  setSelectedDistrict(e.target.value)
+                                }
+                                disabled={!selectedProvince}
+                                className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
                               >
-                                {d.name}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            value={selectedWard}
-                            onChange={(e) => setSelectedWard(e.target.value)}
-                            disabled={!selectedDistrict}
-                            className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
-                          >
-                            <option value="" className="text-black bg-white">
-                              Phường/Xã
-                            </option>
-                            {wards.map((w) => (
-                              <option
-                                key={w.code}
-                                value={w.name}
-                                className="text-black bg-white"
+                                <option value="" className="text-black bg-white">
+                                  Quận/Huyện
+                                </option>
+                                {districts.map((d) => (
+                                  <option
+                                    key={d.code}
+                                    value={d.name}
+                                    className="text-black bg-white"
+                                  >
+                                    {d.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                value={selectedWard}
+                                onChange={(e) => setSelectedWard(e.target.value)}
+                                disabled={!selectedDistrict}
+                                className="w-full bg-transparent border border-outline-variant px-3 py-2 rounded text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
                               >
-                                {w.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="Số nhà, tên đường, tòa nhà..."
-                          value={streetAddress}
-                          onChange={(e) => setStreetAddress(e.target.value)}
-                          className="w-full bg-transparent border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary"
-                        />
-                        <div className="flex justify-end gap-3 mt-4">
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingNewAddress(false)}
-                            className="px-4 py-2 border border-outline-variant rounded hover:bg-surface-container-highest transition-all text-sm font-medium"
-                          >
-                            Hủy
-                          </button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (!customAddress) return;
-                              if (
-                                user &&
-                                !userAddresses.includes(customAddress)
-                              ) {
-                                try {
-                                  const res = await axios.put(
-                                    "http://localhost:5000/api/auth/profile",
-                                    { newAddress: customAddress },
-                                    { withCredentials: true },
-                                  );
-                                  if (res.data.success) {
-                                    setUserAddresses(
-                                      res.data.data.user.addresses,
-                                    );
+                                <option value="" className="text-black bg-white">
+                                  Phường/Xã
+                                </option>
+                                {wards.map((w) => (
+                                  <option
+                                    key={w.code}
+                                    value={w.name}
+                                    className="text-black bg-white"
+                                  >
+                                    {w.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Số nhà, tên đường, tòa nhà..."
+                              value={streetAddress}
+                              onChange={(e) => setStreetAddress(e.target.value)}
+                              className="w-full bg-transparent border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+                            />
+                            <div className="flex justify-end gap-3 mt-4">
+                              <button
+                                type="button"
+                                onClick={() => setIsAddingNewAddress(false)}
+                                className="px-4 py-2 border border-outline-variant rounded hover:bg-surface-container-highest transition-all text-sm font-medium"
+                              >
+                                Hủy
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!customAddress) return;
+                                  if (
+                                    user &&
+                                    !userAddresses.includes(customAddress)
+                                  ) {
+                                    try {
+                                      const res = await axios.put(
+                                        "http://localhost:5000/api/auth/profile",
+                                        { newAddress: customAddress },
+                                        { withCredentials: true },
+                                      );
+                                      if (res.data.success) {
+                                        setUserAddresses(
+                                          res.data.data.user.addresses,
+                                        );
+                                        setFormData({
+                                          ...formData,
+                                          address: customAddress,
+                                        });
+                                        setIsAddingNewAddress(false);
+                                      }
+                                    } catch (error) {
+                                      console.error(
+                                        "Lỗi khi lưu địa chỉ mới:",
+                                        error,
+                                      );
+                                    }
+                                  } else {
                                     setFormData({
                                       ...formData,
                                       address: customAddress,
                                     });
                                     setIsAddingNewAddress(false);
                                   }
-                                } catch (error) {
-                                  console.error(
-                                    "Lỗi khi lưu địa chỉ mới:",
-                                    error,
-                                  );
-                                }
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  address: customAddress,
-                                });
-                                setIsAddingNewAddress(false);
-                              }
-                            }}
-                            className="bg-primary text-on-primary px-4 py-2 rounded hover:bg-primary-fixed-dim transition-all text-sm font-medium"
-                          >
-                            Lưu địa chỉ
-                          </button>
-                        </div>
+                                }}
+                                className="bg-primary text-on-primary px-4 py-2 rounded hover:bg-primary-fixed-dim transition-all text-sm font-medium"
+                              >
+                                Lưu địa chỉ
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <input
+                            type="text"
+                            name="address"
+                            placeholder="Nhập địa chỉ giao hàng của bạn (Số nhà, đường, phường/xã, tỉnh/thành phố)..."
+                            value={formData.address}
+                            onChange={handleInputChange}
+                            className="w-full bg-transparent border border-outline-variant px-4 py-3 rounded text-on-surface placeholder:text-outline transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+                          />
+                        )}
                       </div>
                     )}
                   </div>

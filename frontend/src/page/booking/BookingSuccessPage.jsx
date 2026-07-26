@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 function BookingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const bookingId = searchParams.get("id");
+  const bookingId = searchParams.get("bookingId") || searchParams.get("id") || searchParams.get("orderCode");
   const phone = searchParams.get("phone");
   const { user } = useAuth();
   
@@ -29,14 +29,24 @@ function BookingSuccessContent() {
     if (isCancelled) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setPaymentStatus("cancelled");
+      // Ghi nhận huỷ thanh toán
+      const fetchCancel = async () => {
+        try {
+          const { fetchWithAuth } = await import("@/services/api");
+          await fetchWithAuth(`/bookings/${bookingId}/payment-cancelled`, { method: "PUT" });
+        } catch (error) {
+          console.error("Failed to cancel payment", error);
+        }
+      };
+      fetchCancel();
     } else if (payosStatus === "PAID") {
       // Nếu là khách vãng lai (!user) thì thanh toán PayOS tức là đã cọc 50%
       setPaymentStatus(!user ? "partial_paid" : "paid");
     }
 
     setBooking({
-      id: searchParams.get("id")?.slice(-8).toUpperCase() || "HB-8829-X",
-      fullId: searchParams.get("id"),
+      id: bookingId?.slice(-8).toUpperCase() || "HB-8829-X",
+      fullId: bookingId,
       serviceName: searchParams.get("service") || "Combo Di Sản",
       price: searchParams.get("price") || "850000",
       barberName: searchParams.get("barber") || "Hoàng Anh",

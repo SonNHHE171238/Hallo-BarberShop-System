@@ -17,5 +17,6 @@ router.delete('/bookings/:id/remove-item', staffController.removeItemFromBooking
 router.get('/bookings/:id', staffController.getBookingById);
 router.get('/appointments', staffController.getAppointments);
 router.get('/customers/search', staffController.searchCustomerByPhone);
+router.post('/customers/quick-register', staffController.quickRegisterCustomer);
 
 module.exports = router;

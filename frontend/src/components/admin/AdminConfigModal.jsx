@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
 
 export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
   const [activeTab, setActiveTab] = useState('categories'); // 'categories' or 'brands'
@@ -16,6 +17,7 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
   const [isEditing, setIsEditing] = useState(null);
   const [formData, setFormData] = useState({ name: '', description: '', logoUrl: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, id: null, name: '' });
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -106,8 +108,14 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa "${name}"?`)) return;
+  const handleDeleteInit = (id, name) => {
+    setDeleteModalState({ isOpen: true, id, name });
+  };
+
+  const handleDeleteConfirm = async () => {
+    const { id } = deleteModalState;
+    if (!id) return;
+    setDeleteModalState({ isOpen: false, id: null, name: '' });
 
     try {
       const url = activeTab === 'categories' 
@@ -295,7 +303,7 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
                             <td className="py-3 px-3 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <button onClick={() => handleEdit(cat)} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-[18px]">edit</span></button>
-                                <button onClick={() => handleDelete(cat._id, cat.name)} className="p-1.5 text-on-surface-variant hover:text-error transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span></button>
+                                <button onClick={() => handleDeleteInit(cat._id, cat.name)} className="p-1.5 text-on-surface-variant hover:text-error transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                               </div>
                             </td>
                           </tr>
@@ -321,7 +329,7 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
                             <td className="py-3 px-3 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <button onClick={() => handleEdit(brand)} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-[18px]">edit</span></button>
-                                <button onClick={() => handleDelete(brand._id, brand.name)} className="p-1.5 text-on-surface-variant hover:text-error transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span></button>
+                                <button onClick={() => handleDeleteInit(brand._id, brand.name)} className="p-1.5 text-on-surface-variant hover:text-error transition-colors"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                               </div>
                             </td>
                           </tr>
@@ -336,6 +344,16 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
         </div>
 
       </div>
+      
+      <GenericConfirmModal 
+        isOpen={deleteModalState.isOpen}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc muốn xóa "${deleteModalState.name}"?`}
+        onCancel={() => setDeleteModalState({ isOpen: false, id: null, name: '' })}
+        onConfirm={handleDeleteConfirm}
+        confirmText="Xóa"
+        isDanger={true}
+      />
     </div>
   );
 }

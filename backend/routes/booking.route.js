@@ -59,6 +59,7 @@ router.put('/:bookingId/assign-barber', authenticate, authorizeRoles('admin', 's
 // Booking status management
 router.put('/:bookingId/status', authenticate, checkBookingUpdatePermission, bookingUpdateController.updateBookingStatus);
 router.put('/:bookingId/cancel', authenticate, bookingUpdateController.cancelBooking);
+router.put('/:bookingId/payment-cancelled', bookingUpdateController.handlePaymentCancelled);
 router.put('/:bookingId/reschedule', authenticate, customerBookingController.rescheduleBooking);
 router.put('/:bookingId', authenticate, checkBookingUpdatePermission, bookingUpdateController.updateBookingDetails);
 

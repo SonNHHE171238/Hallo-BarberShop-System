@@ -191,7 +191,7 @@ const staffController = {
         throw error;
       }
       const User = require('../models/user.model');
-      const customer = await User.findOne({ phone: phone, role: 'customer' }).select('name phone email loyaltyPoints');
+      const customer = await User.findOne({ phone: phone, role: 'customer' }).select('name phone email loyaltyPoints role');
       
       if (!customer) {
         return res.status(200).json({
@@ -238,6 +238,51 @@ const staffController = {
         message: 'Đã xoá thành công'
       });
     } catch (error) {
+      next(error);
+    }
+  },
+
+  quickRegisterCustomer: async (req, res, next) => {
+    try {
+      const { name, phone, email, note } = req.body;
+      if (!name || !phone) {
+        return res.status(400).json({ success: false, message: 'Tên và số điện thoại là bắt buộc' });
+      }
+      
+      const User = require('../models/user.model');
+      
+      // Check if phone already exists
+      const existingUser = await User.findOne({ phone });
+      if (existingUser) {
+        return res.status(400).json({ success: false, message: 'Số điện thoại này đã được đăng ký trên hệ thống' });
+      }
+      
+      const newUser = new User({
+        name,
+        phone,
+        role: 'customer'
+      });
+      
+      if (email) {
+        newUser.email = email;
+      }
+      
+      await newUser.save();
+      
+      return res.status(201).json({
+        success: true,
+        message: 'Ghi nhận thông tin khách vãng lai thành công',
+        data: {
+          _id: newUser._id,
+          name: newUser.name,
+          phone: newUser.phone,
+          role: newUser.role
+        }
+      });
+    } catch (error) {
+      if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
+         return res.status(400).json({ success: false, message: 'Email đã tồn tại trong hệ thống' });
+      }
       next(error);
     }
   }

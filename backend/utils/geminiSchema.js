@@ -5,11 +5,10 @@ QUY TẮC PHÂN TÍCH:
 1. Chỉ phân tích đặc điểm hình học phục vụ tư vấn tóc: dáng mặt (trán, xương hàm, gò má), đặc điểm tóc hiện tại (độ dày, chất tóc quan sát được).
 2. KHÔNG định danh người trong ảnh, KHÔNG phân tích hay suy đoán các thông tin nhạy cảm (tuổi, dân tộc, sức khỏe).
 3. TẤT CẢ CÁC TRƯỜNG DỮ LIỆU TEXT TRẢ VỀ BÊN TRONG JSON (như description, whyItFits, barberInstruction, overallAdvice, reason...) BẮT BUỘC PHẢI VIẾT BẰNG TIẾNG VIỆT tự nhiên, thân thiện và chuyên nghiệp.
-4. Riêng trường \`previewPrompt\` BẮT BUỘC viết bằng tiếng Anh.
 
 QUY TẮC ĐỀ XUẤT KIỂU TÓC:
 1. Gợi ý các kiểu tóc nam thực tế, phổ biến và phù hợp với thị hiếu tại Việt Nam (ví dụ: Undercut, Short Quiff, Textured Crop, Side Part, Buzz Cut...).
-2. Bắt buộc tạo một \`previewPrompt\` BẰNG TIẾNG ANH (tối đa 40 từ) cho mỗi kiểu đề xuất. Prompt này dùng để đưa vào hệ thống sinh ảnh AI. Hãy miêu tả tập trung vào: "[face shape] man face, [styleName] haircut, realistic, high quality portrait, natural lighting, looking at camera".
+2. Bắt buộc chọn một \`hair_type\` (Mã kiểu tóc) TƯƠNG ỨNG với đề xuất để gọi API ghép tóc. HÃY CHỌN 1 MÃ SỐ TRONG DANH SÁCH SAU (Ví dụ: 1, 2, 3... Tùy thuộc vào kiểu tóc bạn gợi ý). Hiện tại cứ chọn số từ 1 đến 10.
 3. TRONG TRƯỜNG \`suggestedServiceNames\`, BẠN CHỈ ĐƯỢC PHÉP CHỌN CÁC TÊN DỊCH VỤ SAU ĐÂY (chọn chính xác từng chữ):
 ["Cắt tóc", "Cắt, xả, sấy, tạo kiểu Pomade Heart & Hands", "Cạo râu full", "Xả tóc", "Cạo mặt", "Lấy ráy tai", "Tỉa lông mày", "Tattoo 1 bên đầu", "Tattoo cả đầu", "Tạo kiểu tóc", "Nhuộm tóc", "Nhuộm cơ bản", "Nhuộm thời trang", "Tẩy tóc", "Uốn tóc", "Uốn xoăn", "Uốn con sâu", "Uốn Premlock", "Ép tóc"]
 
@@ -33,10 +32,10 @@ const responseSchema = {
           whyItFits: { type: "STRING" },
           barberInstruction: { type: "STRING" },
           relatedServices: { type: "ARRAY", items: { type: "STRING" } },
-          previewPrompt: { type: "STRING" },
+          hair_type: { type: "NUMBER" },
           priority: { type: "NUMBER" }
         },
-        required: ["styleName", "description", "whyItFits", "barberInstruction", "previewPrompt", "priority"]
+        required: ["styleName", "description", "whyItFits", "barberInstruction", "hair_type", "priority"]
       }
     },
     avoidStyles: {
