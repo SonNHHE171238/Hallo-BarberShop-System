@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 function BookingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const bookingId = searchParams.get("id");
+  const bookingId = searchParams.get("bookingId") || searchParams.get("id");
   const phone = searchParams.get("phone");
   const { user } = useAuth();
   
@@ -34,8 +34,8 @@ function BookingSuccessContent() {
     }
 
     setBooking({
-      id: searchParams.get("id")?.slice(-8).toUpperCase() || "HB-8829-X",
-      fullId: searchParams.get("id"),
+      id: (searchParams.get("bookingId") || searchParams.get("id"))?.slice(-8).toUpperCase() || "HB-8829-X",
+      fullId: searchParams.get("bookingId") || searchParams.get("id"),
       serviceName: searchParams.get("service") || "Combo Di Sản",
       price: searchParams.get("price") || "850000",
       barberName: searchParams.get("barber") || "Hoàng Anh",

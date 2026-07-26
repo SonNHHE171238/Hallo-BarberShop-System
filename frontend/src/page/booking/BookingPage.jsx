@@ -121,7 +121,7 @@ function BookingPageContent() {
       const dateStr = dateObj.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
       
       const queryParams = new URLSearchParams({
-        id: bookingId,
+        bookingId: bookingId,
         service: selectedServices.map(s => s.name).join(', '),
         price: selectedServices.reduce((total, s) => total + (s.price || 0), 0),
         barber: selectedBarber ? selectedBarber.name : "Barber Auto",

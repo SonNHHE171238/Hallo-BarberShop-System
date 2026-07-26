@@ -4,6 +4,7 @@ const BarberSchedule = require("../models/barber-schedule.model");
 const BarberAbsence = require("../models/barber-absence.model");
 const CustomerServiceHistory = require("../models/customer-service-history.model");
 const NoShow = require("../models/no-show.model");
+const User = require("../models/user.model");
 const {
   validateBookingConfirmation,
   validateBookingStatusUpdate,
