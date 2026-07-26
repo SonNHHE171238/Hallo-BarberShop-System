@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { systemPrompt: aiAdvicePrompt, responseSchema: adviceSchema } = require('../utils/geminiSchema');
 const { tools, geminiTools } = require('./chatbotTools.service');
+const Service = require('../models/service.model');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -222,13 +223,63 @@ const handleHairstyleAdvice = async (message, imageBase64, mimeType) => {
     throw new Error("Lỗi phân tích hình ảnh từ AI.");
   }
 
-  // 1. Tạo Pollinations Image URL từ previewPrompt đầu tiên
+  // 1. Tạo ảnh từ Hairstyle Changer Pro trên RapidAPI
   let previewImageUrl = null;
   if (adviceData.recommendedStyles && adviceData.recommendedStyles.length > 0) {
-    const previewPrompt = adviceData.recommendedStyles[0].previewPrompt;
-    if (previewPrompt) {
-      const encodedPrompt = encodeURIComponent(previewPrompt);
-      previewImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true`;
+    const hairType = adviceData.recommendedStyles[0].hair_type || 1; 
+
+    try {
+      // BƯỚC 1: CREATE TASK
+      const createTaskResponse = await fetch(`https://${process.env.RAPIDAPI_HOST}/facebody/editing/hairstyle-pro`, {
+        method: 'POST',
+        headers: {
+          'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+          'x-rapidapi-host': process.env.RAPIDAPI_HOST,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          task_type: 'async',
+          image: `data:${mimeType};base64,${imageBase64}`,
+          hair_style: hairType.toString()
+        })
+      });
+
+      const taskData = await createTaskResponse.json();
+      const taskId = taskData.task_id || (taskData.data && taskData.data.task_id);
+
+      if (taskId) {
+        // BƯỚC 2: POLLING kết quả
+        let isDone = false;
+        let attempts = 0;
+        
+        while (!isDone && attempts < 15) { // Thử tối đa 15 lần (~45 giây)
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 3000)); // Nghỉ 3 giây
+          
+          const resultResponse = await fetch(`https://${process.env.RAPIDAPI_HOST}/api/rapidapi/query-async-task-result?task_id=${taskId}`, {
+            method: 'GET',
+            headers: {
+              'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+              'x-rapidapi-host': process.env.RAPIDAPI_HOST,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const resultData = await resultResponse.json();
+          // Kiểm tra trạng thái. Giả định status == 2 hoặc 'success' là thành công, 3 hoặc 'failed' là thất bại.
+          if (resultData.task_status === 2 || resultData.task_status === 'success') {
+             previewImageUrl = resultData.data?.image_url;
+             isDone = true;
+          } else if (resultData.task_status === 3 || resultData.task_status === 'failed') {
+             console.error("API Hairstyle Changer báo lỗi xử lý ảnh.");
+             isDone = true;
+          }
+        }
+      } else {
+        console.error("Không nhận được task_id từ RapidAPI:", taskData);
+      }
+    } catch (e) {
+      console.error("Lỗi khi gọi RapidAPI Hairstyle Changer:", e);
     }
   }
 
@@ -248,7 +299,7 @@ const handleHairstyleAdvice = async (message, imageBase64, mimeType) => {
     previewImageUrl: previewImageUrl,
     provider: {
       analysis: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
-      imagePreview: "pollinations"
+      imagePreview: "Hairstyle Changer Pro"
     }
   };
 };

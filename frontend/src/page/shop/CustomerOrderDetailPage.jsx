@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, useMemo, Suspense } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -24,6 +24,21 @@ function OrderDetailContent({ orderCode }) {
   const [reviewedProducts, setReviewedProducts] = useState([]);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReasonId, setCancelReasonId] = useState("");
+  const [otherReason, setOtherReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const CANCEL_REASONS = [
+    { id: 'wrong_item', label: 'Đặt sai sản phẩm', reorder: true },
+    { id: 'wrong_quantity', label: 'Đặt sai số lượng', reorder: true },
+    { id: 'forgot_voucher', label: 'Muốn thêm mã giảm giá', reorder: true },
+    { id: 'changed_mind', label: 'Không thích sản phẩm này nữa', reorder: false },
+    { id: 'better_price', label: 'Tôi tìm thấy bên khác bán giá tốt hơn', reorder: false },
+    { id: 'complex_payment', label: 'Thủ tục thanh toán rắc rối', reorder: false },
+    { id: 'other', label: 'Lý do khác', reorder: false },
+  ];
+
   const fetchOrder = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/api/orders/track/${orderCode}`);
@@ -39,6 +54,7 @@ function OrderDetailContent({ orderCode }) {
 
   useEffect(() => {
     if (orderCode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchOrder();
     }
   }, [orderCode]);
@@ -56,6 +72,7 @@ function OrderDetailContent({ orderCode }) {
 
   useEffect(() => {
     if (order?.status === 'completed') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchReviewedProducts();
     }
   }, [order?.status, orderCode]);
@@ -94,7 +111,81 @@ function OrderDetailContent({ orderCode }) {
     }
   };
 
+  const confirmCancel = async () => {
+    let finalReasonText = "";
+    let isReorder = false;
+
+    if (cancelReasonId) {
+      const selectedReason = CANCEL_REASONS.find(r => r.id === cancelReasonId);
+      finalReasonText = selectedReason.label;
+      isReorder = selectedReason.reorder;
+      
+      if (cancelReasonId === 'other') {
+        if (!otherReason.trim()) return;
+        finalReasonText = otherReason.trim();
+      }
+    }
+
+    setIsCancelling(true);
+    try {
+      const res = await axios.put(`http://localhost:5000/api/orders/track/${orderCode}/cancel`, {
+        cancelReason: finalReasonText
+      });
+      if (res.data.success) {
+        if (isReorder && order.items && order.items.length > 0) {
+           // Khôi phục giỏ hàng
+           const isGuest = !order.userId;
+           if (isGuest) {
+             const localCart = JSON.parse(localStorage.getItem('hallo_cart') || '[]');
+             order.items.forEach(item => {
+                const existing = localCart.find(c => (c.productId._id || c.productId) === item.productId._id);
+                if (existing) {
+                   existing.quantity += item.quantity;
+                } else {
+                   localCart.push({ productId: item.productId._id, quantity: item.quantity });
+                }
+             });
+             localStorage.setItem('hallo_cart', JSON.stringify(localCart));
+             router.push('/shop/cart');
+             return;
+           } else {
+             // Dành cho user đăng nhập
+             await Promise.all(order.items.map(item => 
+                axios.post('http://localhost:5000/api/cart', {
+                   productId: item.productId._id,
+                   quantity: item.quantity
+                }, { withCredentials: true }).catch(e => console.error("Lỗi thêm vào giỏ", e))
+             ));
+             router.push('/shop/cart');
+             return;
+           }
+        }
+        
+        setOrder(res.data.data);
+        setIsCancelModalOpen(false);
+        setCancelReasonId("");
+        setOtherReason("");
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Không thể huỷ đơn hàng. Vui lòng thử lại sau.");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   // Đã bỏ hiệu ứng hover theo yêu cầu
+
+  // Calculate review eligibility - must be before early returns to comply with rules-of-hooks
+  const completedLog = order?.historyLog?.find(log => log.action === 'Đơn hàng giao dịch thành công') || order?.historyLog?.[order?.historyLog?.length - 1];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const isReviewExpired = useMemo(() => {
+    const base = completedLog?.timestamp || order?.updatedAt || order?.createdAt;
+    const completedDate = base ? new Date(base) : new Date(0);
+    const diffTime = Math.abs(Date.now() - completedDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 7;
+  }, [completedLog, order?.updatedAt, order?.createdAt]);
 
   if (loading) {
     return (
@@ -144,13 +235,7 @@ function OrderDetailContent({ orderCode }) {
     'cancelled': { label: 'Đã hủy', color: 'bg-error text-on-error' },
   };
 
-  // Calculate review eligibility
-  const completedLog = order?.historyLog?.find(log => log.action === 'Đơn hàng giao dịch thành công') || order?.historyLog?.[order?.historyLog?.length - 1];
-  const completedDate = completedLog ? new Date(completedLog.timestamp) : new Date(order?.updatedAt || order?.createdAt || Date.now());
-  const diffTime = Math.abs(new Date() - completedDate);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  const isReviewExpired = diffDays > 7;
-  
+  // Calculate eligible products (isReviewExpired already computed above)
   const eligibleProductsToReview = order?.status === 'completed' && !isReviewExpired
     ? order.items.filter(item => item.productId && !reviewedProducts.includes(item.productId._id)).map(i => i.productId)
     : [];
@@ -202,6 +287,16 @@ function OrderDetailContent({ orderCode }) {
                 <span className="font-label-md text-label-md text-primary tracking-tighter">#{order.orderCode}</span>
               </div>
               <p className="text-on-surface-variant text-sm">Ngày đặt: {formatDate(order.createdAt)}</p>
+              
+              {['pending', 'processing'].includes(order.status) && (
+                <button
+                  onClick={() => setIsCancelModalOpen(true)}
+                  className="bg-error/10 text-error border border-error/40 px-4 py-2 mt-2 font-label-md text-[11px] uppercase tracking-widest hover:bg-error hover:text-white transition-all shadow-md rounded active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[16px]">cancel</span>
+                  YÊU CẦU HUỶ ĐƠN
+                </button>
+              )}
             </div>
           </div>
 
@@ -478,7 +573,9 @@ function OrderDetailContent({ orderCode }) {
                   <span className="material-symbols-outlined text-3xl">support_agent</span>
                   <span className="font-headline-sm text-headline-sm font-bold">0329 888 777</span>
                 </div>
-                <button className="w-full sm:w-auto border border-primary text-primary px-8 py-3 font-bold tracking-widest text-sm hover:bg-primary/5 transition-all flex items-center justify-center gap-2 rounded whitespace-nowrap">
+                <button 
+                  onClick={() => window.dispatchEvent(new Event('open-chatbot'))}
+                  className="w-full sm:w-auto border border-primary text-primary px-8 py-3 font-bold tracking-widest text-sm hover:bg-primary/5 transition-all flex items-center justify-center gap-2 rounded whitespace-nowrap">
                   <span className="material-symbols-outlined text-lg">chat_bubble</span>
                   LIÊN HỆ NGAY
                 </button>
@@ -499,6 +596,88 @@ function OrderDetailContent({ orderCode }) {
            setReviewedProducts(prev => [...prev, productId]);
         }}
       />
+
+      {/* ====== CANCEL REASON MODAL ====== */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={() => setIsCancelModalOpen(false)}></div>
+          <div className="relative bg-surface-container border border-error/30 max-w-lg w-full p-8 shadow-2xl rounded-xl">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-error/10 border border-error/30 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-error text-2xl">cancel</span>
+              </div>
+              <div>
+                <h3 className="font-headline-md text-xl text-error">Xác nhận huỷ đơn hàng</h3>
+                <p className="text-[12px] text-outline mt-1">Đơn hàng #{order.orderCode} — Hành động này không thể hoàn tác.</p>
+              </div>
+              <button className="ml-auto text-outline hover:text-white transition-colors" onClick={() => setIsCancelModalOpen(false)}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="space-y-4 mb-6">
+              <label className="text-[12px] uppercase tracking-widest text-outline font-bold block mb-2">
+                Vui lòng chọn lý do huỷ <span className="text-outline font-normal lowercase">(không bắt buộc)</span>
+              </label>
+              
+              <div className="space-y-3">
+                {CANCEL_REASONS.map(reason => (
+                  <label key={reason.id} className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center mt-0.5">
+                      <input 
+                        type="radio" 
+                        name="cancelReason" 
+                        value={reason.id}
+                        checked={cancelReasonId === reason.id}
+                        onChange={() => setCancelReasonId(reason.id)}
+                        className="peer appearance-none w-4 h-4 border border-outline-variant rounded-full checked:border-primary checked:border-4 transition-all"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={`text-[14px] ${cancelReasonId === reason.id ? 'text-primary font-bold' : 'text-on-surface group-hover:text-primary transition-colors'}`}>
+                        {reason.label}
+                      </span>
+                      {reason.reorder && (
+                        <span className="text-[11px] text-success italic mt-0.5">Cho phép đặt lại đơn (Tự động thêm hàng vào giỏ)</span>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {cancelReasonId === 'other' && (
+                <textarea
+                  value={otherReason}
+                  onChange={(e) => setOtherReason(e.target.value)}
+                  className="w-full bg-black/40 border border-error/20 focus:border-error/60 focus:ring-0 p-4 text-[14px] text-on-surface min-h-[100px] placeholder:text-outline/40 outline-none rounded transition-all resize-none mt-4 animate-in fade-in"
+                  placeholder="Vui lòng nhập lý do cụ thể của bạn..."
+                  autoFocus
+                />
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
+              <button
+                onClick={() => setIsCancelModalOpen(false)}
+                className="px-6 py-2.5 text-[12px] font-label-md uppercase tracking-widest text-outline hover:text-white transition-colors rounded border border-white/10 hover:border-white/30"
+              >
+                Không huỷ
+              </button>
+              <button
+                onClick={confirmCancel}
+                disabled={(cancelReasonId === 'other' && !otherReason.trim()) || isCancelling}
+                className="bg-error text-white px-8 py-2.5 text-[12px] font-label-md font-bold uppercase tracking-widest rounded hover:bg-error/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-lg shadow-error/20"
+              >
+                {isCancelling && <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>}
+                {CANCEL_REASONS.find(r => r.id === cancelReasonId)?.reorder ? 'HUỶ & ĐẶT LẠI' : 'XÁC NHẬN HUỶ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

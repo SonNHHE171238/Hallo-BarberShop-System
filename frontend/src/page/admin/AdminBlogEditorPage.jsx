@@ -10,7 +10,7 @@ export default function AdminBlogEditorPage({ isEdit = false, blogId = null }) {
   const router = useRouter();
   const pathname = usePathname();
   const basePath = pathname?.startsWith('/staff') ? '/staff/blogs' : '/admin/blogs';
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   
   const [formData, setFormData] = useState({
     title: "",
@@ -26,6 +26,8 @@ export default function AdminBlogEditorPage({ isEdit = false, blogId = null }) {
 
   // Fetch data if editing
   useEffect(() => {
+    if (isAuthLoading) return;
+    
     if (isEdit && blogId) {
       const fetchBlog = async () => {
         try {
@@ -67,7 +69,7 @@ export default function AdminBlogEditorPage({ isEdit = false, blogId = null }) {
       };
       fetchBlog();
     }
-  }, [isEdit, blogId, router, user, basePath]);
+  }, [isEdit, blogId, router, user, basePath, isAuthLoading]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

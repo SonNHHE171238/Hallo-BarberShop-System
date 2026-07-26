@@ -17,6 +17,7 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
 
   React.useEffect(() => {
     if (initialPhone) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustomerPhone(initialPhone);
       setStep(2);
       setPreCheckInfo({ noShowCount: 0, requiresDeposit: false, isBanned: false });
@@ -55,6 +56,8 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
       setErrors({ phone: "Số điện thoại không hợp lệ (VD: 0912345678)." });
       return;
     }
+
+     
 
     setErrors({});
     setIsChecking(true);
@@ -160,17 +163,7 @@ export default function GuestBookingModal({ isOpen, onClose, onSubmit, selectedS
             </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {preCheckInfo?.requiresDeposit && (
-                <div className="bg-error/10 border border-error/20 p-4 rounded-lg mb-6">
-                  <p className="text-error font-bold mb-1 flex items-center gap-2">
-                    <span className="material-symbols-outlined">warning</span>
-                    Yêu cầu đặt cọc
-                  </p>
-                  <p className="text-on-surface-variant text-sm">
-                    Do bạn đã từng không đến {preCheckInfo.noShowCount} lần, hệ thống yêu cầu bạn đặt cọc {preCheckInfo.depositRatio * 100}% giá trị dịch vụ. Link thanh toán sẽ hiển thị sau khi bạn bấm Xác nhận.
-                  </p>
-                </div>
-              )}
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2 group">

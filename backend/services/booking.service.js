@@ -25,6 +25,8 @@ exports.processCreateBooking = async ({
   voucherCode,
   discountType = 'none',
   pointsToUse = 0,
+  skipTimeValidation = false,
+  status,
 }) => {
   // Normalize Date to prevent race conditions
   const requestedDateTime = new Date(bookingDate);
@@ -62,15 +64,17 @@ exports.processCreateBooking = async ({
   });
 
   // Time Buffer Validation (30 mins advance)
-  const now = new Date();
-  const minutesDifference =
-    (requestedDateTime.getTime() - now.getTime()) / (1000 * 60);
+  if (!skipTimeValidation) {
+    const now = new Date();
+    const minutesDifference =
+      (requestedDateTime.getTime() - now.getTime()) / (1000 * 60);
 
-  if (minutesDifference < 30) {
-    const error = new Error("Vui lòng đặt lịch trước ít nhất 30 phút");
-    error.statusCode = 400;
-    error.errorCode = "BOOKING_TOO_SOON";
-    throw error;
+    if (minutesDifference < 30) {
+      const error = new Error("Vui lòng đặt lịch trước ít nhất 30 phút");
+      error.statusCode = 400;
+      error.errorCode = "BOOKING_TOO_SOON";
+      throw error;
+    }
   }
 
   // No-show validation for User/Guest by Phone
@@ -265,6 +269,7 @@ exports.processCreateBooking = async ({
     voucherLockId,
     discountType: appliedDiscountType,
     pointsUsed,
+    status: status || 'pending',
   };
 
   // The default status from the schema is "pending".
@@ -480,6 +485,8 @@ exports.processCreateSinglePageBooking = async (data) => {
     voucherCode,
     discountType,
     pointsToUse,
+    skipTimeValidation,
+    status,
   } = data;
 
   const foundServices = await Service.find({ _id: { $in: services } });
@@ -520,6 +527,8 @@ exports.processCreateSinglePageBooking = async (data) => {
     voucherCode,
     discountType,
     pointsToUse,
+    skipTimeValidation,
+    status,
   });
 
   return { populatedBooking, shouldAutoAssign, noShowCount };

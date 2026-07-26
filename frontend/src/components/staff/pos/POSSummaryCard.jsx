@@ -11,6 +11,14 @@ export default function POSSummaryCard({
   selectItem,
   handlePrint,
   openTimeModalOrCheckout,
+  // Voucher Props
+  discountCodeInput,
+  setDiscountCodeInput,
+  appliedVoucher,
+  isApplyingVoucher,
+  handleApplyVoucher,
+  handleRemoveVoucher,
+  discountAmount,
   // Customer Props
   phoneInput,
   setPhoneInput,
@@ -19,7 +27,9 @@ export default function POSSummaryCard({
   customer,
   setCustomer,
   setShowNewCustomerForm,
-  normalizePhone
+  normalizePhone,
+  // Staff Modal Props
+  setShowStaffModal
 }) {
   return (
     <aside className="w-full lg:w-[450px] bg-surface-container/30 backdrop-blur-md border-l border-outline-variant/50 shrink-0 flex flex-col h-[100vh] sticky top-0 z-20">
@@ -140,12 +150,53 @@ export default function POSSummaryCard({
           
           {/* Display Barber in Summary */}
           {hasServices && (
-            <div className="mt-3 bg-tertiary-container/20 border border-tertiary/20 p-3 rounded-xl flex items-center justify-between">
+            <div 
+              onClick={() => setShowStaffModal && setShowStaffModal(true)}
+              className="mt-3 bg-tertiary-container/20 border border-tertiary/20 p-3 rounded-xl flex items-center justify-between cursor-pointer hover:bg-tertiary-container/40 transition-colors group"
+            >
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-tertiary">Barber phụ trách</span>
-                <span className="text-on-surface font-bold text-sm mt-0.5">{selectedStaff ? (selectedStaff.userId?.name || "Unknown Barber") : 'Chưa chọn!'}</span>
+                <span className="text-on-surface font-bold text-sm mt-0.5">{selectedStaff ? (selectedStaff.userId?.name || "Unknown Barber") : 'Chưa chọn! (Nhấn để chọn)'}</span>
               </div>
-              <span className="material-symbols-outlined text-tertiary opacity-50">content_cut</span>
+              <span className="material-symbols-outlined text-tertiary opacity-50 group-hover:opacity-100 transition-opacity">
+                {selectedStaff ? 'edit' : 'content_cut'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Discount Code Section */}
+        <div className="shrink-0 mb-4 bg-surface-container-low border border-outline-variant/30 rounded-xl p-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-outline-variant">Mã giảm giá</span>
+          </div>
+          {!appliedVoucher ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 bg-surface-container-high border border-outline-variant/50 rounded-lg p-2.5 text-sm uppercase text-on-surface focus:outline-none focus:border-primary"
+                placeholder="Nhập mã..."
+                value={discountCodeInput || ''}
+                onChange={(e) => setDiscountCodeInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === 'Enter' && handleApplyVoucher()}
+              />
+              <button
+                onClick={handleApplyVoucher}
+                disabled={isApplyingVoucher || !discountCodeInput?.trim() || selectedItems.length === 0}
+                className="px-4 bg-primary/10 text-primary hover:bg-primary hover:text-on-primary rounded-lg font-bold transition-colors disabled:opacity-50"
+              >
+                {isApplyingVoucher ? "..." : "Áp dụng"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center bg-green-500/10 border border-green-500/20 p-2.5 rounded-lg">
+              <div className="flex items-center gap-2 text-green-600">
+                <span className="material-symbols-outlined text-[18px]">sell</span>
+                <span className="font-bold text-sm uppercase">{appliedVoucher.code}</span>
+              </div>
+              <button onClick={handleRemoveVoucher} className="text-outline hover:text-error transition-colors">
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
             </div>
           )}
         </div>
@@ -156,8 +207,15 @@ export default function POSSummaryCard({
             <span>Tạm tính</span>
             <span className="font-label-md">{subTotal.toLocaleString('vi-VN')}đ</span>
           </div>
+          
+          {discountAmount > 0 && (
+            <div className="flex justify-between font-body-md text-green-600 text-sm">
+              <span>Giảm giá</span>
+              <span className="font-label-md">- {discountAmount.toLocaleString('vi-VN')}đ</span>
+            </div>
+          )}
 
-          <div className="flex justify-between font-headline-md text-2xl text-primary items-end">
+          <div className="flex justify-between font-headline-md text-2xl text-primary items-end pt-2 border-t border-outline-variant/20">
             <span className="text-base text-on-surface font-bold uppercase">Tổng</span>
             <span className="font-bold tracking-tight">{total.toLocaleString('vi-VN')}đ</span>
           </div>
@@ -170,10 +228,7 @@ export default function POSSummaryCard({
             disabled={selectedItems.length === 0 || !customer}
             className={`w-full py-4 rounded-xl font-label-md font-bold flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${hasServices ? 'bg-primary text-on-primary hover:brightness-110 shadow-primary/20' : 'bg-green-600 text-white hover:bg-green-500 shadow-green-600/20'}`}
           >
-            <span className="material-symbols-outlined text-[20px]">
-              {hasServices ? 'schedule' : 'point_of_sale'}
-            </span>
-            {hasServices ? 'CHỌN GIỜ & CHỐT ĐƠN' : 'THANH TOÁN NGAY'}
+            {hasServices ? 'XÁC NHẬN DỊCH VỤ' : 'THANH TOÁN NGAY'}
           </button>
           
           <button 

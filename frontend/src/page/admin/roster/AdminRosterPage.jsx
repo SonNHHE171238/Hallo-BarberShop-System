@@ -32,16 +32,24 @@ export default function AdminRosterPage() {
   const [activeCellSelector, setActiveCellSelector] = useState(null); // { dateStr, shiftType }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted) {
-      initPage();
+  const loadRosterDetails = React.useCallback(async (rosterId) => {
+    try {
+      const data = await rosterService.getRosterDetails(rosterId);
+      if (data && data.roster) {
+        setSelectedRoster(data.roster);
+        setRegistrations(data.registrations || []);
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: "error", text: "Không thể lấy thông tin chi tiết của lịch tuần." });
     }
-  }, [mounted]);
+  }, []);
 
-  const initPage = async () => {
+  const initPage = React.useCallback(async () => {
     setLoading(true);
     try {
       // 1. Fetch all rosters
@@ -103,20 +111,14 @@ export default function AdminRosterPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadRosterDetails]);
 
-  const loadRosterDetails = async (rosterId) => {
-    try {
-      const data = await rosterService.getRosterDetails(rosterId);
-      if (data && data.roster) {
-        setSelectedRoster(data.roster);
-        setRegistrations(data.registrations || []);
-      }
-    } catch (err) {
-      console.error(err);
-      setMessage({ type: "error", text: "Không thể lấy thông tin chi tiết của lịch tuần." });
+  useEffect(() => {
+    if (mounted) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      initPage();
     }
-  };
+  }, [mounted, initPage]);
 
   const handleSelectRoster = async (e) => {
     const rosterId = e.target.value;

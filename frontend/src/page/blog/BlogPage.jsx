@@ -13,6 +13,7 @@ export default function BlogPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+     
     setMounted(true);
     
     const fetchBlogs = async () => {

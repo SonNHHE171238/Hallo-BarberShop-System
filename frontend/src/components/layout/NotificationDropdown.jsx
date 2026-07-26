@@ -1,33 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { notificationService } from '@/services/notification.service';
 import { useAuth } from '@/context/AuthContext';
+import { useNotification } from '@/context/NotificationContext';
 
 export default function NotificationDropdown() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState([]);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-
-  const fetchNotifications = async () => {
-    if (!user) return;
-    try {
-      const res = await notificationService.getMyNotifications();
-      if (res.success) {
-        setNotifications(res.data);
-      }
-    } catch (error) {
-      // Log as warning/log instead of error to prevent Next.js dev overlay on token expiration
-      console.log("Lỗi lấy thông báo (có thể do token hết hạn):", error.message);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Polling every 30s
-    return () => clearInterval(interval);
-  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -41,24 +22,12 @@ export default function NotificationDropdown() {
 
   const handleMarkAsRead = async (id, e) => {
     e.stopPropagation();
-    try {
-      await notificationService.markAsRead(id);
-      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
-    } catch (error) {
-      console.error(error);
-    }
+    await markAsRead(id);
   };
 
   const handleMarkAllAsRead = async () => {
-    try {
-      await notificationService.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    } catch (error) {
-      console.error(error);
-    }
+    await markAllAsRead();
   };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   if (!user) return null;
 

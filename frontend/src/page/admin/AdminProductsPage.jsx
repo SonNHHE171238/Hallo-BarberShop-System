@@ -8,64 +8,9 @@ import toast from 'react-hot-toast';
 import AdminProductModal from '@/components/admin/AdminProductModal';
 import AdminConfigModal from '@/components/admin/AdminConfigModal';
 import { useRef } from 'react';
+import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 
-const CustomDropdown = ({ options, value, onChange, placeholder }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectedOption = options.find(opt => opt.value === value);
-  const displayValue = selectedOption ? selectedOption.label : (value || placeholder);
-
-  return (
-    <div className="relative min-w-[200px]" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full text-left bg-surface-container border px-3 py-2 rounded focus:ring-1 focus:ring-primary text-body-md transition-all flex items-center justify-between cursor-pointer ${
-          isOpen 
-            ? 'border-primary ring-1 ring-primary' 
-            : 'border-outline-variant hover:border-primary'
-        }`}
-      >
-        <span className={displayValue !== placeholder ? 'text-on-surface' : 'text-on-surface-variant'}>
-          {displayValue}
-        </span>
-        <span className={`material-symbols-outlined text-outline-variant transition-transform text-[20px] ${isOpen ? 'rotate-180' : ''}`}>
-          expand_more
-        </span>
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-surface-container-high border border-outline-variant rounded shadow-xl overflow-hidden">
-          <ul className="max-h-[200px] overflow-y-auto custom-scrollbar">
-            {options.map((opt) => (
-              <li
-                key={opt.value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                className={`px-3 py-2 cursor-pointer hover:bg-surface-bright/20 transition-colors text-sm ${value === opt.value ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface'}`}
-              >
-                {opt.label}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export default function AdminProductsPage() {
   const router = useRouter();
@@ -78,6 +23,8 @@ export default function AdminProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
+  
+  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, productId: null, productName: '' });
 
   // Search State
   const [showSearch, setShowSearch] = useState(false);
@@ -140,6 +87,7 @@ export default function AdminProductsPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, []);
 
@@ -206,8 +154,14 @@ export default function AdminProductsPage() {
     fetchProducts(1, selectedCategory, sortOption, searchQuery);
   };
 
-  const handleDelete = async (productId, productName) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${productName}"?`)) return;
+  const handleDeleteInit = (productId, productName) => {
+    setDeleteModalState({ isOpen: true, productId, productName });
+  };
+
+  const handleDeleteConfirm = async () => {
+    const { productId } = deleteModalState;
+    if (!productId) return;
+    setDeleteModalState({ isOpen: false, productId: null, productName: '' });
     
     try {
       const res = await axios.delete(`http://localhost:5000/api/products/${productId}`, { withCredentials: true });
@@ -402,7 +356,7 @@ export default function AdminProductsPage() {
                           <span className="material-symbols-outlined">edit</span>
                         </button>
                         <button 
-                          onClick={() => handleDelete(product._id, product.name)}
+                          onClick={() => handleDeleteInit(product._id, product.name)}
                           className="p-2 rounded hover:bg-error/20 text-on-surface-variant hover:text-error transition-all"
                         >
                           <span className="material-symbols-outlined">delete</span>
@@ -468,6 +422,16 @@ export default function AdminProductsPage() {
         isOpen={isConfigModalOpen}
         onClose={() => setIsConfigModalOpen(false)}
         onSuccess={loadData}
+      />
+
+      <GenericConfirmModal 
+        isOpen={deleteModalState.isOpen}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa sản phẩm "${deleteModalState.productName}"?`}
+        onCancel={() => setDeleteModalState({ isOpen: false, productId: null, productName: '' })}
+        onConfirm={handleDeleteConfirm}
+        confirmText="Xóa"
+        isDanger={true}
       />
     </div>
   );

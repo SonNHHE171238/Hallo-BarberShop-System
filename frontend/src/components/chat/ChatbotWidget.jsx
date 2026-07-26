@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from "react";
 import toast from 'react-hot-toast';
 import { usePathname } from 'next/navigation';
 import MessageBubble from "./MessageBubble";
-import QuickActions from "./QuickActions";
 
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') return `http://${window.location.hostname}:5000/api/chatbot`;
@@ -13,7 +12,6 @@ const getBaseUrl = () => {
 
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState(null); // 'staff' | 'ai' | null
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -41,43 +39,26 @@ export default function ChatbotWidget() {
 
   useEffect(() => {
     const handleOpenChat = () => {
-      if (!isOpen) {
+      if (!isOpen && messages.length === 0) {
         setIsOpen(true);
-        if (!mode) {
-          setMessages([{ role: "system", content: "Chào bạn! Bạn muốn nhắn tin với nhân viên hay trò chuyện với AI Assistant?" }]);
-        }
+        setMessages([{ role: "system", content: "Chào bạn! Tôi là trợ lý AI của Hallo BarberShop. Bạn cần tôi giúp gì về dịch vụ, thợ cắt tóc hoặc giá cả?" }]);
+      } else {
+        setIsOpen(true);
       }
     };
     window.addEventListener('open-chatbot', handleOpenChat);
     return () => window.removeEventListener('open-chatbot', handleOpenChat);
-  }, [isOpen, mode]);
+  }, [isOpen, messages.length]);
 
   const toggleChat = () => {
-    if (!isOpen && !mode) {
-      // Khi vừa mở lần đầu, thêm message chào mừng
-      setMessages([{ role: "system", content: "Chào bạn! Bạn muốn nhắn tin với nhân viên hay trò chuyện với AI Assistant?" }]);
+    if (!isOpen && messages.length === 0) {
+      setMessages([{ role: "system", content: "Chào bạn! Tôi là trợ lý AI của Hallo BarberShop. Bạn cần tôi giúp gì về dịch vụ, thợ cắt tóc hoặc giá cả?" }]);
     }
     setIsOpen(!isOpen);
   };
 
-  const selectMode = (selectedMode) => {
-    setMode(selectedMode);
-    if (selectedMode === "ai") {
-      setMessages((prev) => [
-        ...prev,
-        { role: "system", content: "Bạn đã chọn nhắn tin với AI. Hãy hỏi tôi về dịch vụ, thợ cắt tóc hoặc giá cả nhé!" },
-      ]);
-    } else {
-      setMessages((prev) => [
-        ...prev,
-        { role: "system", content: "Đang kết nối với nhân viên tư vấn... Vui lòng đợi trong giây lát." },
-      ]);
-    }
-  };
-
   const sendMessage = async (e) => {
-    e.preventDefault();
-    if ((!input.trim() && !selectedImage) || mode !== "ai" || isLoading) return;
+    if ((!input.trim() && !selectedImage) || isLoading) return;
 
     const userMsg = input.trim();
     const imageToSend = selectedImage;
@@ -210,10 +191,7 @@ export default function ChatbotWidget() {
               />
             ))}
 
-            {/* Lựa chọn mode */}
-            {!mode && messages.length > 0 && (
-              <QuickActions selectMode={selectMode} />
-            )}
+
 
             {isLoading && (
               <div className="flex justify-start">
@@ -243,44 +221,33 @@ export default function ChatbotWidget() {
               </div>
             )}
             <form onSubmit={sendMessage} className="flex gap-2 relative items-center">
-              {mode === 'ai' && (
-                <>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    ref={fileInputRef}
-                    onChange={handleImageChange}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-on-surface-variant hover:text-primary transition-colors p-1"
-                    title="Tải ảnh lên"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </>
-              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-on-surface-variant hover:text-primary transition-colors p-1"
+                title="Tải ảnh lên"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={
-                  mode === 'ai'
-                    ? "Nhập câu hỏi của bạn..."
-                    : mode === 'staff'
-                      ? "Tính năng đang phát triển..."
-                      : "Vui lòng chọn đối tượng chat"
-                }
-                disabled={mode !== 'ai'}
+                placeholder="Nhập câu hỏi của bạn..."
                 className="flex-1 px-4 py-2.5 bg-surface-container-lowest border border-outline-variant text-on-surface placeholder-outline-variant rounded-full focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-body-md text-sm disabled:opacity-50 disabled:bg-surface-container transition-all"
               />
               <button
                 type="submit"
-                disabled={(!input.trim() && !selectedImage) || mode !== 'ai' || isLoading}
+                disabled={(!input.trim() && !selectedImage) || isLoading}
                 className="bg-primary text-on-primary rounded-full p-2.5 hover:bg-primary-fixed disabled:bg-outline-variant disabled:text-on-surface-variant disabled:cursor-not-allowed transition-colors shrink-0"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

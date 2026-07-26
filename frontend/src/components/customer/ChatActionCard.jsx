@@ -21,7 +21,7 @@ export default function ChatActionCard() {
         <div>
           <h3 className="font-headline-sm text-xl text-on-surface serif-title mb-2">Cần Hỗ Trợ?</h3>
           <p className="font-body-md text-on-surface-variant max-w-[200px] mx-auto text-sm">
-            Chat ngay với trợ lý AI hoặc chuyên gia của chúng tôi để được tư vấn dịch vụ.
+            Chat ngay với trợ lý AI để được tư vấn dịch vụ.
           </p>
         </div>
       </div>

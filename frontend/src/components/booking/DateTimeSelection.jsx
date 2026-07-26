@@ -23,6 +23,7 @@ export default function DateTimeSelection({ selectedBarber, selectedServices = [
   // Fetch available dynamic slots whenever date, barber, or services changes
   useEffect(() => {
     if (!selectedDate || !selectedBarber || selectedServices.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAvailableSlots([]);
       return;
     }

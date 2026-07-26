@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { absenceService } from "@/services/absence.service";
 import { staffDashboardService } from "@/services/staffDashboard.service";
 import Link from "next/link";
+import toast from "react-hot-toast";
+import GenericConfirmModal from "@/components/ui/GenericConfirmModal";
 
 export default function AdminAbsencesPage() {
   const [absences, setAbsences] = useState([]);
@@ -17,12 +19,9 @@ export default function AdminAbsencesPage() {
   const [barbers, setBarbers] = useState([]);
   const [resolvingBookingId, setResolvingBookingId] = useState(null);
   const [newBarberId, setNewBarberId] = useState("");
+  const [rejectModalState, setRejectModalState] = useState({ isOpen: false, absenceId: null });
 
-  useEffect(() => {
-    fetchAbsences();
-  }, [filter]);
-
-  const fetchAbsences = async () => {
+  const fetchAbsences = React.useCallback(async () => {
     setLoading(true);
     try {
       const res = await absenceService.getMyRequests(filter);
@@ -33,13 +32,22 @@ export default function AdminAbsencesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchAbsences();
+  }, [filter, fetchAbsences]);
 
   const fetchBarbers = async () => {
     try {
       const res = await staffDashboardService.getBarbersStatus();
       if (res && res.barbers) {
         setBarbers(res.barbers);
+      } else if (Array.isArray(res)) {
+        setBarbers(res);
+      } else if (res && res.data) {
+        setBarbers(res.data);
       }
     } catch (err) {
       console.error("Lỗi tải danh sách thợ:", err);
@@ -65,8 +73,14 @@ export default function AdminAbsencesPage() {
     }
   };
 
-  const handleReject = async (absenceId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn từ chối đơn xin nghỉ này?")) return;
+  const handleRejectInit = (absenceId) => {
+    setRejectModalState({ isOpen: true, absenceId });
+  };
+
+  const handleRejectConfirm = async () => {
+    const { absenceId } = rejectModalState;
+    if (!absenceId) return;
+    setRejectModalState({ isOpen: false, absenceId: null });
 
     try {
       await absenceService.rejectAbsence(absenceId);
@@ -79,7 +93,7 @@ export default function AdminAbsencesPage() {
 
   const handleResolveBooking = async (bookingId, action) => {
     if (action === "reassigned" && !newBarberId) {
-      alert("Vui lòng chọn thợ mới để đổi lịch.");
+      toast.error("Vui lòng chọn thợ mới để đổi lịch.");
       return;
     }
 
@@ -107,7 +121,7 @@ export default function AdminAbsencesPage() {
 
       setNewBarberId("");
     } catch (err) {
-      alert(err.message || "Lỗi khi xử lý lịch hẹn.");
+      toast.error(err.message || "Lỗi khi xử lý lịch hẹn.");
     } finally {
       setResolvingBookingId(null);
     }
@@ -116,7 +130,7 @@ export default function AdminAbsencesPage() {
   const handleApproveAfterResolve = async () => {
     const hasPending = selectedAbsence.affectedBookings?.some(b => b.status === "pending_reschedule");
     if (hasPending) {
-      alert("Vui lòng xử lý tất cả các lịch hẹn bị trùng trước khi duyệt.");
+      toast.error("Vui lòng xử lý tất cả các lịch hẹn bị trùng trước khi duyệt.");
       return;
     }
 
@@ -127,7 +141,7 @@ export default function AdminAbsencesPage() {
       setSelectedAbsence(null);
       fetchAbsences();
     } catch (err) {
-      alert(err.message || "Lỗi khi duyệt đơn.");
+      toast.error(err.message || "Lỗi khi duyệt đơn.");
     }
   };
 
@@ -227,9 +241,12 @@ export default function AdminAbsencesPage() {
                       </td>
                       <td className="p-4 text-center">
                         {hasAffected ? (
-                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded text-xs font-bold ${unresolvedCount > 0 ? "bg-error-container text-error" : "bg-primary-container text-primary"}`}>
+                          <button 
+                            onClick={() => handleApprove(req)}
+                            className={`inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:scale-105 shadow-sm ${unresolvedCount > 0 ? "bg-error text-on-error animate-pulse" : "bg-primary-container text-primary"}`}
+                          >
                             {req.affectedBookings.length} khách ({unresolvedCount} chờ xử lý)
-                          </span>
+                          </button>
                         ) : (
                           <span className="text-on-surface-variant text-sm">-</span>
                         )}
@@ -253,23 +270,27 @@ export default function AdminAbsencesPage() {
                         {req.isApproved === null && (
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() => handleReject(req._id)}
+                              onClick={() => handleRejectInit(req._id)}
                               className="px-3 py-1.5 bg-surface-container-highest text-error hover:bg-error hover:text-on-error font-bold text-xs uppercase rounded-sm transition-colors"
                             >
                               Từ chối
                             </button>
                             <button
                               onClick={() => handleApprove(req)}
-                              className={`px-3 py-1.5 font-bold text-xs uppercase rounded-sm transition-colors flex items-center gap-1 ${unresolvedCount > 0
-                                  ? "bg-gold text-on-primary hover:bg-gold-dim"
+                              className={`px-4 py-2 font-bold text-xs uppercase rounded-sm transition-all flex items-center gap-2 shadow-md ${unresolvedCount > 0
+                                  ? "bg-error text-on-error hover:bg-error-focus animate-bounce"
                                   : "bg-primary text-on-primary hover:brightness-110"
                                 }`}
                             >
                               {unresolvedCount > 0 ? (
                                 <>
-                                  <span className="material-symbols-outlined text-[16px]">warning</span> Xử lý trùng
+                                  <span className="material-symbols-outlined text-[18px]">warning</span> Xử lý trùng
                                 </>
-                              ) : "Duyệt"}
+                              ) : (
+                                <>
+                                  <span className="material-symbols-outlined text-[18px]">check</span> Duyệt
+                                </>
+                              )}
                             </button>
                           </div>
                         )}
@@ -310,7 +331,7 @@ export default function AdminAbsencesPage() {
                         {new Date(b.originalDate).toLocaleString('vi-VN')}
                       </div>
                       <div className="text-sm text-on-surface-variant mt-1">
-                        Khách: <strong className="text-on-surface">{b.bookingId?.customerId?.name || "Khách hàng"}</strong> - SĐT: {b.bookingId?.customerId?.phone || "N/A"}
+                        Khách: <strong className="text-on-surface">{b.bookingId?.customerId?.name || b.bookingId?.customerName || "Khách hàng"}</strong> - SĐT: {b.bookingId?.customerId?.phone || b.bookingId?.customerPhone || "N/A"}
                       </div>
 
                       <div className="mt-2 text-xs font-bold uppercase tracking-widest">
@@ -347,8 +368,12 @@ export default function AdminAbsencesPage() {
                             defaultValue=""
                           >
                             <option value="" disabled>-- Chọn thợ rảnh --</option>
-                            {barbers.filter(barber => barber.id !== selectedAbsence.barberId?._id && barber.id !== selectedAbsence.barberId).map(barber => (
-                              <option key={barber.id} value={barber.id}>{barber.user?.name || "Thợ"} (Đánh giá: {barber.averageRating}★)</option>
+                            {barbers.filter(barber => {
+                              const bId = barber._id || barber.id || barber.barberId;
+                              const absentBId = selectedAbsence.barberId?._id || selectedAbsence.barberId;
+                              return String(bId) !== String(absentBId);
+                            }).map(barber => (
+                              <option key={barber._id || barber.id} value={barber._id || barber.id}>{barber.user?.name || barber.name || "Thợ"} (Đánh giá: {barber.averageRating || barber.rating || 5}★)</option>
                             ))}
                           </select>
                           <button
@@ -384,6 +409,16 @@ export default function AdminAbsencesPage() {
           </div>
         </div>
       )}
+
+      <GenericConfirmModal 
+        isOpen={rejectModalState.isOpen}
+        title="Từ chối đơn"
+        message="Bạn có chắc chắn muốn từ chối đơn xin nghỉ này?"
+        onCancel={() => setRejectModalState({ isOpen: false, absenceId: null })}
+        onConfirm={handleRejectConfirm}
+        confirmText="Từ chối"
+        isDanger={true}
+      />
     </div>
   );
 }

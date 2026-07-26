@@ -16,6 +16,7 @@ export default function ProductReviewModal({ isOpen, onClose, products, orderCod
       products.forEach(p => {
         initialReviews[p._id] = { rating: 0, comment: "" };
       });
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReviews(initialReviews);
     }
   }, [products]);

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { adminBarberService } from "@/services/adminBarber.service";
@@ -5,17 +6,28 @@ import { adminAccountService } from '@/services/adminAccount.service';
 import toast from 'react-hot-toast';
 import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
 import BarberUpcomingBookingsModal from '@/components/admin/accounts/BarberUpcomingBookingsModal';
+import AddAccountModal from '@/components/admin/accounts/AddAccountModal';
 
 export default function EmployeeListTab() {
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'barber', 'staff'
   const [staffList, setStaffList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Pagination States
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
+  const tableContainerRef = useRef(null);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
+
   // Modal States
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState(null);
   const [bookingsModalOpen, setBookingsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const fetchStaff = async () => {
     try {
@@ -79,6 +91,7 @@ export default function EmployeeListTab() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStaff();
   }, []);
 
@@ -127,22 +140,24 @@ export default function EmployeeListTab() {
     return staff.type === activeTab;
   });
 
+  const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
+  const paginatedStaff = filteredStaff.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const totalStaff = staffList.length;
 
   return (
     <div className="flex flex-col h-full overflow-hidden animate-fade-in fade-in">
-        {/* Summary Banner */}
-        <div className="mb-6 shrink-0 mt-2">
-          <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant py-3 px-6 rounded-lg flex items-center justify-between w-full border-l-4 border-l-primary shadow-sm">
-            <span className="text-outline text-sm uppercase tracking-widest font-bold">Tổng nhân sự</span>
-            <div className="flex items-center gap-4">
-              <span className="text-green-400 text-xs flex items-center font-bold bg-green-400/10 px-2 py-1 rounded-full">
-                <span className="material-symbols-outlined text-[14px] mr-1">trending_up</span>+Mới
-              </span>
-              <span className="text-2xl font-black text-primary">{totalStaff}</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Tabs & Actions */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 shrink-0">
@@ -173,7 +188,10 @@ export default function EmployeeListTab() {
             </button>
           </div>
 
-          <button className="bg-primary text-on-primary px-6 py-2.5 rounded font-bold flex items-center shadow-lg hover:bg-primary-fixed transition-colors active:scale-95">
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-primary text-on-primary px-6 py-2.5 rounded font-bold flex items-center shadow-lg hover:bg-primary-fixed transition-colors active:scale-95"
+          >
             <span className="material-symbols-outlined mr-2">person_add</span>
             Thêm Nhân Viên
           </button>
@@ -181,7 +199,7 @@ export default function EmployeeListTab() {
 
         {/* Staff Table List */}
         <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant overflow-hidden rounded-xl mb-4 flex-1 flex flex-col min-h-0">
-          <div className="overflow-x-auto overflow-y-auto custom-scrollbar h-full">
+          <div ref={tableContainerRef} className="overflow-x-auto overflow-y-auto custom-scrollbar h-full relative">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead className="sticky top-0 z-10 bg-surface-container-high/90 backdrop-blur">
                 <tr className="border-b border-outline-variant">
@@ -203,7 +221,7 @@ export default function EmployeeListTab() {
                     <td colSpan="6" className="text-center py-8 text-outline">Không có nhân sự nào.</td>
                   </tr>
                 ) : (
-                  filteredStaff.map((staff) => (
+                  paginatedStaff.map((staff) => (
                   <tr key={staff.id} className="border-b border-outline-variant/30 hover:bg-white/5 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
@@ -276,7 +294,54 @@ export default function EmployeeListTab() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Footer */}
+          {totalPages > 0 && (
+            <div className="border-t border-outline-variant bg-surface-container-low px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="text-label-md font-label-md text-on-surface-variant hidden sm:block">
+                Hiển thị {(page - 1) * itemsPerPage + 1} đến{" "}
+                {Math.min(page * itemsPerPage, filteredStaff.length)} trong số{" "}
+                {filteredStaff.length} nhân sự
+              </div>
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  onClick={() => handlePageChange(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  className="p-2 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-bright/10 disabled:opacity-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    chevron_left
+                  </span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => handlePageChange(p)}
+                    className={`w-8 h-8 rounded font-label-md text-sm font-semibold transition-colors ${
+                      page === p
+                        ? "bg-primary text-on-primary"
+                        : "border border-outline-variant text-on-surface-variant hover:bg-surface-bright/10"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                  className="p-2 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-bright/10 disabled:opacity-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    chevron_right
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
 
         <GenericConfirmModal 
             isOpen={confirmModalOpen}
@@ -293,6 +358,13 @@ export default function EmployeeListTab() {
                 onAllResolved={() => executeDelete(accountToDelete.fullId)}
             />
         )}
+        <AddAccountModal 
+            isOpen={isAddModalOpen} 
+            onClose={() => {
+                setIsAddModalOpen(false);
+                fetchStaff();
+            }} 
+        />
     </div>
   );
 }

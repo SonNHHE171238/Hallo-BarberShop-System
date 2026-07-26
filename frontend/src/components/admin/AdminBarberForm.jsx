@@ -30,6 +30,7 @@ export default function AdminBarberForm({ barber, onSubmit, onCancel, isEdit = f
 
     useEffect(() => {
         if (barber) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setFormData((prev) => ({
                 ...prev,
                 name: barber.name || '',

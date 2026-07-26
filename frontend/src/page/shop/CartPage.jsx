@@ -148,8 +148,8 @@ export default function CartPage() {
                   Giỏ hàng của bạn đang trống.
                 </div>
               ) : (
-                cartItems.map((item) => (
-                  <div key={item._id || item.productId?._id || Math.random()} className={`bg-surface-container/60 backdrop-blur-md border border-outline-variant p-6 flex flex-col md:flex-row gap-6 group ${(!item.productId?.isActive || item.productId?.stock === 0 || item.productId?.isDeleted) ? 'opacity-60' : ''}`}>
+                cartItems.map((item, idx) => (
+                  <div key={item._id || item.productId?._id || idx} className={`bg-surface-container/60 backdrop-blur-md border border-outline-variant p-6 flex flex-col md:flex-row gap-6 group ${(!item.productId?.isActive || item.productId?.stock === 0 || item.productId?.isDeleted) ? 'opacity-60' : ''}`}>
                     <div className="w-full md:w-32 h-32 overflow-hidden flex-shrink-0 bg-surface-container-high border border-outline-variant relative">
                       <img 
                         src={item.productId?.image || "/placeholder.png"} 

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from 'react';
 import { adminBarberService } from '@/services/admin.service';
 import { fetchWithAuth } from '@/services/api';
@@ -13,14 +14,7 @@ export default function BarberUpcomingBookingsModal({ isOpen, onClose, barber, o
     const [reassigningBookingId, setReassigningBookingId] = useState(null);
     const [selectedNewBarberId, setSelectedNewBarberId] = useState('');
 
-    useEffect(() => {
-        if (isOpen && barber) {
-            fetchBookings();
-            fetchBarbers();
-        }
-    }, [isOpen, barber]);
-
-    const fetchBookings = async () => {
+    const fetchBookings = React.useCallback(async () => {
         setIsLoading(true);
         try {
             const res = await adminBarberService.getUpcomingBookings(barber._id || barber.id);
@@ -34,9 +28,9 @@ export default function BarberUpcomingBookingsModal({ isOpen, onClose, barber, o
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [barber, onAllResolved]);
 
-    const fetchBarbers = async () => {
+    const fetchBarbers = React.useCallback(async () => {
         try {
             const res = await adminBarberService.getAllAdminBarbers();
             // Filter out the current barber being deleted and inactive ones
@@ -50,7 +44,15 @@ export default function BarberUpcomingBookingsModal({ isOpen, onClose, barber, o
         } catch (error) {
             console.error('Lỗi khi tải danh sách thợ cắt tóc:', error);
         }
-    };
+    }, [barber]);
+
+    useEffect(() => {
+        if (isOpen && barber) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            fetchBookings();
+            fetchBarbers();
+        }
+    }, [isOpen, barber, fetchBookings, fetchBarbers]);
 
     const handleCancelBooking = async (bookingId) => {
         if (!confirm('Khách yêu cầu hủy lịch này. Bạn có chắc chắn?')) return;

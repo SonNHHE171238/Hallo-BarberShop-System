@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { bookingService } from '@/services/booking.service';
@@ -13,16 +13,7 @@ export default function AddItemsModal({ isOpen, onClose, bookingId, onAddSuccess
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchItems();
-      setSelectedServices([]);
-      setSelectedProducts([]);
-      setSearchTerm('');
-    }
-  }, [isOpen]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setIsLoading(true);
     try {
       const [servicesRes, productsRes] = await Promise.all([
@@ -48,7 +39,17 @@ export default function AddItemsModal({ isOpen, onClose, bookingId, onAddSuccess
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchItems();
+      setSelectedServices([]);
+      setSelectedProducts([]);
+      setSearchTerm('');
+    }
+  }, [isOpen, fetchItems]);
 
   const displayedItems = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();

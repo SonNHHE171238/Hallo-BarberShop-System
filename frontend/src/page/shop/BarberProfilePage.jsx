@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { customerService } from "@/services/customer.service";
@@ -9,6 +10,7 @@ import { customerService } from "@/services/customer.service";
 export default function BarberProfilePage({ id }) {
   const router = useRouter();
   const [barber, setBarber] = useState(null);
+  const [feedbacks, setFeedbacks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -22,6 +24,16 @@ export default function BarberProfilePage({ id }) {
           if (foundBarber) {
             setBarber(foundBarber);
           }
+        }
+        
+        // Lấy 3 đánh giá gần nhất
+        try {
+          const res = await axios.get(`http://localhost:5000/api/bookingfeedbacks/barber/${id}?limit=3`);
+          if (res.data.success) {
+            setFeedbacks(res.data.data);
+          }
+        } catch (fbErr) {
+          console.error("Lỗi khi tải feedbacks:", fbErr);
         }
       } catch (error) {
         console.error("Lỗi khi tải thông tin barber:", error);
@@ -218,6 +230,65 @@ export default function BarberProfilePage({ id }) {
             <div className="flex flex-col items-center justify-center p-12 bg-surface-container-low rounded-xl border border-dashed border-outline-variant">
               <span className="material-symbols-outlined text-4xl text-outline mb-2">photo_library</span>
               <p className="text-on-surface-variant font-body-md text-center">Master Barber này chưa cập nhật tác phẩm tiêu biểu nào.</p>
+            </div>
+          )}
+        </section>
+
+        {/* Feedback Section */}
+        <section className="animate-[fadeIn_0.8s_ease-out_forwards] opacity-0 mb-24" style={{ animationDelay: "0.6s" }}>
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="font-serif text-headline-lg text-primary mb-2">Đánh giá từ khách hàng</h2>
+              <p className="text-on-surface-variant font-body-md">Những nhận xét gần đây nhất về {barber.userId?.name || "Thợ cắt tóc"}</p>
+            </div>
+          </div>
+          
+          {feedbacks.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {feedbacks.map((fb, idx) => (
+                <div key={idx} className="bg-surface-container rounded-xl p-6 border border-outline-variant hover:border-primary/50 transition-colors shadow-sm hover:shadow-md flex flex-col h-full">
+                  <div className="flex items-center gap-3 mb-4 border-b border-outline-variant/30 pb-4">
+                    <div className="w-10 h-10 rounded-full bg-surface-variant overflow-hidden shrink-0 border border-outline-variant/50">
+                      <img 
+                        src={fb.userId?.avatarUrl ? `http://localhost:5000${fb.userId.avatarUrl}` : "https://ui-avatars.com/api/?name=Guest&background=random"} 
+                        alt="Customer" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?name=Guest&background=random"; }}
+                      />
+                    </div>
+                    <div>
+                      <p className="font-bold text-on-surface text-sm">{fb.userId?.name || "Khách Vãng Lai"}</p>
+                      <div className="flex text-gold-dim mt-0.5">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <span 
+                            key={star} 
+                            className="material-symbols-outlined text-[14px]"
+                            style={{ fontVariationSettings: star <= fb.rating ? "'FILL' 1" : "'FILL' 0" }}
+                          >
+                            star
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="ml-auto text-xs text-on-surface-variant">
+                      {new Date(fb.createdAt).toLocaleDateString('vi-VN')}
+                    </div>
+                  </div>
+                  
+                  <div className="flex-grow flex items-center justify-center">
+                    {fb.comment ? (
+                      <p className="text-on-surface-variant text-sm italic text-center leading-relaxed px-4">"{fb.comment}"</p>
+                    ) : (
+                      <p className="text-on-surface-variant/50 text-sm italic text-center">Khách hàng không để lại bình luận.</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 bg-surface-container-low rounded-xl border border-dashed border-outline-variant">
+              <span className="material-symbols-outlined text-4xl text-outline mb-2">rate_review</span>
+              <p className="text-on-surface-variant font-body-md text-center">Chưa có đánh giá nào cho Barber này.</p>
             </div>
           )}
         </section>

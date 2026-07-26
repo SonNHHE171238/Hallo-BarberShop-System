@@ -19,6 +19,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -48,6 +49,7 @@ export default function Navbar() {
   }, [user]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveHash(window.location.hash);
     const handleHashChange = () => {
       setActiveHash(window.location.hash);

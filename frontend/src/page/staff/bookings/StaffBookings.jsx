@@ -44,6 +44,38 @@ export default function StaffBookings() {
     setDateFilter(current.toLocaleDateString("en-CA"));
   };
 
+  const fetchData = React.useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
+    try {
+      const [appRes, barbersRes] = await Promise.all([
+        staffDashboardService.getAppointmentsList({
+          date: dateFilter || "all",
+          barberId: barberFilter,
+          status: statusFilter,
+        }),
+        staffDashboardService.getBarbersStatus(),
+      ]);
+
+      if (appRes) {
+        const appData = appRes.data || appRes;
+        setAppointments(appData.appointments || []);
+        setStats(appData.stats || { total: 0, serving: 0, emptyChairs: 0 });
+        setHasFutureBookings(appData.hasFutureBookings !== false);
+        setHasPastBookings(appData.hasPastBookings !== false);
+      }
+
+      if (barbersRes) {
+        const barbersData = barbersRes.data || barbersRes;
+        setBarbers(Array.isArray(barbersData) ? barbersData : []);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Không thể tải dữ liệu lịch hẹn");
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  }, [dateFilter, barberFilter, statusFilter]);
+
   // Polling riêng cho QR Code (mỗi 3s)
   useEffect(() => {
     if (!qrCodeData || !checkInModal.booking) return;
@@ -53,7 +85,7 @@ export default function StaffBookings() {
     }, 3000);
 
     return () => clearInterval(qrInterval);
-  }, [qrCodeData, checkInModal.booking]);
+  }, [qrCodeData, checkInModal.booking, fetchData]);
 
   // Lắng nghe khi appointments được cập nhật để biết khách đã quét mã thành công
   useEffect(() => {
@@ -63,11 +95,12 @@ export default function StaffBookings() {
       );
       if (updatedBooking && updatedBooking.paymentStatus === "paid") {
         toast.success("Nhận tiền thành công! Khách đã thanh toán.");
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setQrCodeData(null);
         setCheckInModal({ isOpen: false, booking: null, isPayment: false });
       }
     }
-  }, [appointments, qrCodeData, checkInModal.isOpen]);
+  }, [appointments, qrCodeData, checkInModal.isOpen, checkInModal.booking]);
 
   const handleStatusUpdate = async (status) => {
     if (!checkInModal.booking) return;
@@ -120,47 +153,17 @@ export default function StaffBookings() {
     }
   };
 
-  const fetchData = async (showLoading = false) => {
-    if (showLoading) setIsLoading(true);
-    try {
-      const [appRes, barbersRes] = await Promise.all([
-        staffDashboardService.getAppointmentsList({
-          date: dateFilter || "all",
-          barberId: barberFilter,
-          status: statusFilter,
-        }),
-        staffDashboardService.getBarbersStatus(),
-      ]);
-
-      if (appRes) {
-        const appData = appRes.data || appRes;
-        setAppointments(appData.appointments || []);
-        setStats(appData.stats || { total: 0, serving: 0, emptyChairs: 0 });
-        setHasFutureBookings(appData.hasFutureBookings !== false);
-        setHasPastBookings(appData.hasPastBookings !== false);
-      }
-
-      if (barbersRes) {
-        const barbersData = barbersRes.data || barbersRes;
-        setBarbers(Array.isArray(barbersData) ? barbersData : []);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Không thể tải dữ liệu lịch hẹn");
-    } finally {
-      if (showLoading) setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(1); // Reset page on filter change
   }, [dateFilter, barberFilter, statusFilter]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData(true);
     const intervalId = setInterval(() => fetchData(false), 60000);
     return () => clearInterval(intervalId);
-  }, [dateFilter, barberFilter, statusFilter]);
+  }, [fetchData]);
 
   if (isLoading) {
     return (
@@ -713,12 +716,6 @@ export default function StaffBookings() {
                         Khách Đã Đến
                       </button>
                       <button
-                        onClick={() => handleStatusUpdate("in_progress")}
-                        className="w-full py-3 bg-secondary text-on-secondary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md"
-                      >
-                        Đang Phục Vụ (Lên ghế)
-                      </button>
-                      <button
                         onClick={() => {
                           setStatusConfirmModal({
                             isOpen: true,
@@ -733,7 +730,7 @@ export default function StaffBookings() {
                         }}
                         className="w-full py-3 bg-error text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
                       >
-                        Khách Không Tới (No Show)
+                        Khách Không Tới
                       </button>
                       <button
                         onClick={() => {
@@ -756,9 +753,12 @@ export default function StaffBookings() {
                     <>
                       <button
                         onClick={() => handleStatusUpdate("in_progress")}
-                        className="w-full py-3 bg-secondary text-on-secondary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md"
+                        className="w-full py-3 bg-secondary text-on-secondary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-secondary/20 flex items-center justify-center gap-2"
                       >
-                        Đang Phục Vụ (Lên ghế)
+                        <span className="material-symbols-outlined">
+                          content_cut
+                        </span>
+                        Đang Phục Vụ
                       </button>
                       <button
                         onClick={() => {

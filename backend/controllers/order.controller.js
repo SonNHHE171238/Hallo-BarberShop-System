@@ -4,6 +4,7 @@ const Cart = require('../models/cart.model');
 const User = require('../models/user.model');
 const voucherController = require('./voucher.controller');
 const { PayOS } = require("@payos/node");
+const notificationService = require('../src/notification.service');
 
 const payos = new PayOS({
   clientId: process.env.PAYOS_CLIENT_ID,
@@ -127,6 +128,14 @@ exports.createOrder = async (req, res, next) => {
       const productIds = orderItems.map(i => i.productId);
       await Cart.deleteMany({ userId, productId: { $in: productIds } });
     }
+
+    // Thông báo cho Admin
+    await notificationService.sendNotificationToAdmins(
+      'Đơn hàng mới',
+      `Khách hàng ${customerName} vừa đặt đơn hàng mới #${orderCode}.`,
+      'order',
+      `/staff/orders/${orderCode}`
+    );
 
     // Xử lý PayOS
     let paymentUrl = null;
@@ -434,6 +443,11 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     // Chỉ log khi thực sự có thay đổi trạng thái
     if (order.status !== status) {
+      // Ràng buộc huỷ đơn: admin được huỷ khi pending, processing, shipped (giao không thành công)
+      if (status === 'cancelled' && !['pending', 'processing', 'shipped'].includes(order.status)) {
+        return res.status(400).json({ success: false, message: 'Chỉ có thể huỷ đơn hàng khi đang chờ xác nhận, chuẩn bị, hoặc đang giao' });
+      }
+
       const actionLabels = {
         pending: 'Đưa về chờ xác nhận',
         processing: 'Xác nhận & Bắt đầu chuẩn bị',
@@ -443,10 +457,23 @@ exports.updateOrderStatus = async (req, res, next) => {
       };
 
       order.status = status;
+      if (status === 'cancelled' && order.paymentStatus !== 'paid') {
+        order.paymentStatus = 'failed';
+      }
+      
+      let historyNote = note || '';
+      if (status === 'cancelled') {
+        // Nếu là huỷ đơn, ghi note vào internalNote và ẩn khỏi history khách
+        if (note && note.trim() !== '') {
+          order.internalNote = order.internalNote ? `${order.internalNote}\n[Huỷ đơn]: ${note.trim()}` : `[Huỷ đơn]: ${note.trim()}`;
+        }
+        historyNote = '';
+      }
+      
       order.historyLog.push({
         action: actionLabels[status] || `Đổi trạng thái: ${status}`,
         actor: actor,
-        note: note || '',
+        note: historyNote,
       });
 
       // Nếu trạng thái là completed và đã thanh toán
@@ -490,6 +517,21 @@ exports.updateOrderStatus = async (req, res, next) => {
         } catch (pointError) {
           console.error("Error updating points for order:", pointError);
         }
+      }
+
+      // Thông báo cho khách hàng
+      if (order.userId) {
+        let msg = `Đơn hàng #${order.orderCode} của bạn đã được cập nhật trạng thái thành: ${actionLabels[status] || status}`;
+        if (status === 'completed') msg = `Đơn hàng #${order.orderCode} của bạn đã giao thành công.`;
+        if (status === 'cancelled') msg = `Đơn hàng #${order.orderCode} của bạn đã bị hủy.`;
+        
+        await notificationService.sendNotificationToUser(
+          order.userId,
+          'Cập nhật Đơn hàng',
+          msg,
+          'order',
+          `/shop/orders/${order.orderCode}`
+        );
       }
     }
 
@@ -572,6 +614,76 @@ exports.getReviewedProducts = async (req, res, next) => {
       success: true,
       data: reviewedProductIds
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Khách hàng / Khách vãng lai: Huỷ đơn hàng bằng mã đơn
+exports.cancelOrderByCustomer = async (req, res, next) => {
+  try {
+    const orderCode = Number(req.params.code);
+    const { cancelReason } = req.body;
+
+    // Cho phép không có lý do
+
+
+    const order = await Order.findOne({ 
+      $or: [
+        { orderCode: orderCode },
+        { previousOrderCodes: orderCode }
+      ]
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+    }
+
+    // Kiểm tra điều kiện huỷ
+    if (!['pending', 'processing'].includes(order.status)) {
+      return res.status(400).json({ success: false, message: 'Chỉ có thể huỷ đơn hàng khi đang chờ xác nhận hoặc đang chuẩn bị' });
+    }
+
+    const oldStatus = order.status;
+    order.status = 'cancelled';
+    if (order.paymentStatus !== 'paid') {
+      order.paymentStatus = 'failed';
+    }
+    
+    // Lưu lịch sử
+    const actor = req.userId ? order.customerName : 'Khách vãng lai (Guest)';
+    order.historyLog.push({
+      action: 'Khách hàng huỷ đơn',
+      actor: actor,
+      note: ''
+    });
+
+    if (cancelReason && cancelReason.trim() !== '') {
+       order.internalNote = order.internalNote ? `${order.internalNote}\n[Khách huỷ]: ${cancelReason.trim()}` : `[Khách huỷ]: ${cancelReason.trim()}`;
+    }
+
+    // Giải phóng voucher
+    if (order.voucherLockId) {
+      try {
+        const voucherController = require('./voucher.controller');
+        await voucherController.releaseVoucherLock(order.voucherLockId);
+      } catch (err) {
+        console.error("Failed to release voucher lock for order:", err);
+      }
+    }
+
+    // Hoàn điểm
+    if (order.userId) {
+      const DiscountService = require('../services/discount.service');
+      try {
+        await DiscountService.revertPoints(order.userId, order.pointsUsed || 0, false, order.totalAmount);
+      } catch (pointError) {
+        console.error("Error reverting points for order:", pointError);
+      }
+    }
+
+    await order.save();
+    res.json({ success: true, message: 'Huỷ đơn hàng thành công', data: order });
   } catch (error) {
     next(error);
   }

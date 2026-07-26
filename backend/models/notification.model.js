@@ -21,8 +21,12 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['system', 'booking', 'refund', 'other'],
+      enum: ['system', 'booking', 'refund', 'order', 'other'],
       default: 'system',
+    },
+    link: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true }
