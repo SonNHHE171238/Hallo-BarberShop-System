@@ -11,6 +11,7 @@ import POSSummaryCard from "@/components/staff/pos/POSSummaryCard";
 import POSNewCustomerModal from "@/components/staff/pos/POSNewCustomerModal";
 import POSTimeSelectionModal from "@/components/staff/pos/POSTimeSelectionModal";
 import POSStaffSelectionModal from "@/components/staff/pos/POSStaffSelectionModal";
+import POSPaymentModal from "@/components/staff/pos/POSPaymentModal";
 import axios from "axios";
 
 export default function POSBookingPage() {
@@ -39,6 +40,9 @@ export default function POSBookingPage() {
   const [discountCodeInput, setDiscountCodeInput] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+
+  // State: Payment Modal
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Determine if cart has services
   const hasServices = selectedItems.some(item => item.itemType === 'service');
@@ -212,13 +216,13 @@ export default function POSBookingPage() {
       }
       setShowTimeModal(true);
     } else {
-      // Only products -> Direct Checkout
-      await handleProcessBoth(true); 
+      // Only products -> Open Payment Modal
+      setShowPaymentModal(true);
     }
   };
 
   // Hàm xử lý chung: Sinh ra Booking (nếu có service) và Order (nếu có product)
-  const handleProcessBoth = async (onlyProducts = false) => {
+  const handleProcessBoth = async (onlyProducts = false, paymentMethod = 'cash') => {
     if (!onlyProducts) {
       if (!selectedDate || !selectedTime) {
         toast.error("Vui lòng chọn ngày và giờ cắt.");
@@ -231,9 +235,6 @@ export default function POSBookingPage() {
       const servicesOnly = selectedItems.filter(i => i.itemType === 'service');
       const productsOnly = selectedItems.filter(i => i.itemType === 'product');
 
-      let orderRes = null;
-      let bookingRes = null;
-
       // 1. Nếu có sản phẩm -> Tạo Order
       if (productsOnly.length > 0) {
         const orderPayload = {
@@ -242,14 +243,28 @@ export default function POSBookingPage() {
             quantity: p.quantity || 1
           })),
           customerName: customer ? customer.name : "Khách vãng lai",
-          customerPhone: customer ? customer.phone : "",
+          customerPhone: customer ? customer.phone : "0000000000",
           shippingAddress: "Mua tại cửa hàng",
-          paymentMethod: "cash",
+          paymentMethod: paymentMethod,
           voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
           discountAmount: discountAmount || 0,
         };
-        // Gửi bằng axios với credentials
-        orderRes = await axios.post("http://localhost:5000/api/orders", orderPayload, { withCredentials: true });
+        const orderRes = await axios.post("http://localhost:5000/api/orders", orderPayload, { withCredentials: true });
+        
+        if (paymentMethod === 'payos') {
+          return orderRes.data;
+        }
+
+        // Nếu là tiền mặt (cash), tự động chuyển status = paid và completed
+        if (paymentMethod === 'cash' && orderRes.data && orderRes.data.data) {
+          const orderId = orderRes.data.data._id;
+          try {
+            await axios.put(`http://localhost:5000/api/orders/${orderId}/pay-cod`, {}, { withCredentials: true });
+            await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, { status: 'completed' }, { withCredentials: true });
+          } catch (e) {
+            console.error("Lỗi khi tự động hoàn thành đơn tại quầy", e);
+          }
+        }
       }
 
       // 2. Nếu có dịch vụ -> Tạo Booking
@@ -270,11 +285,12 @@ export default function POSBookingPage() {
           voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
           discountAmount: discountAmount || 0,
         };
-        bookingRes = await bookingService.createBookingSinglePage(bookingPayload);
+        await bookingService.createBookingSinglePage(bookingPayload);
       }
 
       toast.success("Thanh toán / Lên lịch thành công!");
       setShowTimeModal(false);
+      setShowPaymentModal(false);
       
       // Reset form
       setPhoneInput("");
@@ -287,8 +303,10 @@ export default function POSBookingPage() {
       setNewCustomerInfo({ name: "", phone: "", emailOrNote: "" });
       setAppliedVoucher(null);
       setDiscountCodeInput("");
+      return { success: true };
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Có lỗi xảy ra khi tạo đơn.");
+      return { success: false };
     } finally {
       setIsSubmitting(false);
     }
@@ -381,10 +399,6 @@ export default function POSBookingPage() {
     <div className="w-full h-[calc(100vh-80px)] flex flex-col lg:flex-row max-w-[1600px] mx-auto overflow-hidden bg-surface-container-lowest">
       {/* Left Side: Selection */}
       <section className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col overflow-hidden">
-
-
-
-
         {/* Services & Products Section */}
         <POSServiceList 
           searchTerm={searchTerm}
@@ -395,8 +409,6 @@ export default function POSBookingPage() {
           selectedItems={selectedItems}
           selectItem={selectItem}
         />
-
-
       </section>
 
       {/* Right Side: Booking Summary & Checkout */}
@@ -455,7 +467,30 @@ export default function POSBookingPage() {
         selectedTime={selectedTime}
         setSelectedTime={setSelectedTime}
         isSubmitting={isSubmitting}
-        handleProcessBoth={handleProcessBoth}
+        handleConfirm={() => handleProcessBoth(false)}
+      />
+
+      {/* Payment Modal */}
+      <POSPaymentModal
+        isOpen={showPaymentModal}
+        onClose={(success) => {
+          setShowPaymentModal(false);
+          if (success) {
+            // Reset form if payment success
+            setPhoneInput("");
+            setCustomer(null);
+            setSelectedItems([]);
+            setSelectedStaff(null);
+            setSelectedDate("");
+            setSelectedTime("");
+            setSearchTerm("");
+            setNewCustomerInfo({ name: "", phone: "", emailOrNote: "" });
+            setAppliedVoucher(null);
+            setDiscountCodeInput("");
+          }
+        }}
+        onConfirm={(method) => handleProcessBoth(true, method)}
+        isSubmitting={isSubmitting}
       />
 
       {/* Staff Selection Modal */}
