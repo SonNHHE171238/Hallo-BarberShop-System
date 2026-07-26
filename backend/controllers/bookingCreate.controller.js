@@ -20,6 +20,7 @@ const {
 
 const bookingService = require("../services/booking.service");
 const emailService = require("../services/email.service");
+const notificationService = require("../src/notification.service");
 const { sendSuccess } = require("../utils/response.helper");
 
 exports.preCheckBooking = async (req, res, next) => {
@@ -142,6 +143,14 @@ exports.createBooking = async (req, res, next) => {
         );
     }
 
+    // Gửi thông báo cho Admin
+    await notificationService.sendNotificationToAdmins(
+      'Lịch hẹn mới',
+      `Khách hàng ${customerName || populatedBooking.customerId?.name || 'Khách'} vừa đặt lịch vào lúc ${timeSlot} ngày ${new Date(bookingDate).toLocaleDateString('vi-VN')}.`,
+      'booking',
+      `/staff/orders/${populatedBooking._id}` // Admin/Staff panel URL (you might need to adjust this depending on actual URL structure)
+    );
+
     return sendSuccess(res, 201, "Booking created successfully", {
       booking: populatedBooking,
       paymentLinkData
@@ -263,6 +272,14 @@ exports.createBookingSinglePage = async (req, res, next) => {
         timeSlot: timeSlot,
       }).catch((err) => console.error("Failed to send confirmation email", err));
     }
+
+    // Gửi thông báo cho Admin
+    await notificationService.sendNotificationToAdmins(
+      'Lịch hẹn mới',
+      `Khách hàng ${customerName || populatedBooking.customerId?.name || 'Khách'} vừa đặt lịch vào lúc ${timeSlot} ngày ${new Date(bookingDate).toLocaleDateString('vi-VN')}.`,
+      'booking',
+      `/staff/orders/${populatedBooking._id}`
+    );
 
     return require("../utils/response.helper").sendSuccess(res, 201, "Booking created successfully", {
       booking: populatedBooking,
@@ -534,6 +551,14 @@ exports.createWalkInBooking = async (req, res) => {
           select: "name email profileImageUrl",
         },
       });
+
+    // Gửi thông báo cho Admin
+    await notificationService.sendNotificationToAdmins(
+      'Khách Walk-in mới',
+      `Khách hàng ${customerName} (Walk-in) vừa được đặt lịch lúc ${timeSlot} ngày ${new Date(bookingDate).toLocaleDateString('vi-VN')}.`,
+      'booking',
+      `/staff/orders/${populatedBooking._id}`
+    );
 
     res.status(201).json({
       success: true,

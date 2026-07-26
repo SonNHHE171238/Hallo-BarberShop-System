@@ -20,6 +20,7 @@ const {
 
 const bookingService = require("../services/booking.service");
 const emailService = require("../services/email.service");
+const notificationService = require("../src/notification.service");
 const { sendSuccess } = require("../utils/response.helper");
 
 exports.updateBookingStatus = async (req, res) => {
@@ -256,6 +257,20 @@ exports.updateBookingStatus = async (req, res) => {
       } catch (pointError) {
         console.error("Error updating points:", pointError);
       }
+      
+      // Gửi thông báo cho khách hàng
+      let msg = `Lịch hẹn của bạn vào ngày ${new Date(booking.bookingDate).toLocaleDateString('vi-VN')} đã được cập nhật trạng thái thành: ${status}`;
+      if (status === 'completed') msg = `Lịch hẹn của bạn đã hoàn thành. Cảm ơn bạn đã sử dụng dịch vụ!`;
+      if (status === 'cancelled') msg = `Lịch hẹn của bạn đã bị hủy.`;
+      if (status === 'no_show') msg = `Bạn đã không đến đúng lịch hẹn của mình.`;
+      
+      await notificationService.sendNotificationToUser(
+        booking.customerId,
+        'Cập nhật Lịch hẹn',
+        msg,
+        'booking',
+        `/shop/booking-history`
+      );
     }
 
     const updatedBooking = await Booking.findById(bookingId)

@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { staffDashboardService } from "@/services/staffDashboard.service";
 import toast from "react-hot-toast";
 import AddItemsModal from "@/components/staff/AddItemsModal";
-
 import axios from "axios";
+import GenericConfirmModal from "@/components/ui/GenericConfirmModal";
 
 export default function StaffBookingDetail() {
   const router = useRouter();
@@ -22,6 +22,11 @@ export default function StaffBookingDetail() {
     message: "",
     icon: "",
     color: "",
+  });
+  const [removeConfirmModal, setRemoveConfirmModal] = useState({
+    isOpen: false,
+    itemType: null,
+    itemId: null
   });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -76,11 +81,15 @@ export default function StaffBookingDetail() {
     }
   };
 
-  const handleRemoveItem = async (itemType, itemId) => {
-    if (
-      !window.confirm("Bạn có chắc chắn muốn xoá mục này khỏi Lịch hẹn không?")
-    )
-      return;
+  const handleRemoveItemInit = (itemType, itemId) => {
+    setRemoveConfirmModal({ isOpen: true, itemType, itemId });
+  };
+
+  const handleRemoveItemConfirm = async () => {
+    const { itemType, itemId } = removeConfirmModal;
+    if (!itemType || !itemId) return;
+    setRemoveConfirmModal({ isOpen: false, itemType: null, itemId: null });
+
     try {
       const res = await axios.delete(
         `http://localhost:5000/api/staff/bookings/${booking._id}/remove-item`,
@@ -373,7 +382,7 @@ export default function StaffBookingDetail() {
                         booking.status === "confirmed") && (
                         <button
                           onClick={() =>
-                            handleRemoveItem("service", service._id)
+                            handleRemoveItemInit("service", service._id)
                           }
                           className="w-8 h-8 rounded-full bg-surface-variant hover:bg-error/10 text-on-surface-variant hover:text-error flex items-center justify-center transition-colors"
                           title="Xoá dịch vụ"
@@ -436,7 +445,7 @@ export default function StaffBookingDetail() {
                             booking.status === "confirmed") && (
                             <button
                               onClick={() =>
-                                handleRemoveItem(
+                                handleRemoveItemInit(
                                   "product",
                                   p.productId?._id || p.productId,
                                 )
@@ -712,6 +721,16 @@ export default function StaffBookingDetail() {
         onClose={() => setIsAddModalOpen(false)}
         bookingId={booking._id}
         onAddSuccess={fetchBooking}
+      />
+
+      <GenericConfirmModal 
+        isOpen={removeConfirmModal.isOpen}
+        title="Xóa mục này"
+        message="Bạn có chắc chắn muốn xoá mục này khỏi Lịch hẹn không?"
+        onCancel={() => setRemoveConfirmModal({ isOpen: false, itemType: null, itemId: null })}
+        onConfirm={handleRemoveItemConfirm}
+        confirmText="Xóa"
+        isDanger={true}
       />
     </div>
   );

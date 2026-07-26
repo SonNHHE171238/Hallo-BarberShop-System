@@ -30,6 +30,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
         { name: 'Dịch vụ', href: '/admin/services', icon: 'cut' },
         { name: 'Kho hàng', href: '/admin/products', icon: 'inventory_2' },
         { name: 'Quản lý Blog', href: '/admin/blogs', icon: 'description' },
+        { name: 'Đánh giá', href: '/admin/feedbacks', icon: 'star' },
         { name: 'Mã giảm giá', href: '/admin/vouchers', icon: 'local_offer' },
       ]
     },

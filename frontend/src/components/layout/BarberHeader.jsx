@@ -33,6 +33,7 @@ export default function BarberHeader() {
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/dashboard">Bảng Điều Khiển</Link>
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/bookings">Lịch Hẹn</Link>
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/profile">Hồ sơ barber</Link>
+          <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/feedbacks">Đánh Giá</Link>
           <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 uppercase text-[12px] tracking-[0.2em] font-medium" href="/barber/absence">Xin Nghỉ Phép</Link>
         </nav>
 
@@ -100,6 +101,7 @@ export default function BarberHeader() {
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/dashboard">Bảng Điều Khiển</Link>
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/bookings">Lịch Hẹn</Link>
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/profile">Hồ sơ barber</Link>
+          <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/feedbacks">Đánh Giá</Link>
           <Link onClick={() => setIsMobileMenuOpen(false)} className="text-on-surface-variant hover:text-primary text-sm uppercase tracking-widest font-bold" href="/barber/absence">Xin Nghỉ Phép</Link>
         </div>
       </div>

@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { absenceService } from "@/services/absence.service";
 import { staffDashboardService } from "@/services/staffDashboard.service";
 import Link from "next/link";
+import toast from "react-hot-toast";
+import GenericConfirmModal from "@/components/ui/GenericConfirmModal";
 
 export default function AdminAbsencesPage() {
   const [absences, setAbsences] = useState([]);
@@ -17,6 +19,7 @@ export default function AdminAbsencesPage() {
   const [barbers, setBarbers] = useState([]);
   const [resolvingBookingId, setResolvingBookingId] = useState(null);
   const [newBarberId, setNewBarberId] = useState("");
+  const [rejectModalState, setRejectModalState] = useState({ isOpen: false, absenceId: null });
 
   const fetchAbsences = React.useCallback(async () => {
     setLoading(true);
@@ -70,8 +73,14 @@ export default function AdminAbsencesPage() {
     }
   };
 
-  const handleReject = async (absenceId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn từ chối đơn xin nghỉ này?")) return;
+  const handleRejectInit = (absenceId) => {
+    setRejectModalState({ isOpen: true, absenceId });
+  };
+
+  const handleRejectConfirm = async () => {
+    const { absenceId } = rejectModalState;
+    if (!absenceId) return;
+    setRejectModalState({ isOpen: false, absenceId: null });
 
     try {
       await absenceService.rejectAbsence(absenceId);
@@ -84,7 +93,7 @@ export default function AdminAbsencesPage() {
 
   const handleResolveBooking = async (bookingId, action) => {
     if (action === "reassigned" && !newBarberId) {
-      alert("Vui lòng chọn thợ mới để đổi lịch.");
+      toast.error("Vui lòng chọn thợ mới để đổi lịch.");
       return;
     }
 
@@ -112,7 +121,7 @@ export default function AdminAbsencesPage() {
 
       setNewBarberId("");
     } catch (err) {
-      alert(err.message || "Lỗi khi xử lý lịch hẹn.");
+      toast.error(err.message || "Lỗi khi xử lý lịch hẹn.");
     } finally {
       setResolvingBookingId(null);
     }
@@ -121,7 +130,7 @@ export default function AdminAbsencesPage() {
   const handleApproveAfterResolve = async () => {
     const hasPending = selectedAbsence.affectedBookings?.some(b => b.status === "pending_reschedule");
     if (hasPending) {
-      alert("Vui lòng xử lý tất cả các lịch hẹn bị trùng trước khi duyệt.");
+      toast.error("Vui lòng xử lý tất cả các lịch hẹn bị trùng trước khi duyệt.");
       return;
     }
 
@@ -132,7 +141,7 @@ export default function AdminAbsencesPage() {
       setSelectedAbsence(null);
       fetchAbsences();
     } catch (err) {
-      alert(err.message || "Lỗi khi duyệt đơn.");
+      toast.error(err.message || "Lỗi khi duyệt đơn.");
     }
   };
 
@@ -261,7 +270,7 @@ export default function AdminAbsencesPage() {
                         {req.isApproved === null && (
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() => handleReject(req._id)}
+                              onClick={() => handleRejectInit(req._id)}
                               className="px-3 py-1.5 bg-surface-container-highest text-error hover:bg-error hover:text-on-error font-bold text-xs uppercase rounded-sm transition-colors"
                             >
                               Từ chối
@@ -400,6 +409,16 @@ export default function AdminAbsencesPage() {
           </div>
         </div>
       )}
+
+      <GenericConfirmModal 
+        isOpen={rejectModalState.isOpen}
+        title="Từ chối đơn"
+        message="Bạn có chắc chắn muốn từ chối đơn xin nghỉ này?"
+        onCancel={() => setRejectModalState({ isOpen: false, absenceId: null })}
+        onConfirm={handleRejectConfirm}
+        confirmText="Từ chối"
+        isDanger={true}
+      />
     </div>
   );
 }

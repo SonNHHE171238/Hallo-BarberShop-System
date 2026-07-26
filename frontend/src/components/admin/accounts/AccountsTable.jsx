@@ -1,3 +1,4 @@
+"use client";
 import React, { useMemo, useEffect, useState, useRef } from "react";
 import useSWR from "swr";
 import { adminAccountService } from "@/services/adminAccount.service";
