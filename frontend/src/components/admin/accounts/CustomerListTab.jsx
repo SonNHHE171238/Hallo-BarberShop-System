@@ -7,7 +7,8 @@ import { formatDateTime } from "@/utils/formatters";
 import CustomerHistoryModal from "./CustomerHistoryModal";
 import GenericConfirmModal from "@/components/ui/GenericConfirmModal";
 
-export default function CustomerListTab() {
+export default function CustomerListTab({ role = 'admin' }) {
+  const isAdmin = role === 'admin';
   const {
     data: response,
     error,
@@ -232,6 +233,7 @@ export default function CustomerListTab() {
                             >
                                 <span className="material-symbols-outlined text-[18px]">history</span>
                             </button>
+                            {isAdmin && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -250,6 +252,7 @@ export default function CustomerListTab() {
                                   : "lock_open"}
                               </span>
                             </button>
+                            )}
                         </div>
                       </td>
                     </tr>
@@ -273,6 +276,7 @@ export default function CustomerListTab() {
                                 <span className="material-symbols-outlined text-[16px]">history</span>
                                 Xem lịch sử
                             </button>
+                            {isAdmin && (
                             <button
                                 onClick={() => initiateToggleStatus(account)}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors rounded-md text-xs font-bold ${account.status === "active" ? "text-error bg-error/10 hover:bg-error/20" : "text-[#4ADE80] bg-[#4ADE80]/10 hover:bg-[#4ADE80]/20"}`}
@@ -282,6 +286,7 @@ export default function CustomerListTab() {
                                 </span>
                                 {account.status === "active" ? "Khóa" : "Mở khóa"}
                             </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -345,15 +350,17 @@ export default function CustomerListTab() {
         customer={selectedCustomer} 
       />
 
-      <GenericConfirmModal 
-        isOpen={confirmModalOpen}
-        title={customerToToggle?.status === 'active' ? "Khóa tài khoản" : "Mở khóa tài khoản"}
-        message={customerToToggle?.status === 'active' 
-          ? `Bạn có chắc chắn muốn khóa tài khoản của ${customerToToggle?.name}? Người dùng sẽ không thể đăng nhập.` 
-          : `Bạn có chắc chắn muốn mở khóa tài khoản của ${customerToToggle?.name}?`}
-        onConfirm={handleConfirmToggle}
-        onCancel={() => setConfirmModalOpen(false)}
-      />
+      {isAdmin && (
+        <GenericConfirmModal 
+          isOpen={confirmModalOpen}
+          title={customerToToggle?.status === 'active' ? "Khóa tài khoản" : "Mở khóa tài khoản"}
+          message={customerToToggle?.status === 'active' 
+            ? `Bạn có chắc chắn muốn khóa tài khoản của ${customerToToggle?.name}? Người dùng sẽ không thể đăng nhập.` 
+            : `Bạn có chắc chắn muốn mở khóa tài khoản của ${customerToToggle?.name}?`}
+          onConfirm={handleConfirmToggle}
+          onCancel={() => setConfirmModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
