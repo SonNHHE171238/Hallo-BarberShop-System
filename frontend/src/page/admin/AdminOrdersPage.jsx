@@ -165,7 +165,8 @@ function OrdersPageContent({ role = "admin", baseRoute = "/admin/orders" }) {
   return (
     <div className="space-y-8 max-w-[1400px] mx-auto w-full">
       {/* OVERVIEW CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {role === "admin" && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="glass-panel p-6 border-l-4 border-l-primary hover:scale-[1.02] transition-transform">
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-body-lg text-on-surface-variant font-medium">Tổng số đơn hàng</h3>
@@ -195,6 +196,7 @@ function OrdersPageContent({ role = "admin", baseRoute = "/admin/orders" }) {
           <span className="text-display-sm font-display-sm font-bold text-on-surface">{stats.completed}</span>
         </div>
       </div>
+      )}
 
       {/* TABS */}
       <div className="border-b border-outline-variant overflow-x-auto custom-scrollbar">
@@ -214,18 +216,18 @@ function OrdersPageContent({ role = "admin", baseRoute = "/admin/orders" }) {
       </div>
 
       {/* TOOLBAR */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className="xl:col-span-5 relative">
+      <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between">
+        <div className="relative w-full xl:w-[360px] shrink-0">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
           <input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-lg pl-10 pr-4 py-2.5 text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-on-surface-variant/50"
+            className="w-full bg-surface-container-low border border-outline-variant rounded-lg pl-10 pr-4 py-2 text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-on-surface-variant/50"
             placeholder="Tìm Mã đơn, tên khách, SĐT..."
             type="text"
           />
         </div>
-        <div className="xl:col-span-7 flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto flex-1 xl:justify-end">
           <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
             className="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2.5 text-body-md focus:ring-1 focus:ring-primary outline-none min-w-[140px]">
             <option>PT Thanh toán</option>
@@ -268,7 +270,7 @@ function OrdersPageContent({ role = "admin", baseRoute = "/admin/orders" }) {
             )}
           </div>
           <button onClick={handleResetFilters}
-            className="bg-error/10 text-error border border-error/20 rounded-lg px-4 py-2.5 text-body-md hover:bg-error/20 transition-colors font-bold flex items-center gap-2">
+            className="bg-error/10 text-error border border-error/20 rounded-lg px-4 py-2 text-body-md hover:bg-error/20 transition-colors font-bold flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">filter_alt_off</span> Xoá lọc
           </button>
         </div>
