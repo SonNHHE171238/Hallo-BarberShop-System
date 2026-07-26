@@ -6,6 +6,7 @@ export default function CustomerHistoryModal({ isOpen, onClose, customer }) {
     const [bookings, setBookings] = useState([]);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState('all'); // all, completed, cancelled
 
     useEffect(() => {
         if (isOpen && customer) {
@@ -39,6 +40,34 @@ export default function CustomerHistoryModal({ isOpen, onClose, customer }) {
     const totalSpentOrders = orders.filter(o => o.status === 'completed').reduce((sum, o) => sum + (o.totalAmount || 0), 0);
     const totalSpent = totalSpentBookings + totalSpentOrders;
 
+    const now = new Date();
+    const validBookings = bookings.filter(b => {
+        if (b.status === 'completed') return true;
+        if (b.status === 'pending' || b.status === 'confirmed') {
+            const bDate = new Date(b.bookingDate);
+            return bDate > now;
+        }
+        return false;
+    });
+
+    const validOrders = orders.filter(o => {
+        return o.status === 'completed' || o.status === 'pending' || o.status === 'processing' || o.status === 'shipped';
+    });
+
+    const filteredBookings = bookings.filter(b => {
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'completed') return b.status === 'completed';
+        if (statusFilter === 'cancelled') return b.status === 'cancelled' || b.status === 'no-show';
+        return true;
+    });
+
+    const filteredOrders = orders.filter(o => {
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'completed') return o.status === 'completed';
+        if (statusFilter === 'cancelled') return o.status === 'cancelled' || o.status === 'failed';
+        return true;
+    });
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="bg-surface-container rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-fade-in-up border border-outline-variant shadow-2xl">
@@ -55,23 +84,41 @@ export default function CustomerHistoryModal({ isOpen, onClose, customer }) {
                     </button>
                 </div>
 
-                <div className="p-6 flex-1 overflow-y-auto custom-scrollbar bg-surface flex flex-col gap-6">
+                <div className="p-4 md:p-6 flex-1 overflow-y-auto custom-scrollbar bg-surface flex flex-col gap-4">
                     {/* Tổng quan */}
-                    <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6">
+                    <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col md:flex-row items-center gap-4">
                         <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left">
-                            <span className="text-label-md uppercase tracking-wider font-bold text-on-surface-variant">Tổng chi tiêu</span>
-                            <span className="text-display-sm font-bold text-primary">{formatPrice(totalSpent)}</span>
+                            <span className="text-[10px] md:text-xs uppercase tracking-wider font-bold text-on-surface-variant">Tổng chi tiêu</span>
+                            <span className="text-headline-md md:text-title-lg font-bold text-primary">{formatPrice(totalSpent)}</span>
                         </div>
-                        <div className="h-px md:h-12 w-full md:w-px bg-outline-variant"></div>
+                        <div className="h-px md:h-10 w-full md:w-px bg-outline-variant"></div>
                         <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left">
-                            <span className="text-label-md uppercase tracking-wider font-bold text-on-surface-variant">Lịch hẹn</span>
-                            <span className="text-headline-lg font-bold text-on-surface">{bookings.length} lần</span>
+                            <span className="text-[10px] md:text-xs uppercase tracking-wider font-bold text-on-surface-variant">Lịch hẹn</span>
+                            <span className="text-title-lg font-bold text-on-surface">{validBookings.length} lần</span>
                         </div>
-                        <div className="h-px md:h-12 w-full md:w-px bg-outline-variant"></div>
+                        <div className="h-px md:h-10 w-full md:w-px bg-outline-variant"></div>
                         <div className="flex-1 flex flex-col justify-center items-center md:items-start text-center md:text-left">
-                            <span className="text-label-md uppercase tracking-wider font-bold text-on-surface-variant">Đơn hàng</span>
-                            <span className="text-headline-lg font-bold text-on-surface">{orders.length} đơn</span>
+                            <span className="text-[10px] md:text-xs uppercase tracking-wider font-bold text-on-surface-variant">Đơn hàng</span>
+                            <span className="text-title-lg font-bold text-on-surface">{validOrders.length} đơn</span>
                         </div>
+                    </div>
+
+                    {/* Bộ lọc */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-on-surface-variant mr-2">Lọc trạng thái:</span>
+                        {['all', 'completed', 'cancelled'].map(filter => (
+                            <button
+                                key={filter}
+                                onClick={() => setStatusFilter(filter)}
+                                className={`px-3 py-1 rounded-full text-xs font-bold uppercase transition-colors border ${
+                                    statusFilter === filter 
+                                    ? 'bg-primary text-on-primary border-primary' 
+                                    : 'bg-surface border-outline-variant text-on-surface hover:bg-surface-variant'
+                                }`}
+                            >
+                                {filter === 'all' ? 'Tất cả' : filter === 'completed' ? 'Hoàn thành' : 'Đã huỷ'}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Lịch sử */}
@@ -80,18 +127,19 @@ export default function CustomerHistoryModal({ isOpen, onClose, customer }) {
                             Đang tải dữ liệu...
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Cột 1: Bookings */}
-                            <div className="bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden flex flex-col max-h-[500px]">
-                                <div className="p-4 bg-surface-container-high border-b border-outline-variant font-bold text-on-surface sticky top-0">
-                                    Lịch sử Đặt lịch ({bookings.length})
+                            <div className="bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden flex flex-col max-h-[400px]">
+                                <div className="p-3 bg-surface-container-high border-b border-outline-variant font-bold text-on-surface sticky top-0 text-sm flex justify-between">
+                                    <span>Lịch hẹn</span>
+                                    <span className="bg-primary/10 text-primary px-2 rounded-full text-xs">{filteredBookings.length}</span>
                                 </div>
-                                <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3">
-                                    {bookings.length === 0 ? (
+                                <div className="p-3 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2">
+                                    {filteredBookings.length === 0 ? (
                                         <div className="text-on-surface-variant text-center py-4 text-sm">Chưa có lịch sử.</div>
                                     ) : (
-                                        bookings.map(b => (
-                                            <div key={b._id} className="bg-surface border border-outline-variant p-3 rounded-lg flex flex-col gap-2">
+                                        filteredBookings.map(b => (
+                                            <div key={b._id} className="bg-surface border border-outline-variant p-2.5 rounded-lg flex flex-col gap-1.5">
                                                 <div className="flex justify-between items-start">
                                                     <span className="font-bold text-sm text-on-surface">{formatDateTime(b.bookingDate)}</span>
                                                     <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${b.status === 'completed' ? 'bg-green-500/10 text-green-500' : 'bg-surface-variant text-on-surface-variant'}`}>{b.status}</span>
@@ -110,16 +158,17 @@ export default function CustomerHistoryModal({ isOpen, onClose, customer }) {
                             </div>
 
                             {/* Cột 2: Orders */}
-                            <div className="bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden flex flex-col max-h-[500px]">
-                                <div className="p-4 bg-surface-container-high border-b border-outline-variant font-bold text-on-surface sticky top-0">
-                                    Lịch sử Mua hàng ({orders.length})
+                            <div className="bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden flex flex-col max-h-[400px]">
+                                <div className="p-3 bg-surface-container-high border-b border-outline-variant font-bold text-on-surface sticky top-0 text-sm flex justify-between">
+                                    <span>Mua hàng</span>
+                                    <span className="bg-primary/10 text-primary px-2 rounded-full text-xs">{filteredOrders.length}</span>
                                 </div>
-                                <div className="p-4 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3">
-                                    {orders.length === 0 ? (
+                                <div className="p-3 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2">
+                                    {filteredOrders.length === 0 ? (
                                         <div className="text-on-surface-variant text-center py-4 text-sm">Chưa có lịch sử.</div>
                                     ) : (
-                                        orders.map(o => (
-                                            <div key={o._id} className="bg-surface border border-outline-variant p-3 rounded-lg flex flex-col gap-2">
+                                        filteredOrders.map(o => (
+                                            <div key={o._id} className="bg-surface border border-outline-variant p-2.5 rounded-lg flex flex-col gap-1.5">
                                                 <div className="flex justify-between items-start">
                                                     <span className="font-bold text-sm text-on-surface">{formatDateTime(o.createdAt)}</span>
                                                     <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${o.status === 'completed' ? 'bg-green-500/10 text-green-500' : 'bg-surface-variant text-on-surface-variant'}`}>{o.status}</span>
