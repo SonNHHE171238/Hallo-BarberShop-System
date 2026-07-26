@@ -267,7 +267,8 @@ exports.createBookingSinglePage = async (req, res, next) => {
     return require("../utils/response.helper").sendSuccess(res, 201, "Booking created successfully", {
       booking: populatedBooking,
       isAutoAssigned: wasAutoAssigned,
-      paymentLinkData
+      paymentLinkData,
+      noShowCount
     });
   } catch (err) {
     console.error("DEBUG ERROR IN createBookingSinglePage:", err);

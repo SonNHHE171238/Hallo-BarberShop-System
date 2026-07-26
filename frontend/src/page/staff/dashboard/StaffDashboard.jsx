@@ -151,6 +151,12 @@ export default function StaffDashboard() {
             waitingCustomers: Math.max(0, prev.waitingCustomers - 1),
           }));
         }
+        if (status === "in_progress" && previousStatus === "confirmed") {
+          setMetrics((prev) => ({
+            ...prev,
+            waitingCustomers: Math.max(0, prev.waitingCustomers - 1),
+          }));
+        }
         if (status === "no_show" && previousStatus === "confirmed") {
           setMetrics((prev) => ({
             ...prev,
@@ -621,12 +627,28 @@ export default function StaffDashboard() {
                     </>
                   ) : (
                     <>
-                      <button
-                        onClick={() => handleStatusUpdate("completed")}
-                        className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20"
-                      >
-                        Xác nhận Thu tiền & Hoàn thành
-                      </button>
+                      {checkInModal.booking?.status === "confirmed" && (
+                        <button
+                          onClick={() => handleStatusUpdate("in_progress")}
+                          className="w-full py-3 bg-secondary/20 text-secondary border border-secondary/50 font-bold rounded-xl hover:bg-secondary/30 active:scale-95 transition-all mb-3 flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined">
+                            content_cut
+                          </span>
+                          Khách Đã Lên Ghế Phục Vụ
+                        </button>
+                      )}
+                      {checkInModal.booking?.status === "in_progress" && (
+                        <button
+                          onClick={() => handleStatusUpdate("completed")}
+                          className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2 mb-3"
+                        >
+                          <span className="material-symbols-outlined">
+                            check_circle
+                          </span>
+                          Xác nhận Thu tiền & Hoàn thành
+                        </button>
+                      )}
                       {checkInModal.booking?.status !== "in_progress" && (
                         <button
                           onClick={() => {

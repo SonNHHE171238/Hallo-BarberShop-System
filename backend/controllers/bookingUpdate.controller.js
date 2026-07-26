@@ -678,6 +678,7 @@ exports.cancelBooking = async (req, res) => {
     if (isAdminOrStaff) {
       isAuthorized = true;
     } else {
+      const User = require("../models/user.model");
       const user = await User.findById(userId);
       if (booking.customerId && booking.customerId.toString() === userId) {
         isAuthorized = true;
@@ -792,43 +793,9 @@ exports.cancelBooking = async (req, res) => {
       // Don't fail the cancellation if this update fails, but log it
     }
 
-    // Track cancellation as no-show record
-    const NoShow = require("../models/no-show.model");
+    // Note: We no longer track valid customer cancellations in the NoShow table 
+    // to avoid confusion. Late cancellations are blocked above (400 error).
 
-    // Determine if this is a late cancellation (less than 2 hours before appointment)
-    const isLateCancellation = hoursDifference < 2;
-
-    try {
-      let phone = booking.customerPhone;
-      if (!phone && booking.customerId) {
-        const User = require("../models/user.model");
-        const user = await User.findById(booking.customerId);
-        if (user) phone = user.phone;
-      }
-
-      if (phone) {
-        await NoShow.create({
-          customerId: booking.customerId || null,
-          customerPhone: phone,
-          bookingId: booking._id,
-          barberId: booking.barberId,
-          serviceId:
-            booking.services && booking.services.length > 0
-              ? booking.services[0]._id || booking.services[0]
-              : null,
-          originalBookingDate: booking.bookingDate,
-          markedBy: userId,
-          reason: isLateCancellation
-            ? "late_cancellation"
-            : "customer_cancelled",
-          description: reason,
-          isWithinPolicy: !isLateCancellation,
-        });
-      }
-    } catch (noShowError) {
-      console.error("Error creating no-show record:", noShowError);
-      // Don't fail the cancellation if no-show tracking fails
-    }
 
     res.json({
       message: "Booking cancelled successfully",
@@ -1132,6 +1099,72 @@ exports.guestRescheduleBooking = async (req, res) => {
     res.json({ success: true, message: "Đổi lịch thành công", data: booking });
   } catch (err) {
     console.error("Error in guestRescheduleBooking:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.handlePaymentCancelled = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const mongoose = require("mongoose");
+    let booking;
+
+    if (mongoose.Types.ObjectId.isValid(bookingId)) {
+      booking = await Booking.findById(bookingId);
+    } else if (!isNaN(Number(bookingId))) {
+      booking = await Booking.findOne({ orderCode: Number(bookingId) });
+    }
+    
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy lịch hẹn" });
+    }
+
+    if (booking.status !== "pending" && booking.status !== "confirmed") {
+      return res.json({ success: true, message: "Trạng thái không hợp lệ", data: booking });
+    }
+
+    const NoShow = require("../models/no-show.model");
+    let customerPhone = booking.customerPhone;
+    if (!customerPhone && booking.customerId) {
+      const User = require("../models/user.model");
+      const user = await User.findById(booking.customerId);
+      if (user) customerPhone = user.phone;
+    }
+
+    if (customerPhone) {
+      const count = await NoShow.getNoShowCountByPhone(customerPhone);
+      if (count >= 1) {
+        // Khách hàng có no-show, bắt buộc cọc -> Nếu huỷ thanh toán thì huỷ luôn lịch hẹn
+        booking.status = "cancelled";
+        booking.cancellationReason = "Huỷ thanh toán cọc bắt buộc";
+        booking.cancelledAt = new Date();
+        booking.note = booking.note ? `${booking.note}\nHệ thống tự động huỷ do khách hàng huỷ thanh toán cọc.` : `Hệ thống tự động huỷ do khách hàng huỷ thanh toán cọc.`;
+        await booking.save();
+
+        // Giải phóng slot schedule
+        const BarberSchedule = require("../models/barber-schedule.model");
+        const dateStr = booking.bookingDate.toISOString().split("T")[0];
+        try {
+          await BarberSchedule.unmarkSlotsAsBooked(booking.barberId, dateStr, booking._id);
+        } catch(e) {
+          console.error("Error unmarking schedule slots for cancelled payment:", e);
+        }
+        
+        // Cập nhật totalBookings của thợ
+        try {
+          const Barber = require("../models/barber.model");
+          await Barber.findByIdAndUpdate(booking.barberId, { $inc: { totalBookings: -1 } });
+        } catch(e) {}
+        
+        return res.json({ success: true, message: "Đã huỷ lịch do không thanh toán cọc", data: booking });
+      }
+    }
+    
+    // Nếu không bắt buộc cọc, chỉ ghi nhận paymentStatus (mặc định đã là pending)
+    return res.json({ success: true, message: "Đã ghi nhận huỷ thanh toán", data: booking });
+
+  } catch (err) {
+    console.error("Error in handlePaymentCancelled:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

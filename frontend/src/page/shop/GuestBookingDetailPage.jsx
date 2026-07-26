@@ -83,7 +83,7 @@ export default function GuestBookingDetailPage() {
             const dateStr = booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString("vi-VN", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "";
             
             const queryParams = new URLSearchParams({
-              id: booking._id,
+              bookingId: booking._id,
               service: serviceName,
               price: booking.totalPrice || 0,
               barber: booking.barberName || "Sắp xếp tự động",
