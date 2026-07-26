@@ -110,7 +110,7 @@ export default function POSBookingPage() {
           _id: customerData._id,
           name: customerData.name, 
           phone: customerData.phone, 
-          role: "customer", 
+          role: customerData.role || "customer", 
           points: customerData.loyaltyPoints || 0 
         });
         setShowNewCustomerForm(false);
@@ -126,7 +126,7 @@ export default function POSBookingPage() {
     }
   };
 
-  const handleSaveNewCustomer = () => {
+  const handleSaveNewCustomer = async () => {
     if (!newCustomerInfo.name || !newCustomerInfo.phone) {
       toast.error("Vui lòng nhập tên và số điện thoại.");
       return;
@@ -152,22 +152,36 @@ export default function POSBookingPage() {
       }
     }
 
-    setCustomer({ 
-      name: newCustomerInfo.name, 
-      phone: newCustomerInfo.phone, 
-      role: "guest", 
-      points: null,
-      email,
-      note,
-    });
-    setShowNewCustomerForm(false);
+    try {
+      const customerData = await staffDashboardService.quickRegisterCustomer({
+        name: newCustomerInfo.name,
+        phone: newCustomerInfo.phone,
+        email,
+        note
+      });
+
+      if (customerData) {
+        setCustomer({ 
+          _id: customerData._id,
+          name: customerData.name, 
+          phone: customerData.phone, 
+          role: customerData.role, 
+          note,
+        });
+        toast.success("Đã ghi nhận thông tin khách vãng lai.");
+        setShowNewCustomerForm(false);
+      }
+    } catch (error) {
+      toast.error(error.message || "Lỗi khi kết nối đến máy chủ.");
+    }
   };
 
   const selectItem = (item) => {
     setSelectedItems(prev => {
-      const isSelected = prev.some(i => i._id === item._id);
+      const itemId = item._id || item.id;
+      const isSelected = prev.some(i => (i._id || i.id) === itemId);
       if (isSelected) {
-        return prev.filter(i => i._id !== item._id);
+        return prev.filter(i => (i._id || i.id) !== itemId);
       } else {
         return [...prev, item];
       }
@@ -176,7 +190,7 @@ export default function POSBookingPage() {
 
   const increaseQuantity = (itemId) => {
     setSelectedItems(prev => prev.map(item => {
-      if (item._id === itemId && item.itemType === 'product') {
+      if ((item._id || item.id) === itemId && item.itemType === 'product') {
         if (item.stock && item.quantity >= item.stock) {
           toast.error(`Sản phẩm này chỉ còn ${item.stock} trong kho!`);
           return item;
@@ -189,7 +203,7 @@ export default function POSBookingPage() {
 
   const decreaseQuantity = (itemId) => {
     setSelectedItems(prev => prev.map(item => {
-      if (item._id === itemId && item.itemType === 'product') {
+      if ((item._id || item.id) === itemId && item.itemType === 'product') {
         if (item.quantity > 1) {
           return { ...item, quantity: item.quantity - 1 };
         }
@@ -239,7 +253,7 @@ export default function POSBookingPage() {
       if (productsOnly.length > 0) {
         const orderPayload = {
           items: productsOnly.map(p => ({
-            productId: p._id,
+            productId: p._id || p.id,
             quantity: p.quantity || 1
           })),
           customerName: customer ? customer.name : "Khách vãng lai",
@@ -270,7 +284,7 @@ export default function POSBookingPage() {
       // 2. Nếu có dịch vụ -> Tạo Booking
       if (servicesOnly.length > 0) {
         const bookingPayload = {
-          services: servicesOnly.map(s => s._id),
+          services: servicesOnly.map(s => s._id || s.id),
           barberId: selectedStaff._id || selectedStaff.id,
           bookingDate: new Date(`${selectedDate}T${selectedTime}:00`).toISOString(),
           date: selectedDate,
@@ -282,6 +296,7 @@ export default function POSBookingPage() {
           customerPhone: customer ? customer.phone : "",
           note: customer?.note || "",
           customerEmail: customer?.email || undefined,
+          status: "confirmed",
           voucherCode: appliedVoucher ? appliedVoucher.code : undefined,
           discountAmount: discountAmount || 0,
         };
@@ -408,7 +423,66 @@ export default function POSBookingPage() {
           displayedItems={displayedItems}
           selectedItems={selectedItems}
           selectItem={selectItem}
-        />
+        >
+          {/* Staff Selection (Only show if there's at least one service selected) */}
+          {hasServices && (
+            <div className="mt-8 pt-6 border-t border-outline-variant/30 animate-in fade-in slide-in-from-bottom-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
+                <div>
+                  <h2 className="font-headline-sm text-lg text-on-surface mb-1">Chỉ Định Barber</h2>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 bg-surface-container-low border border-outline-variant/20 rounded-xl p-6">
+                {staffList.map(staff => {
+                  const isSelected = selectedStaff && (selectedStaff._id === staff._id);
+                  const name = staff.userId?.name || "Unknown Barber";
+                  const title = staff.specialties?.join(", ") || "Stylist";
+                  const imageUrl = staff.profileImageUrl;
+                  const firstChar = name.charAt(0).toUpperCase();
+
+                  return (
+                    <div
+                      key={staff._id || staff.id}
+                      onClick={() => setSelectedStaff(staff)}
+                      className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all group ${
+                        isSelected ? 'border-primary bg-primary/10' : 'border-outline-variant/20 hover:bg-primary/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-full overflow-hidden border transition-colors flex items-center justify-center bg-surface-container ${
+                          isSelected ? 'border-primary' : 'border-outline-variant group-hover:border-primary/50'
+                        }`}>
+                          {imageUrl ? (
+                            <img alt={name} className="w-full h-full object-cover" src={imageUrl} />
+                          ) : (
+                            <span className="text-primary font-bold">{firstChar}</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className={`font-label-md block font-semibold transition-colors ${
+                            isSelected ? 'text-primary' : 'text-on-surface group-hover:text-primary'
+                          }`}>
+                            {name}
+                          </span>
+                          <span className={`text-[10px] uppercase tracking-widest line-clamp-1 ${
+                            isSelected ? 'text-primary/70' : 'text-on-surface-variant'
+                          }`}>
+                            {title}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`material-symbols-outlined transition-colors ${
+                        isSelected ? 'text-primary' : 'text-outline-variant group-hover:text-primary'
+                      }`}>
+                        {isSelected ? 'check_circle' : 'radio_button_unchecked'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </POSServiceList>
       </section>
 
       {/* Right Side: Booking Summary & Checkout */}

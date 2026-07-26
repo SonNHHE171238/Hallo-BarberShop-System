@@ -6,14 +6,14 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     email: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true, // Cho phép nhiều document không có email (null/undefined)
       lowercase: true,
       trim: true,
       match: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     },
     phone: { type: String, default: '' },
-    passwordHash: { type: String, select: false }, // Cho phép null/undefined nếu đăng nhập bằng Google
+    passwordHash: { type: String, select: false }, // Cho phép null/undefined nếu đăng nhập bằng Google hoặc guest
     oauthProvider: {
       type: String,
       enum: ['google', 'facebook', null],

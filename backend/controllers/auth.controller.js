@@ -108,7 +108,7 @@ exports.login = async (req, res, next) => {
 
     const { email, password } = req.body;
     if (!email || !password) {
-      const error = new Error('Vui lòng nhập đầy đủ Email và Mật khẩu.');
+      const error = new Error('Vui lòng nhập đầy đủ Email/Số điện thoại và Mật khẩu.');
       error.statusCode = 400;
       error.isOperational = true;
       throw error;

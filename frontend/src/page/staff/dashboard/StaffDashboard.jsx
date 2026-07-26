@@ -151,6 +151,12 @@ export default function StaffDashboard() {
             waitingCustomers: Math.max(0, prev.waitingCustomers - 1),
           }));
         }
+        if (status === "in_progress" && previousStatus === "confirmed") {
+          setMetrics((prev) => ({
+            ...prev,
+            waitingCustomers: Math.max(0, prev.waitingCustomers - 1),
+          }));
+        }
         if (status === "no_show" && previousStatus === "confirmed") {
           setMetrics((prev) => ({
             ...prev,
@@ -587,7 +593,7 @@ export default function StaffDashboard() {
                         }}
                         className="w-full py-3 bg-error text-white font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all"
                       >
-                        Khách Không Tới (No Show)
+                        Khách Không Tới
                       </button>
                       <button
                         onClick={() => {
@@ -619,14 +625,72 @@ export default function StaffDashboard() {
                         Đóng cửa sổ
                       </button>
                     </>
-                  ) : (
+                  ) : checkInModal.booking?.status === "confirmed" ? (
                     <>
                       <button
-                        onClick={() => handleStatusUpdate("completed")}
-                        className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20"
+                        onClick={() => handleStatusUpdate("in_progress")}
+                        className="w-full py-3 bg-secondary text-on-secondary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-secondary/20 flex items-center justify-center gap-2"
                       >
-                        Xác nhận Thu tiền & Hoàn thành
+                        <span className="material-symbols-outlined">
+                          content_cut
+                        </span>
+                        Đang Phục Vụ
                       </button>
+                      <button
+                        onClick={() => {
+                          setStatusConfirmModal({
+                            isOpen: true,
+                            status: "cancelled",
+                            title: "Hủy Lịch Hẹn",
+                            message:
+                              "Bạn có chắc chắn muốn HỦY lịch hẹn này?",
+                            icon: "cancel",
+                            color: "text-error",
+                            bg: "bg-error/10",
+                          });
+                        }}
+                        className="w-full py-3 bg-surface-danger text-error font-bold border border-error/50 rounded-xl hover:bg-error/10 active:scale-95 transition-all"
+                      >
+                        Hủy Lịch Hẹn
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCheckInModal({
+                            isOpen: false,
+                            booking: null,
+                            isPayment: false,
+                          });
+                          setQrCodeData(null);
+                        }}
+                        className="w-full py-3 bg-surface-variant text-on-surface font-bold rounded-xl hover:bg-outline-variant active:scale-95 transition-all"
+                      >
+                        Đóng cửa sổ
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {checkInModal.booking?.status === "confirmed" && (
+                        <button
+                          onClick={() => handleStatusUpdate("in_progress")}
+                          className="w-full py-3 bg-secondary/20 text-secondary border border-secondary/50 font-bold rounded-xl hover:bg-secondary/30 active:scale-95 transition-all mb-3 flex items-center justify-center gap-2"
+                        >
+                          <span className="material-symbols-outlined">
+                            content_cut
+                          </span>
+                          Khách Đã Lên Ghế Phục Vụ
+                        </button>
+                      )}
+                      {checkInModal.booking?.status === "in_progress" && (
+                        <button
+                          onClick={() => handleStatusUpdate("completed")}
+                          className="w-full py-3 bg-primary text-on-primary font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2 mb-3"
+                        >
+                          <span className="material-symbols-outlined">
+                            check_circle
+                          </span>
+                          Xác nhận Thu tiền & Hoàn thành
+                        </button>
+                      )}
                       {checkInModal.booking?.status !== "in_progress" && (
                         <button
                           onClick={() => {

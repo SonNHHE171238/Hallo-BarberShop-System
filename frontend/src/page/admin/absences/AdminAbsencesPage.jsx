@@ -44,6 +44,10 @@ export default function AdminAbsencesPage() {
       const res = await staffDashboardService.getBarbersStatus();
       if (res && res.barbers) {
         setBarbers(res.barbers);
+      } else if (Array.isArray(res)) {
+        setBarbers(res);
+      } else if (res && res.data) {
+        setBarbers(res.data);
       }
     } catch (err) {
       console.error("Lỗi tải danh sách thợ:", err);
@@ -237,9 +241,12 @@ export default function AdminAbsencesPage() {
                       </td>
                       <td className="p-4 text-center">
                         {hasAffected ? (
-                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded text-xs font-bold ${unresolvedCount > 0 ? "bg-error-container text-error" : "bg-primary-container text-primary"}`}>
+                          <button 
+                            onClick={() => handleApprove(req)}
+                            className={`inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:scale-105 shadow-sm ${unresolvedCount > 0 ? "bg-error text-on-error animate-pulse" : "bg-primary-container text-primary"}`}
+                          >
                             {req.affectedBookings.length} khách ({unresolvedCount} chờ xử lý)
-                          </span>
+                          </button>
                         ) : (
                           <span className="text-on-surface-variant text-sm">-</span>
                         )}
@@ -270,16 +277,20 @@ export default function AdminAbsencesPage() {
                             </button>
                             <button
                               onClick={() => handleApprove(req)}
-                              className={`px-3 py-1.5 font-bold text-xs uppercase rounded-sm transition-colors flex items-center gap-1 ${unresolvedCount > 0
-                                  ? "bg-gold text-on-primary hover:bg-gold-dim"
+                              className={`px-4 py-2 font-bold text-xs uppercase rounded-sm transition-all flex items-center gap-2 shadow-md ${unresolvedCount > 0
+                                  ? "bg-error text-on-error hover:bg-error-focus animate-bounce"
                                   : "bg-primary text-on-primary hover:brightness-110"
                                 }`}
                             >
                               {unresolvedCount > 0 ? (
                                 <>
-                                  <span className="material-symbols-outlined text-[16px]">warning</span> Xử lý trùng
+                                  <span className="material-symbols-outlined text-[18px]">warning</span> Xử lý trùng
                                 </>
-                              ) : "Duyệt"}
+                              ) : (
+                                <>
+                                  <span className="material-symbols-outlined text-[18px]">check</span> Duyệt
+                                </>
+                              )}
                             </button>
                           </div>
                         )}
@@ -320,7 +331,7 @@ export default function AdminAbsencesPage() {
                         {new Date(b.originalDate).toLocaleString('vi-VN')}
                       </div>
                       <div className="text-sm text-on-surface-variant mt-1">
-                        Khách: <strong className="text-on-surface">{b.bookingId?.customerId?.name || "Khách hàng"}</strong> - SĐT: {b.bookingId?.customerId?.phone || "N/A"}
+                        Khách: <strong className="text-on-surface">{b.bookingId?.customerId?.name || b.bookingId?.customerName || "Khách hàng"}</strong> - SĐT: {b.bookingId?.customerId?.phone || b.bookingId?.customerPhone || "N/A"}
                       </div>
 
                       <div className="mt-2 text-xs font-bold uppercase tracking-widest">
@@ -357,8 +368,12 @@ export default function AdminAbsencesPage() {
                             defaultValue=""
                           >
                             <option value="" disabled>-- Chọn thợ rảnh --</option>
-                            {barbers.filter(barber => barber.id !== selectedAbsence.barberId?._id && barber.id !== selectedAbsence.barberId).map(barber => (
-                              <option key={barber.id} value={barber.id}>{barber.user?.name || "Thợ"} (Đánh giá: {barber.averageRating}★)</option>
+                            {barbers.filter(barber => {
+                              const bId = barber._id || barber.id || barber.barberId;
+                              const absentBId = selectedAbsence.barberId?._id || selectedAbsence.barberId;
+                              return String(bId) !== String(absentBId);
+                            }).map(barber => (
+                              <option key={barber._id || barber.id} value={barber._id || barber.id}>{barber.user?.name || barber.name || "Thợ"} (Đánh giá: {barber.averageRating || barber.rating || 5}★)</option>
                             ))}
                           </select>
                           <button

@@ -30,6 +30,7 @@ function BookingPageContent() {
   const [currentBookingId, setCurrentBookingId] = useState(null);
   const [successQueryString, setSuccessQueryString] = useState("");
   const [payosData, setPayosData] = useState(null);
+  const [depositModalData, setDepositModalData] = useState(null);
   
   // Voucher State
   const [discountType, setDiscountType] = useState('none');
@@ -122,7 +123,7 @@ function BookingPageContent() {
       const dateStr = dateObj.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
       
       const queryParams = new URLSearchParams({
-        id: bookingId,
+        bookingId: bookingId,
         service: selectedServices.map(s => s.name).join(', '),
         price: selectedServices.reduce((total, s) => total + (s.price || 0), 0),
         barber: selectedBarber ? selectedBarber.name : "Barber Auto",
@@ -136,15 +137,13 @@ function BookingPageContent() {
       }
 
       if (response.paymentLinkData && response.paymentLinkData.checkoutUrl) {
-        if (response.noShowCount && response.noShowCount > 0) {
-          toast.error(`Yêu cầu đặt cọc: Hệ thống ghi nhận bạn đã không đến ${response.noShowCount} lần trước đó! Đang chuyển hướng thanh toán...`, { duration: 4000 });
-        } else {
-          toast.success("Vui lòng thanh toán cọc để giữ chỗ!");
-        }
-        
-        setTimeout(() => {
-          window.location.href = response.paymentLinkData.checkoutUrl;
-        }, 3000);
+        setIsGuestModalOpen(false);
+        setDepositModalData({
+          noShowCount: response.noShowCount || 1,
+          checkoutUrl: response.paymentLinkData.checkoutUrl,
+          bookingId: bookingId,
+          depositRatio: (response.noShowCount === 2) ? 100 : 50
+        });
         return;
       }
 
@@ -257,6 +256,45 @@ function BookingPageContent() {
                 setApplyingVoucher={setApplyingVoucher}
                 setVerifiedPhone={setVerifiedPhone}
               />
+            )}
+            {depositModalData && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-surface/90 border border-outline-variant rounded-xl max-w-md w-full p-8 shadow-2xl text-center">
+                  <div className="w-16 h-16 rounded-full bg-error/20 flex items-center justify-center mx-auto mb-4">
+                    <span className="material-symbols-outlined text-error text-3xl">warning</span>
+                  </div>
+                  <h3 className="font-headline-sm text-headline-sm text-on-surface mb-2">Yêu cầu đặt cọc</h3>
+                  <p className="font-body-md text-on-surface-variant mb-6">
+                    Hệ thống ghi nhận bạn đã đặt lịch và không đến <b>{depositModalData.noShowCount} lần</b>. 
+                    Bạn cần đặt cọc <b>{depositModalData.depositRatio}%</b> giá trị đơn để giữ chỗ. Nếu bạn không thanh toán, lịch hẹn này sẽ bị huỷ.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <button 
+                      onClick={() => {
+                        window.location.href = depositModalData.checkoutUrl;
+                      }}
+                      className="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md font-bold hover:bg-primary/90 transition-colors uppercase tracking-wider"
+                    >
+                      Tiến hành thanh toán
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          const { fetchWithAuth } = await import('@/services/api');
+                          await fetchWithAuth(`/bookings/${depositModalData.bookingId}/payment-cancelled`, { method: "PUT" });
+                        } catch (error) {
+                          console.error("Failed to cancel booking", error);
+                        }
+                        setDepositModalData(null);
+                        toast.success("Lịch hẹn đã được huỷ.");
+                      }}
+                      className="w-full border border-outline-variant text-on-surface-variant py-3 rounded-lg font-label-md hover:bg-surface-container-high transition-colors"
+                    >
+                      Huỷ đặt lịch
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

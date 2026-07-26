@@ -4,8 +4,12 @@ import Link from "next/link";
 export default function BlogDetailHeader({ blog }) {
   if (!blog) return null;
 
-  const dateObj = new Date(blog.createdAt);
-  const formattedDate = `${dateObj.getDate()} Tháng ${dateObj.getMonth() + 1}, ${dateObj.getFullYear()}`;
+  const authorName = blog.author?.name || "Admin";
+  const formattedDate = new Date(blog.createdAt).toLocaleDateString("vi-VN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
 
   return (
     <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop mb-12">
@@ -24,11 +28,11 @@ export default function BlogDetailHeader({ blog }) {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between border-y border-outline-variant py-6 gap-4">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-full bg-surface-container border border-outline-variant flex items-center justify-center overflow-hidden">
-            <span className="material-symbols-outlined text-primary">person</span>
+          <div className="w-12 h-12 rounded-full bg-surface-container border border-outline-gold overflow-hidden flex items-center justify-center text-primary font-bold">
+            {authorName.substring(0, 2).toUpperCase()}
           </div>
           <div>
-            <p className="text-body-md font-semibold text-primary">Bởi {blog.author?.name || "Admin"}</p>
+            <p className="text-body-md font-semibold text-primary">Bởi {authorName}</p>
             <p className="text-label-md text-outline">Tác giả</p>
           </div>
         </div>
