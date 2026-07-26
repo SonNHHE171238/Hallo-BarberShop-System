@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import LogoutConfirmModal from '../ui/LogoutConfirmModal';
+import NotificationDropdown from "./NotificationDropdown";
 
 export default function StaffHeader() {
   const pathname = usePathname();
@@ -52,6 +53,9 @@ export default function StaffHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
+          
+          <NotificationDropdown />
+
           <div className="relative hidden md:block ml-2">
             <div 
               className="w-10 h-10 rounded-full overflow-hidden border border-primary cursor-pointer hover:scale-105 transition-transform"

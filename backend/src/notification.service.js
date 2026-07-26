@@ -43,8 +43,9 @@ const sendNotificationToAdmins = async (title, message, type = 'system', link = 
         link,
         createdAt: new Date()
       });
+      console.log('📢 Đã emit new_notification tới room_role_admin', title);
     } catch (socketErr) {
-      console.log('Socket.io không khả dụng hoặc chưa khởi tạo');
+      console.log('Socket.io không khả dụng hoặc chưa khởi tạo', socketErr);
     }
   } catch (error) {
     console.error('Lỗi khi gửi thông báo cho Admin:', error);

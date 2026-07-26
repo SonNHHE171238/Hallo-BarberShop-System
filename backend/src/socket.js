@@ -6,7 +6,9 @@ let io;
 const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "*", // Or specific origins if needed
+      origin: function (origin, callback) {
+        callback(null, true);
+      },
       methods: ["GET", "POST", "PUT", "DELETE"],
       credentials: true,
     },
@@ -14,8 +16,18 @@ const initSocket = (server) => {
 
   io.use((socket, next) => {
     try {
-      // Token can be sent in handshake auth or headers
-      const token = socket.handshake.auth.token || socket.handshake.headers.token;
+      let token = socket.handshake.auth.token || socket.handshake.headers.token;
+      
+      // If token not found in auth/headers, try parsing from cookies (since it is HttpOnly)
+      if (!token && socket.handshake.headers.cookie) {
+        const cookieStr = socket.handshake.headers.cookie;
+        const cookies = cookieStr.split(';').reduce((acc, curr) => {
+          const parts = curr.split('=');
+          if (parts.length === 2) acc[parts[0].trim()] = parts[1].trim();
+          return acc;
+        }, {});
+        token = cookies.accessToken;
+      }
       
       if (!token) {
         return next(new Error("Authentication error: No token provided"));

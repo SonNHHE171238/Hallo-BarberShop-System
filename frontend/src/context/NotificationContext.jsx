@@ -36,22 +36,25 @@ export function NotificationProvider({ children }) {
   };
 
   useEffect(() => {
-    fetchNotifications();
-  }, [token]);
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (token) {
+    if (user) {
       // Connect to socket server
       const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       const newSocket = io(socketUrl, {
-        auth: { token }
+        withCredentials: true
       });
 
       newSocket.on('connect', () => {
         console.log('Socket connected:', newSocket.id);
       });
 
-      newSocket.on('newNotification', (notification) => {
+      newSocket.on('new_notification', (notification) => {
+        console.log('🔔 NHẬN ĐƯỢC NOTI TỪ SERVER:', notification);
         // Show toast
         toast(
           (t) => (
@@ -87,7 +90,7 @@ export function NotificationProvider({ children }) {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, [token]);
+  }, [user]);
 
   const markAsRead = async (notificationId) => {
     try {

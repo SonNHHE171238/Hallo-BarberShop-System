@@ -59,8 +59,8 @@ export default function NotificationDropdown() {
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-sm text-on-surface-variant">Không có thông báo nào</div>
             ) : (
-              notifications.map(noti => (
-                <div key={noti._id} className={`p-4 border-b border-outline-variant/50 hover:bg-surface-variant transition-colors cursor-pointer relative ${!noti.isRead ? 'bg-primary/5' : ''}`}>
+              notifications.map((noti, index) => (
+                <div key={noti._id || index} className={`p-4 border-b border-outline-variant/50 hover:bg-surface-variant transition-colors cursor-pointer relative ${!noti.isRead ? 'bg-primary/5' : ''}`}>
                   {!noti.isRead && <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary"></div>}
                   <div className="pl-4">
                     <p className={`text-sm ${!noti.isRead ? 'font-bold text-on-surface' : 'text-on-surface-variant'}`}>{noti.title}</p>

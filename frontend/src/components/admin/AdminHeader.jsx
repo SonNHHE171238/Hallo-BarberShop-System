@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import LogoutConfirmModal from '../ui/LogoutConfirmModal';
 import Link from 'next/link';
+import NotificationDropdown from '../layout/NotificationDropdown';
 
 export default function AdminHeader({ onMenuClick }) {
   const pathname = usePathname();
@@ -36,6 +37,10 @@ export default function AdminHeader({ onMenuClick }) {
         </h1>
       </div>
       <div className="flex items-center gap-4 md:gap-6">
+        
+        {/* Notification Dropdown */}
+        <NotificationDropdown />
+
         {/* User Profile Dropdown */}
         <div className="relative">
           <div 
