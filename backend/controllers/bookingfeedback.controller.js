@@ -362,3 +362,23 @@ exports.getBarberFeedbacks = async (req, res) => {
     return res.status(500).json({ success: false, message: "Lỗi server." });
   }
 };
+
+// GET /api/bookingfeedbacks/booking/:bookingId
+exports.getFeedbackByBookingId = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const feedback = await BookingFeedback.findOne({ bookingId });
+    
+    if (!feedback) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy đánh giá cho cuộc hẹn này." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: feedback
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Lỗi server." });
+  }
+};

@@ -143,18 +143,7 @@ exports.updateBookingStatus = async (req, res) => {
     if (status === "completed") {
       const completionTime = new Date();
 
-      // Create service history record
-      const serviceHistory = new CustomerServiceHistory({
-        customerId: booking.customerId,
-        serviceId:
-          booking.services && booking.services.length > 0
-            ? booking.services[0]._id
-            : null,
-        bookingId: booking._id,
-        barberId: booking.barberId,
-        completedAt: completionTime,
-      });
-      await serviceHistory.save();
+
 
       // Update service popularity
       const Service = require("../models/service.model");

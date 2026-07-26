@@ -14,6 +14,7 @@ router.post("/", feedbackController.createFeedback);
 router.use(authenticate);
 router.use(authorizeRoles('admin', 'staff'));
 router.get("/all", feedbackController.getAllBookingFeedbacks);
+router.get("/booking/:bookingId", feedbackController.getFeedbackByBookingId);
 router.delete("/:id", feedbackController.deleteBookingFeedback);
 
 module.exports = router;

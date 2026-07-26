@@ -62,11 +62,16 @@ const CustomDropdown = ({ options, value, onChange, placeholder }) => {
   );
 };
 
+import ImportProductModal from '@/components/admin/ImportProductModal';
+import ImportReceiptsModal from '@/components/admin/ImportReceiptsModal';
+
 export default function StaffInventoryPage() {
   const tableContainerRef = useRef(null);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isReceiptsModalOpen, setIsReceiptsModalOpen] = useState(false);
   
   // Search State
   const [showSearch, setShowSearch] = useState(false);
@@ -106,7 +111,7 @@ export default function StaffInventoryPage() {
   const fetchProducts = async (currentPage, categoryId, sort, search = searchQuery) => {
     try {
       setLoading(true);
-      let url = `http://localhost:5000/api/products?page=${currentPage}&limit=10&includeInactive=true`;
+      let url = `http://localhost:5000/api/products?page=${currentPage}&limit=5&includeInactive=true`;
       if (categoryId) url += `&categoryId=${categoryId}`;
       if (sort) url += `&sort=${sort}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
@@ -212,7 +217,23 @@ export default function StaffInventoryPage() {
             />
           </div>
           
-          <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end relative">
+            <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end relative">
+              <button 
+                onClick={() => setIsReceiptsModalOpen(true)}
+                className="flex items-center gap-1 bg-surface-container-highest text-on-surface-variant border border-outline-variant px-4 py-2 rounded hover:text-primary transition-all font-bold uppercase tracking-wider text-[13px]"
+              >
+                <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+                Lịch sử nhập
+              </button>
+
+              <button 
+                onClick={() => setIsImportModalOpen(true)}
+                className="flex items-center gap-1 bg-secondary text-on-secondary px-4 py-2 rounded hover:brightness-110 active:scale-95 transition-all font-bold uppercase tracking-wider text-[13px]"
+              >
+                <span className="material-symbols-outlined text-[18px]">inventory</span>
+                Nhập hàng
+              </button>
+              
             <div className="relative">
               <button 
                 onClick={() => setShowSearch(!showSearch)}
@@ -372,6 +393,19 @@ export default function StaffInventoryPage() {
           </div>
         )}
       </div>
+      
+      <ImportProductModal 
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={loadData}
+        userRole="staff"
+      />
+
+      <ImportReceiptsModal 
+        isOpen={isReceiptsModalOpen}
+        onClose={() => setIsReceiptsModalOpen(false)}
+        userRole="staff"
+      />
     </div>
   );
 }

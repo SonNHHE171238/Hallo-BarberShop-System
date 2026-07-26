@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { staffDashboardService } from '@/services/staffDashboard.service';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
 
 export default function AdminBookingDetailPage() {
@@ -12,6 +13,7 @@ export default function AdminBookingDetailPage() {
   const id = searchParams.get('id');
   
   const [booking, setBooking] = useState(null);
+  const [feedback, setFeedback] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -60,6 +62,22 @@ export default function AdminBookingDetailPage() {
     };
     fetchBooking();
   }, [id]);
+
+  useEffect(() => {
+    if (booking && booking.status === "completed") {
+      const fetchFeedback = async () => {
+        try {
+          const res = await axios.get(`http://localhost:5000/api/bookingfeedbacks/booking/${booking._id}`, { withCredentials: true });
+          if (res.data.success) {
+            setFeedback(res.data.data);
+          }
+        } catch (error) {
+          console.error("Không lấy được đánh giá:", error);
+        }
+      };
+      fetchFeedback();
+    }
+  }, [booking]);
 
   if (isLoading) {
     return (
@@ -308,6 +326,33 @@ export default function AdminBookingDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Booking Feedback Section */}
+      {booking.status === "completed" && feedback && (
+        <div className="max-w-7xl mx-auto px-6 md:px-margin-desktop pb-12 animate-fade-in-up mt-4">
+          <div className="bg-surface-container rounded-3xl p-8 border border-outline-variant/30 shadow-2xl relative overflow-hidden">
+            <h2 className="font-headline-sm text-xl text-primary uppercase tracking-widest mb-6 flex items-center gap-3 border-b border-outline-variant/30 pb-4">
+              <span className="material-symbols-outlined text-2xl">reviews</span>
+              Đánh giá từ khách hàng
+            </h2>
+            <div className="flex flex-col gap-4">
+              <div className="flex text-primary">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <span key={star} className="material-symbols-outlined text-3xl drop-shadow-sm" style={{ fontVariationSettings: star <= feedback.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+                ))}
+              </div>
+              {feedback.comment && (
+                <p className="text-on-surface-variant whitespace-pre-line text-base border-l-4 border-primary pl-6 py-3 italic bg-surface-container-low rounded-r-lg">
+                  "{feedback.comment}"
+                </p>
+              )}
+              <span className="text-sm text-on-surface-variant/70 mt-2 font-label-md">
+                Đăng lúc: {new Date(feedback.createdAt).toLocaleString("vi-VN")}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <GenericConfirmModal 
         isOpen={isConfirmModalOpen}
