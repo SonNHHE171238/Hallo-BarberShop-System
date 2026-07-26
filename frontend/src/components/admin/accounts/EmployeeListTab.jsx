@@ -6,6 +6,7 @@ import { adminAccountService } from '@/services/adminAccount.service';
 import toast from 'react-hot-toast';
 import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
 import BarberUpcomingBookingsModal from '@/components/admin/accounts/BarberUpcomingBookingsModal';
+import AddAccountModal from '@/components/admin/accounts/AddAccountModal';
 
 export default function EmployeeListTab() {
   const [activeTab, setActiveTab] = useState("all"); // 'all', 'barber', 'staff'
@@ -17,6 +18,7 @@ export default function EmployeeListTab() {
   const [accountToDelete, setAccountToDelete] = useState(null);
   const [bookingsModalOpen, setBookingsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const fetchStaff = async () => {
     try {
@@ -175,7 +177,10 @@ export default function EmployeeListTab() {
             </button>
           </div>
 
-          <button className="bg-primary text-on-primary px-6 py-2.5 rounded font-bold flex items-center shadow-lg hover:bg-primary-fixed transition-colors active:scale-95">
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-primary text-on-primary px-6 py-2.5 rounded font-bold flex items-center shadow-lg hover:bg-primary-fixed transition-colors active:scale-95"
+          >
             <span className="material-symbols-outlined mr-2">person_add</span>
             Thêm Nhân Viên
           </button>
@@ -295,6 +300,13 @@ export default function EmployeeListTab() {
                 onAllResolved={() => executeDelete(accountToDelete.fullId)}
             />
         )}
+        <AddAccountModal 
+            isOpen={isAddModalOpen} 
+            onClose={() => {
+                setIsAddModalOpen(false);
+                fetchStaff();
+            }} 
+        />
     </div>
   );
 }
