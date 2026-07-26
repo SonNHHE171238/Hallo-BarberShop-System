@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { absenceService } from '@/services/absence.service';
 import { useAuth } from '@/context/AuthContext';
 

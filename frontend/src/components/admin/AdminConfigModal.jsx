@@ -44,8 +44,6 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
     }
   }, [isOpen, activeTab, fetchData]);
 
-
-
   const handleEdit = (item) => {
     setIsEditing(item._id);
     setFormData({ 
