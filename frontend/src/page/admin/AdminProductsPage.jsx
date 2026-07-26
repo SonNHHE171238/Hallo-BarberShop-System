@@ -10,8 +10,8 @@ import AdminConfigModal from '@/components/admin/AdminConfigModal';
 import { useRef } from 'react';
 import GenericConfirmModal from '@/components/ui/GenericConfirmModal';
 import CustomDropdown from '@/components/ui/CustomDropdown';
-
-
+import ImportProductModal from '@/components/admin/ImportProductModal';
+import ImportReceiptsModal from '@/components/admin/ImportReceiptsModal';
 export default function AdminProductsPage() {
   const router = useRouter();
   const tableContainerRef = useRef(null);
@@ -22,6 +22,8 @@ export default function AdminProductsPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isReceiptsModalOpen, setIsReceiptsModalOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
   
   const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, productId: null, productName: '' });
@@ -177,25 +179,6 @@ export default function AdminProductsPage() {
   return (
     <div className="max-w-container-max mx-auto px-6 md:px-margin-desktop py-4 w-full h-[calc(100vh-80px)] flex flex-col overflow-hidden">
       
-      {/* Stats Grid (Bento Style) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 shrink-0">
-        <div className="bg-surface-container-highest/60 backdrop-blur-md border border-outline-variant p-4 rounded-lg flex flex-col justify-between hover:-translate-y-1 transition-transform">
-          <span className="text-on-surface-variant text-[11px] font-bold tracking-wider uppercase">TỔNG SẢN PHẨM</span>
-          <div className="flex items-end justify-between mt-2">
-            <span className="text-[24px] leading-tight font-headline-md text-primary">{stats.totalProducts}</span>
-            <span className="material-symbols-outlined text-gold-dim">inventory_2</span>
-          </div>
-        </div>
-        
-        <div className="bg-surface-container-highest/60 backdrop-blur-md border border-outline-variant p-4 rounded-lg flex flex-col justify-between hover:-translate-y-1 transition-transform">
-          <span className="text-on-surface-variant text-[11px] font-bold tracking-wider uppercase">DANH MỤC</span>
-          <div className="flex items-end justify-between mt-2">
-            <span className="text-[24px] leading-tight font-headline-md text-primary">{stats.totalCategories}</span>
-            <span className="material-symbols-outlined text-gold-dim">category</span>
-          </div>
-        </div>
-      </div>
-
       {/* Inventory Table Container */}
       <div className="bg-surface-container-highest/60 backdrop-blur-md rounded-lg overflow-hidden border border-outline-variant flex-1 flex flex-col min-h-0">
         
@@ -251,6 +234,22 @@ export default function AdminProductsPage() {
                 Quản lý Danh mục & Hãng
               </button>
             </div>
+            
+            <button 
+              onClick={() => setIsReceiptsModalOpen(true)}
+              className="flex items-center gap-1 bg-surface-container-highest text-on-surface-variant border border-outline-variant px-4 py-2 rounded hover:text-primary transition-all font-bold uppercase tracking-wider text-[13px]"
+            >
+              <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+              Phiếu nhập
+            </button>
+
+            <button 
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1 bg-secondary text-on-secondary px-4 py-2 rounded hover:brightness-110 active:scale-95 transition-all font-bold uppercase tracking-wider text-[13px]"
+            >
+              <span className="material-symbols-outlined text-[18px]">inventory</span>
+              Nhập hàng
+            </button>
             
             <button 
               onClick={() => { setEditingProductId(null); setIsModalOpen(true); }}
@@ -411,27 +410,43 @@ export default function AdminProductsPage() {
         )}
       </div>
 
-      <AdminProductModal  
+      <AdminProductModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        productId={editingProductId}
         onSuccess={loadData}
+        productId={editingProductId}
+        categories={categories}
+      />
+      
+      <AdminConfigModal 
+        isOpen={isConfigModalOpen}
+        onClose={() => { setIsConfigModalOpen(false); loadData(); }}
+        categories={categories}
       />
 
-      <AdminConfigModal
-        isOpen={isConfigModalOpen}
-        onClose={() => setIsConfigModalOpen(false)}
+      <ImportProductModal 
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
         onSuccess={loadData}
+        userRole="admin"
+      />
+
+      <ImportReceiptsModal 
+        isOpen={isReceiptsModalOpen}
+        onClose={() => setIsReceiptsModalOpen(false)}
+        userRole="admin"
       />
 
       <GenericConfirmModal 
         isOpen={deleteModalState.isOpen}
-        title="Xác nhận xóa"
-        message={`Bạn có chắc chắn muốn xóa sản phẩm "${deleteModalState.productName}"?`}
-        onCancel={() => setDeleteModalState({ isOpen: false, productId: null, productName: '' })}
+        onClose={() => setDeleteModalState({ isOpen: false, productId: null, productName: '' })}
         onConfirm={handleDeleteConfirm}
-        confirmText="Xóa"
-        isDanger={true}
+        title="Xóa sản phẩm"
+        message={`Bạn có chắc chắn muốn xóa sản phẩm "${deleteModalState.productName}" không?`}
+        confirmText="Xóa Sản Phẩm"
+        confirmButtonClass="bg-error text-white hover:brightness-110"
+        icon="delete_forever"
+        iconClass="text-error"
       />
     </div>
   );

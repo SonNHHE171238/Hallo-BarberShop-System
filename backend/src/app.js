@@ -61,6 +61,7 @@ app.use("/api/vouchers", voucherRoute);
 app.use("/api/product-feedbacks", require("../routes/product-feedback.route"));
 app.use("/api/blogs", blogRoute);
 app.use("/api/notifications", notificationRoute);
+app.use("/api/import-receipts", require("../routes/import-receipt.route"));
 app.get("/", (req, res) => {
   res.send("Hallo BarberShop API is running");
 });

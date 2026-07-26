@@ -14,6 +14,7 @@ export default function StaffBookingDetail() {
   const id = searchParams.get("id");
 
   const [booking, setBooking] = useState(null);
+  const [feedback, setFeedback] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [statusConfirmModal, setStatusConfirmModal] = useState({
     isOpen: false,
@@ -51,6 +52,22 @@ export default function StaffBookingDetail() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchBooking();
   }, [id]);
+
+  useEffect(() => {
+    if (booking && booking.status === "completed") {
+      const fetchFeedback = async () => {
+        try {
+          const res = await axios.get(`http://localhost:5000/api/bookingfeedbacks/booking/${booking._id}`, { withCredentials: true });
+          if (res.data.success) {
+            setFeedback(res.data.data);
+          }
+        } catch (error) {
+          console.error("Không lấy được đánh giá:", error);
+        }
+      };
+      fetchFeedback();
+    }
+  }, [booking]);
 
   const handleCompleteService = () => {
     router.push(`/staff/payment?id=${id}`);
@@ -621,6 +638,31 @@ export default function StaffBookingDetail() {
           </button>
         )}
       </footer>
+
+      {/* Booking Feedback Section */}
+      {booking.status === "completed" && feedback && (
+        <div className="bg-surface-container rounded-2xl p-6 shadow-sm border border-outline-variant mt-6">
+          <h2 className="font-headline-sm text-lg text-primary uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-outline-variant pb-2">
+            <span className="material-symbols-outlined">reviews</span>
+            Đánh giá từ khách hàng
+          </h2>
+          <div className="flex flex-col gap-3">
+            <div className="flex text-primary">
+              {[1, 2, 3, 4, 5].map(star => (
+                <span key={star} className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: star <= feedback.rating ? "'FILL' 1" : "'FILL' 0" }}>star</span>
+              ))}
+            </div>
+            {feedback.comment && (
+              <p className="text-on-surface-variant whitespace-pre-line text-sm border-l-2 border-primary pl-4 py-1 italic">
+                "{feedback.comment}"
+              </p>
+            )}
+            <span className="text-xs text-on-surface-variant/70 mt-1">
+              Đăng lúc: {new Date(feedback.createdAt).toLocaleString("vi-VN")}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Custom Status Confirm Modal */}
       {statusConfirmModal.isOpen && (
