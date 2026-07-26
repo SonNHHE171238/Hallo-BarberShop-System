@@ -7,7 +7,6 @@ import Footer from "@/components/layout/Footer";
 import BlogDetailHeader from "@/components/blog/BlogDetailHeader";
 import BlogDetailHero from "@/components/blog/BlogDetailHero";
 import BlogContent from "@/components/blog/BlogContent";
-import RelatedPosts from "@/components/blog/RelatedPosts";
 import BlogDetailCTA from "@/components/blog/BlogDetailCTA";
 
 export default function BlogDetailPage({ slug }) {
@@ -81,7 +80,6 @@ export default function BlogDetailPage({ slug }) {
         <BlogDetailHeader blog={blog} />
         <BlogDetailHero blog={blog} />
         <BlogContent blog={blog} />
-        <RelatedPosts />
         <BlogDetailCTA />
       </main>
 

@@ -42,23 +42,6 @@ export default function AdminConfigModal({ isOpen, onClose, onSuccess }) {
     }
   }, [isOpen, activeTab, fetchData]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      if (activeTab === 'categories') {
-        const res = await axios.get('http://localhost:5000/api/categories?includeInactive=true');
-        if (res.data.success) setCategories(res.data.data);
-      } else {
-        const res = await axios.get('http://localhost:5000/api/brands?includeInactive=true');
-        if (res.data.success) setBrands(res.data.data);
-      }
-    } catch (error) {
-      toast.error('Lỗi khi tải dữ liệu');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEdit = (item) => {
     setIsEditing(item._id);
     setFormData({ 
