@@ -573,7 +573,9 @@ function OrderDetailContent({ orderCode }) {
                   <span className="material-symbols-outlined text-3xl">support_agent</span>
                   <span className="font-headline-sm text-headline-sm font-bold">0329 888 777</span>
                 </div>
-                <button className="w-full sm:w-auto border border-primary text-primary px-8 py-3 font-bold tracking-widest text-sm hover:bg-primary/5 transition-all flex items-center justify-center gap-2 rounded whitespace-nowrap">
+                <button 
+                  onClick={() => window.dispatchEvent(new Event('open-chatbot'))}
+                  className="w-full sm:w-auto border border-primary text-primary px-8 py-3 font-bold tracking-widest text-sm hover:bg-primary/5 transition-all flex items-center justify-center gap-2 rounded whitespace-nowrap">
                   <span className="material-symbols-outlined text-lg">chat_bubble</span>
                   LIÊN HỆ NGAY
                 </button>
